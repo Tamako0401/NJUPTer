@@ -1,0 +1,9 @@
+package com.example.njupter.data
+
+data class CourseSession(
+    val courseId: String,   // 关联CourseInfo
+    val day: Int,           // 1=Mon, 2=Tue, ...
+    val startSection: Int,
+    val endSection: Int,
+    val weeks: List<Int> = (1..20).toList()
+)

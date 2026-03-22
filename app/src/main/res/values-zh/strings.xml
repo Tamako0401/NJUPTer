@@ -1,0 +1,84 @@
+<resources>
+    <string name="app_name">NJUPTer</string>
+
+    <!-- Days of Week -->
+    <string name="day_mon">周一</string>
+    <string name="day_tue">周二</string>
+    <string name="day_wed">周三</string>
+    <string name="day_thu">周四</string>
+    <string name="day_fri">周五</string>
+    <string name="day_sat">周六</string>
+    <string name="day_sun">周日</string>
+    <string name="day_m">一</string>
+    <string name="day_t">二</string>
+    <string name="day_w">三</string>
+    <string name="day_f">四</string>
+    <string name="day_s">五</string>
+
+    <!-- Week -->
+    <string name="week">第%1$d周</string>
+
+    <!-- Screen Titles -->
+    <string name="timetable">课程表</string>
+    <string name="me">我的</string>
+
+    <!-- Course Editor Dialog -->
+    <string name="add_course">添加课程</string>
+    <string name="edit_course">编辑课程</string>
+    <string name="course_details">课程信息</string>
+    <string name="course_name">课程名称</string>
+    <string name="teacher">教师</string>
+    <string name="classroom">教室</string>
+    <string name="time_settings">时间设置</string>
+    <string name="day_of_week">星期</string>
+    <string name="start_sec">开始节次</string>
+    <string name="end_sec">结束节次</string>
+    <string name="weeks">周次: %1$s</string>
+    <string name="weeks_none">无</string>
+    <string name="weeks_selected">已选%1$d周</string>
+    <string name="customize">自定义</string>
+    <string name="card_color">卡片颜色</string>
+    <string name="auto">A</string>
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+
+    <!-- Week Picker Dialog -->
+    <string name="select_weeks">选择周次</string>
+    <string name="at_least_one_week">至少选择一周</string>
+    <string name="select_all">全选</string>
+    <string name="odd_week">单周</string>
+    <string name="even_week">双周</string>
+    <string name="clear">清空</string>
+    <string name="confirm">确定</string>
+    <string name="cancel">取消</string>
+
+    <!-- Me Screen -->
+    <string name="show_weekends">显示周末</string>
+    <string name="show_weekends_desc">在课程表中显示周六和周日</string>
+
+    <!-- Timetable Selector Dialog -->
+    <string name="new_timetable">新建课程表</string>
+    <string name="name">名称</string>
+    <string name="create">创建</string>
+    <string name="select_timetable">选择课程表</string>
+    <string name="last_modified">最后修改: %1$s</string>
+
+    <!-- Week Selection Dialog -->
+    <string name="jump_to_week">跳转到周</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_switch_timetable">切换课程表</string>
+    <string name="cd_previous_week">上一周</string>
+    <string name="cd_next_week">下一周</string>
+    <string name="cd_add_course">添加课程</string>
+    <string name="cd_selected">已选择</string>
+
+    <!-- Settings Screen -->
+    <string name="settings">设置</string>
+    <string name="current_timetable_settings">当前课表设置</string>
+    <string name="timetable_name">课表名称</string>
+    <string name="start_date">开学日期</string>
+    <string name="total_weeks">学期周数</string>
+    <string name="app_settings">应用设置</string>
+
+</resources>
