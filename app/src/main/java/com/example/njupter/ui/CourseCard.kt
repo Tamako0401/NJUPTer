@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
+import androidx.compose.ui.tooling.preview.Preview
 import kotlin.math.abs
 
 @Composable
@@ -75,6 +76,27 @@ fun CourseCard(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CourseCardPreview() {
+    val sampleColors = listOf(
+        Color(0xFFE3F2FD),
+        Color(0xFFE8F5E9),
+        Color(0xFFFFF3E0),
+        Color(0xFFF3E5F5),
+        Color(0xFFE0F7FA)
+    )
+    MaterialTheme {
+        CourseCard(
+            course = CourseInfo("1", "高等数学", "张老师", "教 1-101", 0),
+            session = CourseSession("1", 1, 1, 2, listOf(1, 2, 3, 4, 5)),
+            sectionHeight = 60.dp,
+            colorsList = sampleColors,
+            onClick = {}
+        )
     }
 }
 

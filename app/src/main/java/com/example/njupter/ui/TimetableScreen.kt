@@ -96,14 +96,35 @@ fun TimetableScreen(
     var showTimetableSelector by remember { mutableStateOf(false) }
     var showWeekSelector by remember { mutableStateOf(false) }
 
+    // New state for NewTimetableDialog
+    var showNewTimetableDialog by remember { mutableStateOf(false) }
+
+    if (showNewTimetableDialog) {
+        NewTimetableDialog(
+            onDismiss = { showNewTimetableDialog = false },
+            onConfirm = { name, startDate, weeks ->
+                onCreateTimetable(name, startDate, weeks)
+                showNewTimetableDialog = false
+            }
+        )
+    }
+
     if (showTimetableSelector) {
         TimetableSelectorDialog(
             timetables = timetables,
             currentId = currentTimetableId,
             onDismiss = { showTimetableSelector = false },
             onSelect = onSwitchTimetable,
-            onCreate = { name, startDate -> onCreateTimetable(name, startDate, 20) }
+            onNewTimetable = { showNewTimetableDialog = true }
         )
+    }
+
+    // Show empty state if no timetables exist
+    if (timetables.isEmpty()) {
+        EmptyGuidePlaceholder(
+            onCreateTimetable = { showNewTimetableDialog = true }
+        )
+        return
     }
 
     if (showWeekSelector) {
@@ -331,6 +352,7 @@ fun TimetableScreen(
             existingSessions = courseSessions,
             colorsList = currentCourseColors,
             isDarkTheme = isDark,
+            totalWeeks = currentTotalWeeks,
             onDismiss = { showDialog = false },
             onSave = { info, session, createNewCourse ->
                 if (createNewCourse) {

@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.njupter.R
 import java.text.SimpleDateFormat
@@ -29,60 +30,27 @@ fun SettingsScreen(
     var showNameDialog by remember { mutableStateOf(false) }
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = currentStartDate)
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let {
-                        if (currentTimetableId != null) {
-                            onUpdateTimetableMetadata(currentTimetableId, currentTimetableName, it, currentTotalWeeks)
-                        }
-                    }
-                    showDatePicker = false
-                }) {
-                    Text(stringResource(R.string.confirm))
+        StartDateDialog(
+            initialDateMillis = currentStartDate,
+            onDismiss = { showDatePicker = false },
+            onConfirm = {
+                if (currentTimetableId != null) {
+                    onUpdateTimetableMetadata(currentTimetableId, currentTimetableName, it, currentTotalWeeks)
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
+                showDatePicker = false
             }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+        )
     }
 
     if (showWeeksDialog) {
-        var weeksInput by remember { mutableStateOf(currentTotalWeeks.toString()) }
-        AlertDialog(
-            onDismissRequest = { showWeeksDialog = false },
-            title = { Text(stringResource(R.string.total_weeks)) },
-            text = {
-                OutlinedTextField(
-                    value = weeksInput,
-                    onValueChange = { weeksInput = it.filter { char -> char.isDigit() } },
-                    label = { Text(stringResource(R.string.weeks)) },
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    weeksInput.toIntOrNull()?.let {
-                        if (currentTimetableId != null) {
-                            onUpdateTimetableMetadata(currentTimetableId, currentTimetableName, currentStartDate, it)
-                        }
-                    }
-                    showWeeksDialog = false
-                }) {
-                    Text(stringResource(R.string.confirm))
+        TotalWeeksDialog(
+            initialWeeks = currentTotalWeeks,
+            onDismiss = { showWeeksDialog = false },
+            onConfirm = {
+                if (currentTimetableId != null) {
+                    onUpdateTimetableMetadata(currentTimetableId, currentTimetableName, currentStartDate, it)
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showWeeksDialog = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
+                showWeeksDialog = false
             }
         )
     }
@@ -140,30 +108,43 @@ fun SettingsScreen(
                     modifier = Modifier.padding(16.dp)
                 )
             }
+            
+            // If no timetable is selected/created, disable or hide specific settings
+            if (currentTimetableId == null) {
+                 item {
+                     Text(
+                         text = stringResource(R.string.no_timetable_desc),
+                         modifier = Modifier.padding(16.dp),
+                         style = MaterialTheme.typography.bodyMedium,
+                         color = MaterialTheme.colorScheme.error
+                     )
+                 }
+            } else {
 
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.timetable_name)) },
-                    supportingContent = { Text(currentTimetableName) },
-                    modifier = Modifier.clickable { showNameDialog = true }
-                )
-            }
+                item {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.timetable_name)) },
+                        supportingContent = { Text(currentTimetableName) },
+                        modifier = Modifier.clickable { showNameDialog = true }
+                    )
+                }
 
-            item {
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.start_date)) },
-                    supportingContent = { Text(dateFormat.format(Date(currentStartDate))) },
-                    modifier = Modifier.clickable { showDatePicker = true }
-                )
-            }
+                item {
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.start_date)) },
+                        supportingContent = { Text(dateFormat.format(Date(currentStartDate))) },
+                        modifier = Modifier.clickable { showDatePicker = true }
+                    )
+                }
 
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.total_weeks)) },
-                    supportingContent = { Text(currentTotalWeeks.toString()) },
-                    modifier = Modifier.clickable { showWeeksDialog = true }
-                )
+                item {
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.total_weeks)) },
+                        supportingContent = { Text(currentTotalWeeks.toString()) },
+                        modifier = Modifier.clickable { showWeeksDialog = true }
+                    )
+                }
             }
 
             item {
@@ -190,5 +171,21 @@ fun SettingsScreen(
             
             // Empty for now
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SettingsScreenPreview() {
+    MaterialTheme {
+        SettingsScreen(
+            currentTimetableId = "1",
+            currentTimetableName = "2026 春季学期",
+            currentStartDate = System.currentTimeMillis(),
+            currentTotalWeeks = 20,
+            showWeekends = false,
+            onUpdateTimetableMetadata = { _, _, _, _ -> },
+            onToggleShowWeekends = {}
+        )
     }
 }

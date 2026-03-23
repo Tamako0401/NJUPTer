@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 
 class FileTimetableRepository(private val dataSource: TimetableDataSource) : TimetableRepository {
 
+    // 状态持有，private 是因为外部只能读取，Mutable 是因为内部有权修改
     private val _courseInfos = MutableStateFlow<List<CourseInfo>>(emptyList())
     private val _courseSessions = MutableStateFlow<List<CourseSession>>(emptyList())
     
@@ -25,10 +26,6 @@ class FileTimetableRepository(private val dataSource: TimetableDataSource) : Tim
     init {
         CoroutineScope(Dispatchers.IO).launch {
             refreshTimetableList()
-            if (_availableTimetables.value.isNotEmpty()) {
-               val first = _availableTimetables.value.first()
-               switchTimetable(first.id)
-            }
         }
     }
 
@@ -36,9 +33,12 @@ class FileTimetableRepository(private val dataSource: TimetableDataSource) : Tim
         _availableTimetables.value = dataSource.getAllTimetables()
     }
     
-    private fun saveData() {
+    private suspend fun saveData() {
         val id = _currentTimetableId.value ?: return
-        CoroutineScope(Dispatchers.IO).launch {
+        // 启动一个新的协程任务，在IO线程中执行保存操作，避免阻塞主线程
+        // 但是把持久化操作丢到后台线程，不保证完成时间、不保证顺序、不保证成功
+        // CoroutineScope(Dispatchers.IO).launch {
+        // 那就 suspend + 上层控制
             dataSource.saveTimetable(
                 id,
                 TimetableData(
@@ -46,9 +46,10 @@ class FileTimetableRepository(private val dataSource: TimetableDataSource) : Tim
                     sessions = _courseSessions.value
                 )
             )
-        }
+        // }
     }
 
+    // 对外暴露只读流
     override fun getCourseInfos(): Flow<List<CourseInfo>> = _courseInfos.asStateFlow()
     override fun getCourseSessions(): Flow<List<CourseSession>> = _courseSessions.asStateFlow()
     
@@ -84,7 +85,7 @@ class FileTimetableRepository(private val dataSource: TimetableDataSource) : Tim
     override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int) {
         dataSource.updateTimetableMetadata(id, name, startDate, totalWeeks)
         refreshTimetableList()
-        // If current timetable is updated, we might need to refresh UI state if it depends on metadata
+        // 如果当前Timetable被更新了，我们需要刷新UI状态
         if (_currentTimetableId.value == id) {
              _currentTimetableName.value = name
         }
@@ -95,9 +96,6 @@ class FileTimetableRepository(private val dataSource: TimetableDataSource) : Tim
              val first = _availableTimetables.value.firstOrNull()
              if (first != null) {
                  switchTimetable(first.id)
-             } else {
-                 // Create default if all deleted
-                 createTimetable("My Timetable", System.currentTimeMillis(), 20)
              }
         }
         dataSource.deleteTimetable(id)

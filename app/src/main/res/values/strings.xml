@@ -81,4 +81,9 @@
     <string name="total_weeks">Total Weeks</string>
     <string name="app_settings">App Settings</string>
 
+    <string name="weeks_label" translatable="false">Weeks</string>
+    <string name="no_timetable_title" translatable="false">No Timetable</string>
+    <string name="no_timetable_desc" translatable="false">Create a new timetable to get started</string>
+    <string name="create_timetable" translatable="false">Create Timetable</string>
+
 </resources>

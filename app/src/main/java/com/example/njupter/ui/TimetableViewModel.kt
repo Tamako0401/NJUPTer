@@ -42,6 +42,12 @@ class TimetableViewModel(
         repository.getCurrentTimetable(),
         settingsRepository.getShowWeekends()
     ) { (courses, sessions, timetables), currentName, currentId, currentMeta, showWeekends ->
+        // Handle defaults for missing metadata (e.g. from older JSON files where fields are 0)
+        val safeTotalWeeks = currentMeta?.totalWeeks?.takeIf { it > 0 } ?: 20
+        // If startDate is 0 (1970), maybe default to now? Or let user see 1970 to fix it.
+        // User complained about 1970-01-01. Providing a default if 0 seems appropriate.
+        val safeStartDate = if (currentMeta?.startDate != null && currentMeta.startDate > 0) currentMeta.startDate else System.currentTimeMillis()
+
         TimetableUiState(
             courseInfos = courses,
             sessions = sessions,
@@ -49,8 +55,8 @@ class TimetableViewModel(
             timetables = timetables,
             currentTimetableName = currentName,
             currentTimetableId = currentId,
-            currentStartDate = currentMeta?.startDate ?: System.currentTimeMillis(),
-            currentTotalWeeks = currentMeta?.totalWeeks ?: 20,
+            currentStartDate = safeStartDate,
+            currentTotalWeeks = safeTotalWeeks,
             showWeekends = showWeekends
         )
     }.stateIn(

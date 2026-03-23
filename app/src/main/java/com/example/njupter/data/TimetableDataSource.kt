@@ -153,12 +153,7 @@ class LocalFileDataSource(private val context: Context) : TimetableDataSource {
             oldFile.renameTo(newFile)
             listOf(defaultMeta)
         } else {
-            val defaultMeta = TimetableMetadata(id = UUID.randomUUID().toString(), name = "My Timetable", lastModified = System.currentTimeMillis())
-            // Create empty file
-            val emptyData = TimetableData(emptyList(), emptyList())
-            val root = TimetableJsonRoot(emptyList(), emptyList())
-            getDataFile(defaultMeta.id).writeText(gson.toJson(root))
-            listOf(defaultMeta)
+            emptyList()
         }
         
         saveIndex(initialList)
