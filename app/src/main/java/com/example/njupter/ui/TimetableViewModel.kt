@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/**
+ * 该 ViewModel 负责管理课程表相关的 UI 状态和业务逻辑。它从 TimetableRepository 获取课程信息、课程安排和时间表列表，并将它们组合成一个统一的 UI 状态流（uiState）。UI 层可以观察这个状态流来更新界面。
+ */
 data class TimetableUiState(
     val courseInfos: List<CourseInfo> = emptyList(),
     val sessions: List<CourseSession> = emptyList(),
@@ -23,7 +26,8 @@ data class TimetableUiState(
     val currentTimetableId: String? = null,
     val currentStartDate: Long = System.currentTimeMillis(),
     val currentTotalWeeks: Int = 20,
-    val showWeekends: Boolean = false
+    val showWeekends: Boolean = false,
+    val currentSessionTimes: List<String> = emptyList()
 )
 
 class TimetableViewModel(
@@ -39,14 +43,15 @@ class TimetableViewModel(
         ) { courses, sessions, timetables -> Triple(courses, sessions, timetables) },
         repository.getCurrentTimetableName(),
         repository.getCurrentTimetableId(),
-        repository.getCurrentTimetable(),
-        settingsRepository.getShowWeekends()
-    ) { (courses, sessions, timetables), currentName, currentId, currentMeta, showWeekends ->
+        repository.getCurrentTimetable()
+    ) { (courses, sessions, timetables), currentName, currentId, currentMeta ->
         // Handle defaults for missing metadata (e.g. from older JSON files where fields are 0)
         val safeTotalWeeks = currentMeta?.totalWeeks?.takeIf { it > 0 } ?: 20
         // If startDate is 0 (1970), maybe default to now? Or let user see 1970 to fix it.
         // User complained about 1970-01-01. Providing a default if 0 seems appropriate.
         val safeStartDate = if (currentMeta?.startDate != null && currentMeta.startDate > 0) currentMeta.startDate else System.currentTimeMillis()
+        val safeSessionTimes = currentMeta?.nonNullSessionTimes ?: com.example.njupter.data.TimetableMetadata("", "", 0).nonNullSessionTimes
+        val safeShowWeekends = currentMeta?.showWeekends ?: true
 
         TimetableUiState(
             courseInfos = courses,
@@ -57,7 +62,8 @@ class TimetableViewModel(
             currentTimetableId = currentId,
             currentStartDate = safeStartDate,
             currentTotalWeeks = safeTotalWeeks,
-            showWeekends = showWeekends
+            showWeekends = safeShowWeekends,
+            currentSessionTimes = safeSessionTimes
         )
     }.stateIn(
         scope = viewModelScope,
@@ -65,27 +71,21 @@ class TimetableViewModel(
         initialValue = TimetableUiState(isLoading = true)
     )
 
-    fun toggleShowWeekends(show: Boolean) {
+    fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
         viewModelScope.launch {
-            settingsRepository.setShowWeekends(show)
+            repository.createTimetable(name, startDate, totalWeeks, showWeekends, sessionTimes)
+        }
+    }
+    
+    fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
+        viewModelScope.launch {
+            repository.updateTimetableMetadata(id, name, startDate, totalWeeks, showWeekends, sessionTimes)
         }
     }
 
     fun switchTimetable(id: String) {
         viewModelScope.launch {
             repository.switchTimetable(id)
-        }
-    }
-    
-    fun createTimetable(name: String, startDate: Long, totalWeeks: Int = 20) {
-        viewModelScope.launch {
-            repository.createTimetable(name, startDate, totalWeeks)
-        }
-    }
-    
-    fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int) {
-        viewModelScope.launch {
-            repository.updateTimetableMetadata(id, name, startDate, totalWeeks)
         }
     }
 

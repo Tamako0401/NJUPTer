@@ -11,10 +11,26 @@ import kotlinx.coroutines.withContext
 /**
  * 数据源接口：负责数据的原始读取（不包含业务逻辑）和写入
  */
+
+val defaultSessionTimes = listOf(
+    "08:00-08:45",
+    "08:50-09:35",
+    "09:50-10:35",
+    "10:40-11:25",
+    "11:30-12:15",
+    "13:45-14:30",
+    "14:35-15:20",
+    "15:35-16:20",
+    "16:25-17:10",
+    "18:30-19:15",
+    "19:20-20:05",
+    "20:10-20:55"
+)
+
 interface TimetableDataSource {
     suspend fun getAllTimetables(): List<TimetableMetadata>
-    suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int): TimetableMetadata
-    suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int)
+    suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>): TimetableMetadata
+    suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>)
     suspend fun loadTimetable(id: String): TimetableData
     suspend fun saveTimetable(id: String, data: TimetableData)
     suspend fun deleteTimetable(id: String)
@@ -25,12 +41,20 @@ data class TimetableMetadata(
     val name: String,
     val lastModified: Long,
     val startDate: Long = System.currentTimeMillis(),
-    val totalWeeks: Int = 20
-)
+    val totalWeeks: Int = 20,
+    val sessionTimes: List<String>? = null,
+    val showWeekends: Boolean = true
+) {
+    val nonNullSessionTimes: List<String>
+        get() = sessionTimes?.let { times ->
+            if (times.size < 12) {
+                times + defaultSessionTimes.drop(times.size)
+            } else {
+                times
+            }
+        } ?: defaultSessionTimes
+}
 
-/**
- * 封装一次性加载的数据包
- */
 data class TimetableData(
     val courses: List<CourseInfo>,
     val sessions: List<CourseSession>
@@ -62,7 +86,7 @@ private data class TimetableIndex(
 )
 
 /**
- * Assets 实现：仅从 APK 包内的 assets/timetable.json 读取
+ * 资产文件数据源：只读，提供默认课表
  */
 class AssetTimetableDataSource(private val context: Context) : TimetableDataSource {
 
@@ -73,11 +97,17 @@ class AssetTimetableDataSource(private val context: Context) : TimetableDataSour
         return listOf(TimetableMetadata(defaultId, "Default (Assets)", 0L, System.currentTimeMillis(), 20))
     }
 
-    override suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int): TimetableMetadata {
+    override suspend fun createTimetable(
+        name: String,
+        startDate: Long,
+        totalWeeks: Int,
+        showWeekends: Boolean,
+        sessionTimes: List<String>
+    ): TimetableMetadata {
         throw UnsupportedOperationException("Cannot create timetable in assets")
     }
 
-    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int) {
+    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
         throw UnsupportedOperationException("Cannot update timetable in assets")
     }
 
@@ -166,13 +196,15 @@ class LocalFileDataSource(private val context: Context) : TimetableDataSource {
         file.writeText(json)
     }
 
-    override suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int): TimetableMetadata = withContext(Dispatchers.IO) {
+    override suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>): TimetableMetadata = withContext(Dispatchers.IO) {
         val meta = TimetableMetadata(
             id = UUID.randomUUID().toString(),
             name = name,
             lastModified = System.currentTimeMillis(),
             startDate = startDate,
-            totalWeeks = totalWeeks
+            totalWeeks = totalWeeks,
+            sessionTimes = sessionTimes,
+            showWeekends = showWeekends
         )
         // Create empty file
         val root = TimetableJsonRoot(emptyList(), emptyList())
@@ -185,7 +217,7 @@ class LocalFileDataSource(private val context: Context) : TimetableDataSource {
         return@withContext meta
     }
 
-    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int) = withContext(Dispatchers.IO) {
+    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) = withContext(Dispatchers.IO) {
         val currentList = getAllTimetables().toMutableList()
         val index = currentList.indexOfFirst { it.id == id }
         if (index != -1) {
@@ -194,6 +226,8 @@ class LocalFileDataSource(private val context: Context) : TimetableDataSource {
                 name = name, 
                 startDate = startDate, 
                 totalWeeks = totalWeeks,
+                sessionTimes = sessionTimes,
+                showWeekends = showWeekends,
                 lastModified = System.currentTimeMillis()
             )
             saveIndex(currentList)
@@ -262,6 +296,5 @@ class LocalFileDataSource(private val context: Context) : TimetableDataSource {
         val currentList = getAllTimetables().toMutableList()
         currentList.removeAll { it.id == id }
         saveIndex(currentList)
-        Unit
     }
 }

@@ -85,5 +85,8 @@
     <string name="no_timetable_title">No Timetable</string>
     <string name="no_timetable_desc">Create a new timetable to get started</string>
     <string name="create_timetable">Create Timetable</string>
+    <string name="session_times">Duration of each class</string>
+    <string name="session_times_desc">Edit start/end times for each session</string>
+    <string name="cur_timetable_settings">Edit Current Timetable</string>
 
 </resources>

@@ -80,6 +80,9 @@ class MainActivity : ComponentActivity() {
                                 timetables = uiState.timetables,
                                 currentTimetableName = uiState.currentTimetableName,
                                 currentTimetableId = uiState.currentTimetableId,
+                                currentStartDate = uiState.currentStartDate,
+                                currentTotalWeeks = uiState.currentTotalWeeks,
+                                sessionTimes = uiState.currentSessionTimes,
                                 showWeekends = uiState.showWeekends,
                                 onAddCourse = viewModel::addCourse,
                                 onAddSession = viewModel::addSession,
@@ -95,11 +98,9 @@ class MainActivity : ComponentActivity() {
                                 currentTimetableName = uiState.currentTimetableName,
                                 currentStartDate = uiState.currentStartDate,
                                 currentTotalWeeks = uiState.currentTotalWeeks,
-                                showWeekends = uiState.showWeekends,
-                                onUpdateTimetableMetadata = { id, name, startDate, totalWeeks ->
-                                    viewModel.updateTimetableMetadata(id, name, startDate, totalWeeks)
-                                },
-                                onToggleShowWeekends = viewModel::toggleShowWeekends
+                                currentSessionTimes = uiState.currentSessionTimes,
+                                currentShowWeekends = uiState.showWeekends,
+                                onUpdateTimetableMetadata = viewModel::updateTimetableMetadata
                             )
                         }
                     }

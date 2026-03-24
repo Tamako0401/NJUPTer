@@ -1,5 +1,3 @@
-// 该类实现了 TimetableRepository 接口，负责从 assets 目录中的 JSON 文件读取课程信息和课程安排数据，并将其转换为领域模型 CourseInfo 和 CourseSession。
-
 package com.example.njupter.data
 
 import kotlinx.coroutines.CoroutineScope
@@ -11,6 +9,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/**
+ * 该类实现了 TimetableRepository 接口，负责从 assets 目录中的 JSON 文件读取课程信息和课程安排数据，并将其转换为领域模型 CourseInfo 和 CourseSession。
+ */
+
 
 class FileTimetableRepository(
     private val dataSource: TimetableDataSource,
@@ -91,19 +94,19 @@ class FileTimetableRepository(
         settingsRepository.setLastSelectedTimetableId(id)
     }
 
-    override suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int) {
-        val meta = dataSource.createTimetable(name, startDate, totalWeeks)
+    override suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
+        val meta = dataSource.createTimetable(name, startDate, totalWeeks, showWeekends, sessionTimes)
         _availableTimetables.value = dataSource.getAllTimetables()
         switchTimetable(meta.id)
     }
 
-    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int) {
-        dataSource.updateTimetableMetadata(id, name, startDate, totalWeeks)
-        refreshTimetableList()
-        // 如果当前Timetable被更新了，我们需要刷新UI状态
-        if (_currentTimetableId.value == id) {
-             _currentTimetableName.value = name
+    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
+        dataSource.updateTimetableMetadata(id, name, startDate, totalWeeks, showWeekends, sessionTimes)
+        
+        if (id == _currentTimetableId.value) {
+            _currentTimetableName.value = name
         }
+        refreshTimetableList()
     }
 
     override suspend fun deleteTimetable(id: String) {

@@ -48,7 +48,7 @@ fun CourseCard(
             .fillMaxWidth()
             .padding(top = topMargin)
             .height(height)
-            .padding(1.dp) // Small spacing between cards
+            .padding(1.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor)
@@ -70,6 +70,15 @@ fun CourseCard(
             if (course.classroom.isNotEmpty()) {
                 Text(
                     text = "@${course.classroom}",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            if (course.teacher.isNotEmpty()) {
+                Text(
+                    text = "${course.teacher}",
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

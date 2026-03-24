@@ -118,15 +118,16 @@ fun CourseEditorDialog(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
-                        value = teacher,
-                        onValueChange = { teacher = it },
-                        label = { Text(stringResource(R.string.teacher)) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
                         value = classroom,
                         onValueChange = { classroom = it },
                         label = { Text(stringResource(R.string.classroom)) },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    OutlinedTextField(
+                        value = teacher,
+                        onValueChange = { teacher = it },
+                        label = { Text(stringResource(R.string.teacher)) },
                         modifier = Modifier.weight(1f)
                     )
                 }

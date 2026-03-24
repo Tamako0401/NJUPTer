@@ -84,5 +84,8 @@
     <string name="no_timetable_title">还没有课程表</string>
     <string name="no_timetable_desc">创建一个新课程表以开始</string>
     <string name="create_timetable">创建课程表</string>
+    <string name="session_times">每节课时间</string>
+    <string name="session_times_desc">调整每节课的开始/结束时间</string>
+    <string name="cur_timetable_settings">编辑当前课表</string>
 
 </resources>

@@ -13,8 +13,8 @@ interface TimetableRepository {
     fun getCurrentTimetable(): Flow<TimetableMetadata?>
     
     suspend fun switchTimetable(id: String)
-    suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int)
-    suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int)
+    suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>)
+    suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>)
     suspend fun deleteTimetable(id: String)
 
     suspend fun addCourse(course: CourseInfo)
