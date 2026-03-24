@@ -9,11 +9,15 @@ import kotlinx.coroutines.flow.asStateFlow
 interface SettingsRepository {
     fun getShowWeekends(): Flow<Boolean>
     suspend fun setShowWeekends(show: Boolean)
+    
+    fun getLastSelectedTimetableId(): Flow<String?>
+    suspend fun setLastSelectedTimetableId(id: String)
 }
 
 class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository {
     private val prefs: SharedPreferences = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
     private val _showWeekends = MutableStateFlow(prefs.getBoolean("show_weekends", false))
+    private val _lastSelectedTimetableId = MutableStateFlow<String?>(prefs.getString("last_selected_timetable_id", null))
     
     override fun getShowWeekends(): Flow<Boolean> = _showWeekends.asStateFlow()
 
@@ -21,5 +25,11 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         prefs.edit().putBoolean("show_weekends", show).apply()
         _showWeekends.value = show
     }
-}
 
+    override fun getLastSelectedTimetableId(): Flow<String?> = _lastSelectedTimetableId.asStateFlow()
+
+    override suspend fun setLastSelectedTimetableId(id: String) {
+        prefs.edit().putString("last_selected_timetable_id", id).apply()
+        _lastSelectedTimetableId.value = id
+    }
+}

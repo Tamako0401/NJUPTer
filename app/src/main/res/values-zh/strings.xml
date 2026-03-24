@@ -33,9 +33,9 @@
     <string name="day_of_week">星期</string>
     <string name="start_sec">开始节次</string>
     <string name="end_sec">结束节次</string>
-    <string name="weeks">周次: %1$s</string>
+    <string name="weeks">周次</string>
     <string name="weeks_none">无</string>
-    <string name="weeks_selected">已选%1$d周</string>
+    <string name="weeks_selected">已选</string>
     <string name="customize">自定义</string>
     <string name="card_color">卡片颜色</string>
     <string name="auto">A</string>
@@ -61,7 +61,7 @@
     <string name="name">名称</string>
     <string name="create">创建</string>
     <string name="select_timetable">选择课程表</string>
-    <string name="last_modified">最后修改: %1$s</string>
+    <string name="last_modified">最后修改</string>
 
     <!-- Week Selection Dialog -->
     <string name="jump_to_week">跳转到周</string>
@@ -80,5 +80,9 @@
     <string name="start_date">开学日期</string>
     <string name="total_weeks">学期周数</string>
     <string name="app_settings">应用设置</string>
+    <string name="weeks_label">周</string>
+    <string name="no_timetable_title">还没有课程表</string>
+    <string name="no_timetable_desc">创建一个新课程表以开始</string>
+    <string name="create_timetable">创建课程表</string>
 
 </resources>

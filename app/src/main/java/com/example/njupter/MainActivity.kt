@@ -42,8 +42,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()  // 全面屏适配
 
         val dataSource = LocalFileDataSource(this)
-        val repository = FileTimetableRepository(dataSource)    // 实例化TimetableRepository，传入MainActivity的Context来读取assets下的JSON
         val settingsRepository = SharedPreferencesSettingsRepository(this)
+        val repository = FileTimetableRepository(dataSource, settingsRepository)    // 实例化TimetableRepository，传入MainActivity的Context来读取assets下的JSON
 
         val viewModel by viewModels<TimetableViewModel> {
             TimetableViewModel.provideFactory(repository, settingsRepository)
