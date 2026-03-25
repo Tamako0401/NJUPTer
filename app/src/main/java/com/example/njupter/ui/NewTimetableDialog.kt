@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,7 +31,8 @@ import java.util.Locale
 @Composable
 fun NewTimetableDialog(
     onDismiss: () -> Unit,
-    onConfirm: (String, Long, Int) -> Unit
+    onConfirm: (String, Long, Int) -> Unit,
+    onImportClick: (() -> Unit)? = null
 ) {
     var name by remember { mutableStateOf("") }
     var startDate by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -53,6 +55,15 @@ fun NewTimetableDialog(
         title = { Text(stringResource(R.string.new_timetable)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                if (onImportClick != null) {
+                    FilledTonalButton(
+                        onClick = onImportClick,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("📥 从教务系统快捷导入")
+                    }
+                }
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -116,8 +127,8 @@ fun NewTimetableDialogPreview() {
     MaterialTheme {
         NewTimetableDialog(
             onDismiss = {},
-            onConfirm = { _, _, _ -> }
+            onConfirm = { _, _, _ -> },
+            onImportClick = {}
         )
     }
 }
-

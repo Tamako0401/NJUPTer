@@ -11,12 +11,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * 该类实现了 TimetableRepository 接口，负责从 assets 目录中的 JSON 文件读取课程信息和课程安排数据，并将其转换为领域模型 CourseInfo 和 CourseSession。
+ * 基于文件存储的课表仓库实现，持有StateFlow，调用 DataSource完成持久化
  */
 
-
 class FileTimetableRepository(
-    private val dataSource: TimetableDataSource,
+    private val dataSource: TimetableDataSource,    // 负责实际的文件读写
     private val settingsRepository: SettingsRepository
 ) : TimetableRepository {
 
@@ -154,6 +153,16 @@ class FileTimetableRepository(
     override suspend fun deleteSession(session: CourseSession) {
         _courseSessions.update { current ->
             current - session
+        }
+        saveData()
+    }
+
+    override suspend fun importTimetableData(newCourses: List<CourseInfo>, newSessions: List<CourseSession>) {
+        _courseInfos.update { current ->
+            current + newCourses
+        }
+        _courseSessions.update { current ->
+            current + newSessions
         }
         saveData()
     }
