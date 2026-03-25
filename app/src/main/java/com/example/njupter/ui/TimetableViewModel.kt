@@ -10,6 +10,7 @@ import com.example.njupter.data.TimetableRepository
 import com.example.njupter.data.SettingsRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -27,7 +28,12 @@ data class TimetableUiState(
     val currentStartDate: Long = System.currentTimeMillis(),
     val currentTotalWeeks: Int = 20,
     val showWeekends: Boolean = false,
-    val currentSessionTimes: List<String> = emptyList()
+    val currentSessionTimes: List<String> = emptyList(),
+    
+    // Import state
+    val importResult: com.example.njupter.domain.import.TimetableImportMatcher.ImportResult? = null,
+    val isImporting: Boolean = false,
+    val importError: String? = null
 )
 
 class TimetableViewModel(
@@ -70,6 +76,45 @@ class TimetableViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = TimetableUiState(isLoading = true)
     )
+
+    // A separate StateFlow for import process so we can overlay it on top of the combined flow above.
+    private val _importState = kotlinx.coroutines.flow.MutableStateFlow(ImportState())
+    val importState = _importState.asStateFlow()
+
+    data class ImportState(
+        val isImporting: Boolean = false,
+        val result: com.example.njupter.domain.import.TimetableImportMatcher.ImportResult? = null,
+        val error: String? = null
+    )
+
+    fun fetchAndProcessImport(cookieString: String, xh: String) {
+        viewModelScope.launch {
+            _importState.value = ImportState(isImporting = true)
+            try {
+                // 1. Fetch HTML
+                val client = com.example.njupter.data.import.JwxtClient(cookieString, xh)
+                val html = client.fetchTimetableHtml()
+
+                // 2. Parse HTML
+                val parser = com.example.njupter.data.import.JwxtParser()
+                val remoteCourses = parser.parseHtml(html)
+
+                // 3. Match and Convert
+                val matcher = com.example.njupter.domain.import.TimetableImportMatcher()
+                
+                // For a new timetable, we match against empty lists to treat all courses as new
+                val result = matcher.matchAndConvert(remoteCourses, emptyList(), emptyList())
+                
+                _importState.value = ImportState(result = result)
+            } catch (e: Exception) {
+                _importState.value = ImportState(error = e.message ?: "Unknown error")
+            }
+        }
+    }
+
+    fun clearImportState() {
+        _importState.value = ImportState()
+    }
 
     fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
         viewModelScope.launch {
@@ -116,6 +161,21 @@ class TimetableViewModel(
     fun deleteSession(session: CourseSession) {
         viewModelScope.launch {
             repository.deleteSession(session)
+        }
+    }
+
+    fun createAndImportTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>, newCourses: List<CourseInfo>, newSessions: List<CourseSession>) {
+        viewModelScope.launch {
+            repository.createTimetable(name, startDate, totalWeeks, showWeekends, sessionTimes)
+            // The active timetable is automatically switched inside createTimetable,
+            // so we can now safely import.
+            repository.importTimetableData(newCourses, newSessions)
+        }
+    }
+
+    fun importTimetableData(newCourses: List<CourseInfo>, newSessions: List<CourseSession>) {
+        viewModelScope.launch {
+            repository.importTimetableData(newCourses, newSessions)
         }
     }
 

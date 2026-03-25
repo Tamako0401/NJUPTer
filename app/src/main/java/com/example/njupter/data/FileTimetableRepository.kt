@@ -11,12 +11,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * 该类实现了 TimetableRepository 接口，负责从 assets 目录中的 JSON 文件读取课程信息和课程安排数据，并将其转换为领域模型 CourseInfo 和 CourseSession。
+ * 基于文件存储的课表仓库实现，持有StateFlow，调用 DataSource完成持久化
  */
 
-
 class FileTimetableRepository(
-    private val dataSource: TimetableDataSource,
+    private val dataSource: TimetableDataSource,    // 负责实际的文件读写
     private val settingsRepository: SettingsRepository
 ) : TimetableRepository {
 
@@ -96,7 +95,16 @@ class FileTimetableRepository(
 
     override suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
         val meta = dataSource.createTimetable(name, startDate, totalWeeks, showWeekends, sessionTimes)
-        _availableTimetables.value = dataSource.getAllTimetables()
+        
+        // 强制更新内存中的列表，确保新创建的表立即可用
+        val currentList = dataSource.getAllTimetables()
+        _availableTimetables.value = currentList
+        
+        // 如果列表中找不到刚创建的表（极端情况），手动添加进去以确保 switchTimetable 成功
+        if (_availableTimetables.value.none { it.id == meta.id }) {
+            _availableTimetables.value = _availableTimetables.value + meta
+        }
+
         switchTimetable(meta.id)
     }
 
@@ -154,6 +162,16 @@ class FileTimetableRepository(
     override suspend fun deleteSession(session: CourseSession) {
         _courseSessions.update { current ->
             current - session
+        }
+        saveData()
+    }
+
+    override suspend fun importTimetableData(newCourses: List<CourseInfo>, newSessions: List<CourseSession>) {
+        _courseInfos.update { current ->
+            current + newCourses
+        }
+        _courseSessions.update { current ->
+            current + newSessions
         }
         saveData()
     }

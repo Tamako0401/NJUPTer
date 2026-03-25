@@ -53,7 +53,8 @@ fun TimetableScreen(
     onUpdateSession: (CourseSession, CourseSession) -> Unit = { _, _ -> },
     onDeleteSession: (CourseSession) -> Unit = {},
     onSwitchTimetable: (String) -> Unit = {},
-    onCreateTimetable: (String, Long, Int, Boolean, List<String>) -> Unit = { _, _, _, _, _ -> }
+    onCreateTimetable: (String, Long, Int, Boolean, List<String>) -> Unit = { _, _, _, _, _ -> },
+    onImportClick: (() -> Unit)? = null
 ) {
     val sectionHeight = 60.dp
     val sidebarWidth = 50.dp
@@ -108,6 +109,10 @@ fun TimetableScreen(
             onConfirm = { name, startDate, weeks, showWeekends, times ->
                 onCreateTimetable(name, startDate, weeks, showWeekends, times)
                 showNewTimetableDialog = false
+            },
+            onImportClick = {
+                showNewTimetableDialog = false
+                onImportClick?.invoke()
             }
         )
     }

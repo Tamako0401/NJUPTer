@@ -49,7 +49,8 @@ fun TimetableConfigDialog(
     initialSessionTimes: List<String> = defaultSessionTimes,
     isEditMode: Boolean = false,
     onDismiss: () -> Unit,
-    onConfirm: (String, Long, Int, Boolean, List<String>) -> Unit
+    onConfirm: (String, Long, Int, Boolean, List<String>) -> Unit,
+    onImportClick: (() -> Unit)? = null
 ) {
     var name by remember { mutableStateOf(initialName) }
     var startDate by remember { mutableStateOf(initialStartDate) }
@@ -92,6 +93,17 @@ fun TimetableConfigDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
+                if (!isEditMode && onImportClick != null) {
+                    item {
+                        androidx.compose.material3.FilledTonalButton(
+                            onClick = onImportClick,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("📥 从教务系统快捷导入")
+                        }
+                    }
+                }
+
                 // Name
                 item {
                     OutlinedTextField(
@@ -202,4 +214,3 @@ fun ConfigItemRow(
         }
     }
 }
-
