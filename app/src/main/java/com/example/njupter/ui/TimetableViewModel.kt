@@ -102,11 +102,8 @@ class TimetableViewModel(
                 // 3. Match and Convert
                 val matcher = com.example.njupter.domain.import.TimetableImportMatcher()
                 
-                // Fetch current list to pass into matcher
-                val currentCourses = repository.getCourseInfos().stateIn(viewModelScope).value
-                val currentSessions = repository.getCourseSessions().stateIn(viewModelScope).value
-                
-                val result = matcher.matchAndConvert(remoteCourses, currentCourses, currentSessions)
+                // For a new timetable, we match against empty lists to treat all courses as new
+                val result = matcher.matchAndConvert(remoteCourses, emptyList(), emptyList())
                 
                 _importState.value = ImportState(result = result)
             } catch (e: Exception) {
@@ -164,6 +161,15 @@ class TimetableViewModel(
     fun deleteSession(session: CourseSession) {
         viewModelScope.launch {
             repository.deleteSession(session)
+        }
+    }
+
+    fun createAndImportTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>, newCourses: List<CourseInfo>, newSessions: List<CourseSession>) {
+        viewModelScope.launch {
+            repository.createTimetable(name, startDate, totalWeeks, showWeekends, sessionTimes)
+            // The active timetable is automatically switched inside createTimetable,
+            // so we can now safely import.
+            repository.importTimetableData(newCourses, newSessions)
         }
     }
 

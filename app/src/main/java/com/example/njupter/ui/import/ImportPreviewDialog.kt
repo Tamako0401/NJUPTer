@@ -5,9 +5,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.njupter.domain.import.TimetableImportMatcher
@@ -15,9 +20,11 @@ import com.example.njupter.domain.import.TimetableImportMatcher
 @Composable
 fun ImportPreviewDialog(
     importResult: TimetableImportMatcher.ImportResult,
-    onConfirm: () -> Unit,
+    onConfirm: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var name by remember { mutableStateOf("导入的课表") }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -29,12 +36,22 @@ fun ImportPreviewDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(text = importResult.summary)
-                Text(text = "确认要把这些数据追加到当前课表吗？")
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("新课表名称") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(text = "将为你自动创建一个全新的课表。")
             }
         },
         confirmButton = {
-            Button(onClick = onConfirm) {
-                Text("导入")
+            Button(
+                onClick = { onConfirm(name) },
+                enabled = name.isNotBlank()
+            ) {
+                Text("创建并导入")
             }
         },
         dismissButton = {
@@ -44,4 +61,3 @@ fun ImportPreviewDialog(
         }
     )
 }
-

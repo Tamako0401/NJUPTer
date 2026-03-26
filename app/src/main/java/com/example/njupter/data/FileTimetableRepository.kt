@@ -95,7 +95,16 @@ class FileTimetableRepository(
 
     override suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
         val meta = dataSource.createTimetable(name, startDate, totalWeeks, showWeekends, sessionTimes)
-        _availableTimetables.value = dataSource.getAllTimetables()
+        
+        // 强制更新内存中的列表，确保新创建的表立即可用
+        val currentList = dataSource.getAllTimetables()
+        _availableTimetables.value = currentList
+        
+        // 如果列表中找不到刚创建的表（极端情况），手动添加进去以确保 switchTimetable 成功
+        if (_availableTimetables.value.none { it.id == meta.id }) {
+            _availableTimetables.value = _availableTimetables.value + meta
+        }
+
         switchTimetable(meta.id)
     }
 

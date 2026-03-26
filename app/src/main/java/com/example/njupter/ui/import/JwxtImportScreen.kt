@@ -83,8 +83,8 @@ fun JwxtImportScreen(
                             }
                         }
 
-                        // 智慧校园门户登录页
-                        loadUrl("https://i.njupt.edu.cn/portal")
+                        // 会重定向到统一身份认证
+                        loadUrl("http://jwxt.njupt.edu.cn/login_cas.aspx")
                     }
                 }
             )

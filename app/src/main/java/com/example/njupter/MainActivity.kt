@@ -36,6 +36,7 @@ import com.example.njupter.ui.SettingsScreen
 import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.ui.import.JwxtImportScreen
 import com.example.njupter.ui.import.ImportPreviewDialog
+import com.example.njupter.data.defaultSessionTimes
 
 /**
  * 初始化依赖关系，连接ViewModel与UI，设置应用主题
@@ -65,8 +66,16 @@ class MainActivity : ComponentActivity() {
                 importState.result?.let { result ->
                     ImportPreviewDialog(
                         importResult = result,
-                        onConfirm = {
-                            viewModel.importTimetableData(result.newCourses, result.newSessions)
+                        onConfirm = { name ->
+                            viewModel.createAndImportTimetable(
+                                name = name,
+                                startDate = System.currentTimeMillis(),
+                                totalWeeks = 20,
+                                showWeekends = true,
+                                sessionTimes = defaultSessionTimes,
+                                newCourses = result.newCourses,
+                                newSessions = result.newSessions
+                            )
                             viewModel.clearImportState()
                             showJwxtImport = false
                         },
