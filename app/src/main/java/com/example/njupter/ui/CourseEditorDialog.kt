@@ -48,6 +48,7 @@ fun CourseEditorDialog(
     existingSessions: List<CourseSession>,
     colorsList: List<Color>,
     isDarkTheme: Boolean,
+    totalWeeks: Int,
     onDismiss: () -> Unit,
     onSave: (CourseInfo, CourseSession, Boolean) -> Unit,
     onDelete: () -> Unit
@@ -65,9 +66,8 @@ fun CourseEditorDialog(
     var endSection by remember { mutableStateOf(initialSession?.endSection?.toString() ?: "2") }
 
     // Weeks
-    val maxWeeks = 20
     var selectedWeeks by remember {
-        mutableStateOf(initialSession?.weeks?.toSet() ?: (1..maxWeeks).toSet())
+        mutableStateOf(initialSession?.weeks?.toSet() ?: (1..totalWeeks).toSet())
     }
     var showCustomWeekDialog by remember { mutableStateOf(false) }
 
@@ -83,7 +83,7 @@ fun CourseEditorDialog(
 
     if (showCustomWeekDialog) {
         CustomWeekPickerDialog(
-            totalWeeks = maxWeeks,
+            totalWeeks = totalWeeks,
             initialWeeks = selectedWeeks,
             onDismiss = { showCustomWeekDialog = false },
             onConfirm = {
@@ -118,15 +118,16 @@ fun CourseEditorDialog(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
-                        value = teacher,
-                        onValueChange = { teacher = it },
-                        label = { Text(stringResource(R.string.teacher)) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
                         value = classroom,
                         onValueChange = { classroom = it },
                         label = { Text(stringResource(R.string.classroom)) },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    OutlinedTextField(
+                        value = teacher,
+                        onValueChange = { teacher = it },
+                        label = { Text(stringResource(R.string.teacher)) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -499,7 +500,7 @@ fun WeekGrid(
 @Composable
 fun CourseEditorDialogPreview() {
     val sampleCourses = listOf(
-        CourseInfo("1", "高等数学", "张老师", "教1-101", 0)
+        CourseInfo("1", "高等数学", "张老师", "教 1-101", 0)
     )
     val sampleSessions = listOf(
         CourseSession("1", 1, 1, 2, (1..20).toList())
@@ -518,9 +519,10 @@ fun CourseEditorDialogPreview() {
                 Color(0xFFE0F7FA)
             ),
             isDarkTheme = false,
+            totalWeeks = 20,
             onDismiss = {},
             onSave = { _, _, _ -> },
-            onDelete = {}
+            onDelete = { }
         )
     }
 }

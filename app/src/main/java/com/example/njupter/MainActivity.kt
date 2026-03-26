@@ -1,4 +1,3 @@
-// 初始化依赖关系，连接ViewModel与UI，设置应用主题
 package com.example.njupter
 
 import android.os.Bundle
@@ -35,6 +34,13 @@ import com.example.njupter.data.LocalFileDataSource
 import com.example.njupter.data.SharedPreferencesSettingsRepository
 import com.example.njupter.ui.SettingsScreen
 import com.example.njupter.ui.theme.NJUPTerTheme
+import com.example.njupter.ui.import.JwxtImportScreen
+import com.example.njupter.ui.import.ImportPreviewDialog
+import com.example.njupter.data.defaultSessionTimes
+
+/**
+ * 初始化依赖关系，连接ViewModel与UI，设置应用主题
+ */
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,8 +48,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()  // 全面屏适配
 
         val dataSource = LocalFileDataSource(this)
-        val repository = FileTimetableRepository(dataSource)    // 实例化TimetableRepository，传入MainActivity的Context来读取assets下的JSON
         val settingsRepository = SharedPreferencesSettingsRepository(this)
+        val repository = FileTimetableRepository(dataSource, settingsRepository)    // 实例化TimetableRepository，传入MainActivity的Context来读取assets下的JSON
 
         val viewModel by viewModels<TimetableViewModel> {
             TimetableViewModel.provideFactory(repository, settingsRepository)
@@ -52,55 +58,91 @@ class MainActivity : ComponentActivity() {
         setContent {
             NJUPTerTheme {  // 主题包装
                 val uiState by viewModel.uiState.collectAsState()   // 观察状态，将StateFlow转换成Compose的State
+                val importState by viewModel.importState.collectAsState()
                 var currentTab by remember { mutableStateOf(0) }
+                var showJwxtImport by remember { mutableStateOf(false) }
 
-                Scaffold(
-                    bottomBar = {
-                        NavigationBar {
-                            NavigationBarItem(
-                                selected = currentTab == 0,
-                                onClick = { currentTab = 0 },
-                                icon = { Icon(Icons.Default.Home, contentDescription = "Timetable") },
-                                label = { Text("Timetable") }
+                // 导入预览对话框
+                importState.result?.let { result ->
+                    ImportPreviewDialog(
+                        importResult = result,
+                        onConfirm = { name ->
+                            viewModel.createAndImportTimetable(
+                                name = name,
+                                startDate = System.currentTimeMillis(),
+                                totalWeeks = 20,
+                                showWeekends = true,
+                                sessionTimes = defaultSessionTimes,
+                                newCourses = result.newCourses,
+                                newSessions = result.newSessions
                             )
-                            NavigationBarItem(
-                                selected = currentTab == 1,
-                                onClick = { currentTab = 1 },
-                                icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                                label = { Text(stringResource(R.string.settings)) }
-                            )
+                            viewModel.clearImportState()
+                            showJwxtImport = false
+                        },
+                        onDismiss = {
+                            viewModel.clearImportState()
                         }
-                    }
-                ) { innerPadding ->
-                    Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                        if (currentTab == 0) {
-                            TimetableScreen(
-                                courseInfos = uiState.courseInfos,
-                                courseSessions = uiState.sessions,
-                                timetables = uiState.timetables,
-                                currentTimetableName = uiState.currentTimetableName,
-                                currentTimetableId = uiState.currentTimetableId,
-                                showWeekends = uiState.showWeekends,
-                                onAddCourse = viewModel::addCourse,
-                                onAddSession = viewModel::addSession,
-                                onUpdateCourse = viewModel::updateCourse,
-                                onUpdateSession = viewModel::updateSession,
-                                onDeleteSession = viewModel::deleteSession,
-                                onSwitchTimetable = viewModel::switchTimetable,
-                                onCreateTimetable = viewModel::createTimetable
-                            )
-                        } else {
-                            SettingsScreen(
-                                currentTimetableId = uiState.currentTimetableId,
-                                currentTimetableName = uiState.currentTimetableName,
-                                currentStartDate = uiState.currentStartDate,
-                                currentTotalWeeks = uiState.currentTotalWeeks,
-                                showWeekends = uiState.showWeekends,
-                                onUpdateTimetableMetadata = { id, name, startDate, totalWeeks ->
-                                    viewModel.updateTimetableMetadata(id, name, startDate, totalWeeks)
-                                },
-                                onToggleShowWeekends = viewModel::toggleShowWeekends
-                            )
+                    )
+                }
+
+                if (showJwxtImport) {
+                    JwxtImportScreen(
+                        onBack = { showJwxtImport = false },
+                        onCookiesObtained = { cookie, xh ->
+                            viewModel.fetchAndProcessImport(cookie, xh)
+                        }
+                    )
+                } else {
+                    Scaffold(
+                        bottomBar = {
+                            NavigationBar {
+                                NavigationBarItem(
+                                    selected = currentTab == 0,
+                                    onClick = { currentTab = 0 },
+                                    icon = { Icon(Icons.Default.Home, contentDescription = "Timetable") },
+                                    label = { Text("Timetable") }
+                                )
+                                NavigationBarItem(
+                                    selected = currentTab == 1,
+                                    onClick = { currentTab = 1 },
+                                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                                    label = { Text(stringResource(R.string.settings)) }
+                                )
+                            }
+                        }
+                    ) { innerPadding ->
+                        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                            if (currentTab == 0) {
+                                TimetableScreen(
+                                    courseInfos = uiState.courseInfos,
+                                    courseSessions = uiState.sessions,
+                                    timetables = uiState.timetables,
+                                    currentTimetableName = uiState.currentTimetableName,
+                                    currentTimetableId = uiState.currentTimetableId,
+                                    currentStartDate = uiState.currentStartDate,
+                                    currentTotalWeeks = uiState.currentTotalWeeks,
+                                    sessionTimes = uiState.currentSessionTimes,
+                                    showWeekends = uiState.showWeekends,
+                                    onAddCourse = viewModel::addCourse,
+                                    onAddSession = viewModel::addSession,
+                                    onUpdateCourse = viewModel::updateCourse,
+                                    onUpdateSession = viewModel::updateSession,
+                                    onDeleteSession = viewModel::deleteSession,
+                                    onSwitchTimetable = viewModel::switchTimetable,
+                                    onCreateTimetable = viewModel::createTimetable,
+                                    onImportClick = { showJwxtImport = true }
+                                )
+                            } else {
+                                SettingsScreen(
+                                    currentTimetableId = uiState.currentTimetableId,
+                                    currentTimetableName = uiState.currentTimetableName,
+                                    currentStartDate = uiState.currentStartDate,
+                                    currentTotalWeeks = uiState.currentTotalWeeks,
+                                    currentSessionTimes = uiState.currentSessionTimes,
+                                    currentShowWeekends = uiState.showWeekends,
+                                    onUpdateTimetableMetadata = viewModel::updateTimetableMetadata
+                                )
+                            }
                         }
                     }
                 }
@@ -115,9 +157,9 @@ fun GreetingPreview() {
     NJUPTerTheme {
         // ... (Preview data setup)
         val courseInfos = listOf(
-            CourseInfo("math", "高等数学", "张三", "教1-101"),
-            CourseInfo("physics", "大学物理", "李四", "教2-202"),
-            CourseInfo("cs", "计算机导论", "王五", "教3-303")
+            CourseInfo("math", "高等数学", "李", "教1-145"),
+            CourseInfo("physics", "大学物理", "田", "教1-4191"),
+            CourseInfo("cs", "计算机导论", "所", "教9-810")
         )
         val sessions = listOf(
             CourseSession("math", 1, 1, 2),

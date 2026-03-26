@@ -1,5 +1,3 @@
-// 该类实现了 TimetableRepository 接口，负责从 assets 目录中的 JSON 文件读取课程信息和课程安排数据，并将其转换为领域模型 CourseInfo 和 CourseSession。
-
 package com.example.njupter.data
 
 import kotlinx.coroutines.CoroutineScope
@@ -8,11 +6,20 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class FileTimetableRepository(private val dataSource: TimetableDataSource) : TimetableRepository {
+/**
+ * 基于文件存储的课表仓库实现，持有StateFlow，调用 DataSource完成持久化
+ */
 
+class FileTimetableRepository(
+    private val dataSource: TimetableDataSource,    // 负责实际的文件读写
+    private val settingsRepository: SettingsRepository
+) : TimetableRepository {
+
+    // 状态持有，private 是因为外部只能读取，Mutable 是因为内部有权修改
     private val _courseInfos = MutableStateFlow<List<CourseInfo>>(emptyList())
     private val _courseSessions = MutableStateFlow<List<CourseSession>>(emptyList())
     
@@ -20,14 +27,19 @@ class FileTimetableRepository(private val dataSource: TimetableDataSource) : Tim
     private val _currentTimetableName = MutableStateFlow("")
     private val _currentTimetableId = MutableStateFlow<String?>(null)
     
-    private var isLoaded = false
-
     init {
         CoroutineScope(Dispatchers.IO).launch {
             refreshTimetableList()
-            if (_availableTimetables.value.isNotEmpty()) {
-               val first = _availableTimetables.value.first()
-               switchTimetable(first.id)
+            // 尝试加载上次选择的时间表
+            val lastId = settingsRepository.getLastSelectedTimetableId().firstOrNull()
+            if (lastId != null && _availableTimetables.value.any { it.id == lastId }) {
+                switchTimetable(lastId)
+            } else {
+                // 尝试选择第一个可用项
+                val first = _availableTimetables.value.firstOrNull()
+                if (first != null) {
+                    switchTimetable(first.id)
+                }
             }
         }
     }
@@ -36,9 +48,12 @@ class FileTimetableRepository(private val dataSource: TimetableDataSource) : Tim
         _availableTimetables.value = dataSource.getAllTimetables()
     }
     
-    private fun saveData() {
+    private suspend fun saveData() {
         val id = _currentTimetableId.value ?: return
-        CoroutineScope(Dispatchers.IO).launch {
+        // 启动一个新的协程任务，在IO线程中执行保存操作，避免阻塞主线程
+        // 但是把持久化操作丢到后台线程，不保证完成时间、不保证顺序、不保证成功
+        // CoroutineScope(Dispatchers.IO).launch {
+        // 那就 suspend + 上层控制
             dataSource.saveTimetable(
                 id,
                 TimetableData(
@@ -46,9 +61,10 @@ class FileTimetableRepository(private val dataSource: TimetableDataSource) : Tim
                     sessions = _courseSessions.value
                 )
             )
-        }
+        // }
     }
 
+    // 对外暴露只读流
     override fun getCourseInfos(): Flow<List<CourseInfo>> = _courseInfos.asStateFlow()
     override fun getCourseSessions(): Flow<List<CourseSession>> = _courseSessions.asStateFlow()
     
@@ -57,7 +73,7 @@ class FileTimetableRepository(private val dataSource: TimetableDataSource) : Tim
     override fun getCurrentTimetableId(): Flow<String?> = _currentTimetableId.asStateFlow()
 
     override fun getCurrentTimetable(): Flow<TimetableMetadata?> =
-        kotlinx.coroutines.flow.combine(_availableTimetables, _currentTimetableId) { list, id ->
+        combine(_availableTimetables, _currentTimetableId) { list, id ->
             list.find { it.id == id }
         }
 
@@ -73,21 +89,32 @@ class FileTimetableRepository(private val dataSource: TimetableDataSource) : Tim
         val data = dataSource.loadTimetable(id)
         _courseInfos.value = data.courses
         _courseSessions.value = data.sessions
+
+        settingsRepository.setLastSelectedTimetableId(id)
     }
 
-    override suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int) {
-        val meta = dataSource.createTimetable(name, startDate, totalWeeks)
-        _availableTimetables.value = dataSource.getAllTimetables()
+    override suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
+        val meta = dataSource.createTimetable(name, startDate, totalWeeks, showWeekends, sessionTimes)
+        
+        // 强制更新内存中的列表，确保新创建的表立即可用
+        val currentList = dataSource.getAllTimetables()
+        _availableTimetables.value = currentList
+        
+        // 如果列表中找不到刚创建的表（极端情况），手动添加进去以确保 switchTimetable 成功
+        if (_availableTimetables.value.none { it.id == meta.id }) {
+            _availableTimetables.value = _availableTimetables.value + meta
+        }
+
         switchTimetable(meta.id)
     }
 
-    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int) {
-        dataSource.updateTimetableMetadata(id, name, startDate, totalWeeks)
-        refreshTimetableList()
-        // If current timetable is updated, we might need to refresh UI state if it depends on metadata
-        if (_currentTimetableId.value == id) {
-             _currentTimetableName.value = name
+    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
+        dataSource.updateTimetableMetadata(id, name, startDate, totalWeeks, showWeekends, sessionTimes)
+        
+        if (id == _currentTimetableId.value) {
+            _currentTimetableName.value = name
         }
+        refreshTimetableList()
     }
 
     override suspend fun deleteTimetable(id: String) {
@@ -95,9 +122,6 @@ class FileTimetableRepository(private val dataSource: TimetableDataSource) : Tim
              val first = _availableTimetables.value.firstOrNull()
              if (first != null) {
                  switchTimetable(first.id)
-             } else {
-                 // Create default if all deleted
-                 createTimetable("My Timetable", System.currentTimeMillis(), 20)
              }
         }
         dataSource.deleteTimetable(id)
@@ -128,7 +152,7 @@ class FileTimetableRepository(private val dataSource: TimetableDataSource) : Tim
     override suspend fun updateSession(oldSession: CourseSession, newSession: CourseSession) {
         _courseSessions.update { current ->
             current.map {
-                // CourseSession doesn't have a unique ID, so we compare all fields or object reference
+                // CourseSession 没有唯一 ID，需要比较所有字段或对象引用
                 if (it == oldSession) newSession else it
             }
         }
@@ -138,6 +162,16 @@ class FileTimetableRepository(private val dataSource: TimetableDataSource) : Tim
     override suspend fun deleteSession(session: CourseSession) {
         _courseSessions.update { current ->
             current - session
+        }
+        saveData()
+    }
+
+    override suspend fun importTimetableData(newCourses: List<CourseInfo>, newSessions: List<CourseSession>) {
+        _courseInfos.update { current ->
+            current + newCourses
+        }
+        _courseSessions.update { current ->
+            current + newSessions
         }
         saveData()
     }

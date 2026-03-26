@@ -11,10 +11,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,9 +29,11 @@ import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
 import com.example.njupter.data.TimetableMetadata
 import com.example.njupter.ui.theme.getCourseColors
+import com.example.njupter.domain.getDateForWeekDay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +45,7 @@ fun TimetableScreen(
     currentTimetableId: String? = null,
     currentStartDate: Long = System.currentTimeMillis(),
     currentTotalWeeks: Int = 20,
+    sessionTimes: List<String> = emptyList(),
     showWeekends: Boolean = true,
     onAddCourse: (CourseInfo) -> Unit = {},
     onAddSession: (CourseSession) -> Unit = {},
@@ -50,7 +53,8 @@ fun TimetableScreen(
     onUpdateSession: (CourseSession, CourseSession) -> Unit = { _, _ -> },
     onDeleteSession: (CourseSession) -> Unit = {},
     onSwitchTimetable: (String) -> Unit = {},
-    onCreateTimetable: (String, Long, Int) -> Unit = { _, _, _ -> }
+    onCreateTimetable: (String, Long, Int, Boolean, List<String>) -> Unit = { _, _, _, _, _ -> },
+    onImportClick: (() -> Unit)? = null
 ) {
     val sectionHeight = 60.dp
     val sidebarWidth = 50.dp
@@ -96,14 +100,39 @@ fun TimetableScreen(
     var showTimetableSelector by remember { mutableStateOf(false) }
     var showWeekSelector by remember { mutableStateOf(false) }
 
+    // New state for NewTimetableDialog
+    var showNewTimetableDialog by remember { mutableStateOf(false) }
+
+    if (showNewTimetableDialog) {
+        TimetableConfigDialog(
+            onDismiss = { showNewTimetableDialog = false },
+            onConfirm = { name, startDate, weeks, showWeekends, times ->
+                onCreateTimetable(name, startDate, weeks, showWeekends, times)
+                showNewTimetableDialog = false
+            },
+            onImportClick = {
+                showNewTimetableDialog = false
+                onImportClick?.invoke()
+            }
+        )
+    }
+
     if (showTimetableSelector) {
         TimetableSelectorDialog(
             timetables = timetables,
             currentId = currentTimetableId,
             onDismiss = { showTimetableSelector = false },
             onSelect = onSwitchTimetable,
-            onCreate = { name, startDate -> onCreateTimetable(name, startDate, 20) }
+            onNewTimetable = { showNewTimetableDialog = true }
         )
+    }
+
+    // Show empty state if no timetables exist
+    if (timetables.isEmpty()) {
+        EmptyGuidePlaceholder(
+            onCreateTimetable = { showNewTimetableDialog = true }
+        )
+        return
     }
 
     if (showWeekSelector) {
@@ -132,7 +161,9 @@ fun TimetableScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = if (currentTimetableName.isNotEmpty()) currentTimetableName else stringResource(R.string.timetable),
+                                text = if (currentTimetableName.isNotEmpty()) currentTimetableName else stringResource(
+                                    R.string.timetable
+                                ),
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Icon(
@@ -162,26 +193,33 @@ fun TimetableScreen(
                                     pagerState.animateScrollToPage(prev)
                                 }
                             }) {
-                                Icon(Icons.Default.KeyboardArrowLeft, contentDescription = stringResource(R.string.cd_previous_week))
+                                Icon(
+                                    Icons.Default.KeyboardArrowLeft,
+                                    contentDescription = stringResource(R.string.cd_previous_week)
+                                )
                             }
                             IconButton(onClick = {
                                 scope.launch {
-                                    val next = (pagerState.currentPage + 1).coerceAtMost(currentTotalWeeks - 1)
+                                    val next =
+                                        (pagerState.currentPage + 1).coerceAtMost(currentTotalWeeks - 1)
                                     pagerState.animateScrollToPage(next)
+                                }
+                            }) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = stringResource(R.string.cd_next_week)
+                                )
                             }
-                        }) {
-                            Icon(Icons.Default.KeyboardArrowRight, contentDescription = stringResource(R.string.cd_next_week))
                         }
                     }
-                }
-            },
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-                scrolledContainerColor = Color.Transparent
-            ),
-            modifier = Modifier,
-            windowInsets = WindowInsets(0.dp)
-        )
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = Color.Transparent
+                ),
+                modifier = Modifier,
+                windowInsets = WindowInsets(0.dp)
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
@@ -219,7 +257,11 @@ fun TimetableScreen(
                     )
 
                     dayLabels.forEachIndexed { index, dayLabel ->
-                        val dateString = com.example.njupter.domain.getDateForWeekDay(currentStartDate, currentWeek, index + 1)
+                        val dateString = getDateForWeekDay(
+                            currentStartDate,
+                            currentWeek,
+                            index + 1
+                        )
                         Box(
                             modifier = Modifier.weight(1f).height(45.dp)
                                 .border(0.5.dp, gridBorderColor),
@@ -252,14 +294,52 @@ fun TimetableScreen(
                     Column(modifier = Modifier.width(sidebarWidth).fillMaxHeight()) {
                         (1..maxSection).forEach { section ->
                             Box(
-                                modifier = Modifier.fillMaxWidth().height(sectionHeight)
+                                modifier = Modifier
+                                    .fillMaxWidth().height(sectionHeight)
+                                    .height(sectionHeight)
                                     .border(0.5.dp, gridBorderColor),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = section.toString(),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = section.toString(),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    if (section - 1 < sessionTimes.size && sessionTimes[section - 1].isNotEmpty()) {
+                                        val timeStr = sessionTimes[section - 1]
+                                        val parts = timeStr.split("-")
+                                        if (parts.size == 2) {
+                                            Text(
+                                                text = parts[0],
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
+                                                fontSize = 9.sp,
+                                                lineHeight = 9.sp,
+                                                textAlign = TextAlign.Center,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = parts[1],
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
+                                                fontSize = 9.sp,
+                                                lineHeight = 9.sp,
+                                                textAlign = TextAlign.Center,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        } else {
+                                            Text(
+                                                text = timeStr,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
+                                                fontSize = 9.sp,
+                                                lineHeight = 9.sp,
+                                                textAlign = TextAlign.Center,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -321,36 +401,37 @@ fun TimetableScreen(
                 }
             }
         }
-    }
 
-    if (showDialog) {
-        CourseEditorDialog(
-            initialSession = editingSession,
-            initialCourse = editingCourse,
-            existingCourses = courseInfos,
-            existingSessions = courseSessions,
-            colorsList = currentCourseColors,
-            isDarkTheme = isDark,
-            onDismiss = { showDialog = false },
-            onSave = { info, session, createNewCourse ->
-                if (createNewCourse) {
-                    onAddCourse(info)
-                    onAddSession(session)
-                } else {
-                    if (editingCourse != null && editingCourse != info) onUpdateCourse(info)
-                    if (editingSession != null && editingSession != session) onUpdateSession(
-                        editingSession!!,
-                        session
-                    )
+        if (showDialog) {
+            CourseEditorDialog(
+                initialSession = editingSession,
+                initialCourse = editingCourse,
+                existingCourses = courseInfos,
+                existingSessions = courseSessions,
+                colorsList = currentCourseColors,
+                isDarkTheme = isDark,
+                totalWeeks = currentTotalWeeks,
+                onDismiss = { showDialog = false },
+                onSave = { info, session, createNewCourse ->
+                    if (createNewCourse) {
+                        onAddCourse(info)
+                        onAddSession(session)
+                    } else {
+                        if (editingCourse != null && editingCourse != info) onUpdateCourse(info)
+                        if (editingSession != null && editingSession != session) onUpdateSession(
+                            editingSession!!,
+                            session
+                        )
+                    }
+                    showDialog = false
+                },
+                onDelete = {
+                    if (editingSession != null) {
+                        onDeleteSession(editingSession!!)
+                    }
+                    showDialog = false
                 }
-                showDialog = false
-            },
-            onDelete = {
-                if (editingSession != null) {
-                    onDeleteSession(editingSession!!)
-                }
-                showDialog = false
-            }
-        )
+            )
+        }
     }
 }

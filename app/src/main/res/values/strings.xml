@@ -33,9 +33,9 @@
     <string name="day_of_week">Day of Week</string>
     <string name="start_sec">Start Sec</string>
     <string name="end_sec">End Sec</string>
-    <string name="weeks">Weeks: %1$s</string>
+    <string name="weeks">Weeks</string>
     <string name="weeks_none">None</string>
-    <string name="weeks_selected">%1$d selected</string>
+    <string name="weeks_selected">selected</string>
     <string name="customize">Customize</string>
     <string name="card_color">Card Color</string>
     <string name="auto">A</string>
@@ -61,7 +61,7 @@
     <string name="name">Name</string>
     <string name="create">Create</string>
     <string name="select_timetable">Select Timetable</string>
-    <string name="last_modified">Last modified: %1$s</string>
+    <string name="last_modified">Last modified</string>
 
     <!-- Week Selection Dialog -->
     <string name="jump_to_week">Jump to Week</string>
@@ -80,5 +80,13 @@
     <string name="start_date">Start Date</string>
     <string name="total_weeks">Total Weeks</string>
     <string name="app_settings">App Settings</string>
+
+    <string name="weeks_label">Weeks</string>
+    <string name="no_timetable_title">No Timetable</string>
+    <string name="no_timetable_desc">Create a new timetable to get started</string>
+    <string name="create_timetable">Create Timetable</string>
+    <string name="session_times">Duration of each class</string>
+    <string name="session_times_desc">Edit start/end times for each session</string>
+    <string name="cur_timetable_settings">Edit Current Timetable</string>
 
 </resources>

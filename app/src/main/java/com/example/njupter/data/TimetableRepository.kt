@@ -2,7 +2,9 @@ package com.example.njupter.data
 
 import kotlinx.coroutines.flow.Flow
 
-// 抽象数据源
+/**
+ * 课表数据仓库接口，Flow使数据源支持订阅，数据变化时会主动推送给MainViewModel
+ */
 interface TimetableRepository {
     fun getCourseInfos(): Flow<List<CourseInfo>>
     fun getCourseSessions(): Flow<List<CourseSession>>
@@ -13,8 +15,8 @@ interface TimetableRepository {
     fun getCurrentTimetable(): Flow<TimetableMetadata?>
     
     suspend fun switchTimetable(id: String)
-    suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int)
-    suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int)
+    suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>)
+    suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>)
     suspend fun deleteTimetable(id: String)
 
     suspend fun addCourse(course: CourseInfo)
@@ -22,4 +24,7 @@ interface TimetableRepository {
     suspend fun updateCourse(course: CourseInfo)
     suspend fun updateSession(oldSession: CourseSession, newSession: CourseSession)
     suspend fun deleteSession(session: CourseSession)
+
+    // 新增：批量导入课表数据
+    suspend fun importTimetableData(newCourses: List<CourseInfo>, newSessions: List<CourseSession>)
 }
