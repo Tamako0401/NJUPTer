@@ -30,9 +30,12 @@ import com.example.njupter.data.CourseSession
 import com.example.njupter.data.TimetableMetadata
 import com.example.njupter.ui.theme.getCourseColors
 import com.example.njupter.domain.getDateForWeekDay
+import com.example.njupter.domain.getTodayDayOfWeek
+import com.example.njupter.domain.getTodayWeekIndex
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -96,6 +99,10 @@ fun TimetableScreen(
     val maxSection = 12
 
     val pagerState = rememberPagerState(pageCount = { currentTotalWeeks })
+    val todayWeekIndex = remember(currentStartDate, currentTotalWeeks) {
+        getTodayWeekIndex(currentStartDate, currentTotalWeeks)
+    }
+    val todayDayOfWeek = remember { getTodayDayOfWeek() }
 
     var showTimetableSelector by remember { mutableStateOf(false) }
     var showWeekSelector by remember { mutableStateOf(false) }
@@ -147,6 +154,14 @@ fun TimetableScreen(
                 showWeekSelector = false
             }
         )
+    }
+
+    LaunchedEffect(currentTimetableId, currentStartDate, currentTotalWeeks, todayWeekIndex) {
+        todayWeekIndex?.let { targetPage ->
+            if (pagerState.currentPage != targetPage && targetPage < pagerState.pageCount) {
+                pagerState.scrollToPage(targetPage)
+            }
+        }
     }
 
     Scaffold(
@@ -262,6 +277,17 @@ fun TimetableScreen(
                             currentWeek,
                             index + 1
                         )
+                        val isToday = todayWeekIndex == page && todayDayOfWeek == index + 1
+                        val headerTextColor = if (isToday) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                        val headerDateColor = if (isToday) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                         Box(
                             modifier = Modifier.weight(1f).height(45.dp)
                                 .border(0.5.dp, gridBorderColor),
@@ -271,12 +297,14 @@ fun TimetableScreen(
                                 Text(
                                     text = dayLabel,
                                     style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    color = headerTextColor
                                 )
                                 Text(
                                     text = dateString,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = headerDateColor,
+                                    fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
                                 )
                             }
                         }

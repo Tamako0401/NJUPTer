@@ -1,9 +1,12 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.njupter.ui
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +37,7 @@ fun SessionTimeEditorDialog(
 
     // State for the currently editing index
     var editingIndex by remember { mutableStateOf<Int?>(null) }
+    val conflictIndexes = remember(times) { findConflictIndexes(times) }
 
     if (editingIndex != null) {
         val index = editingIndex!!
@@ -56,32 +60,61 @@ fun SessionTimeEditorDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit Session Times") },
         text = {
-            LazyColumn(
-                modifier = Modifier.heightIn(max = 400.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                itemsIndexed(times) { index, time ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { editingIndex = index }
-                            .padding(vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = "${index + 1}",
-                            modifier = Modifier.width(30.dp),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        
-                        // Display formatted time or placeholder
-                        Text(
-                            text = if (time.isNotBlank()) time else "Set time...",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (time.isNotBlank()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outline
-                        )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (conflictIndexes.isNotEmpty()) {
+                    Text(
+                        text = "Some sessions overlap. Conflicting cards are highlighted in red.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 400.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    itemsIndexed(times) { index, time ->
+                        val hasConflict = index in conflictIndexes
+                        OutlinedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { editingIndex = index },
+                            colors = CardDefaults.outlinedCardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            border = BorderStroke(
+                                width = if (hasConflict) 2.dp else 1.dp,
+                                color = if (hasConflict) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant
+                            )
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp)
+                            ) {
+                                Text(
+                                    text = "${index + 1}",
+                                    modifier = Modifier.width(36.dp),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Text(
+                                    text = if (time.isNotBlank()) time else "Set time...",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = if (hasConflict) {
+                                        MaterialTheme.colorScheme.error
+                                    } else if (time.isNotBlank()) {
+                                        MaterialTheme.colorScheme.onSurface
+                                    } else {
+                                        MaterialTheme.colorScheme.outline
+                                    }
+                                )
+                            }
+                        }
                     }
-                    HorizontalDivider()
                 }
             }
         },
@@ -96,6 +129,51 @@ fun SessionTimeEditorDialog(
             }
         }
     )
+}
+
+private fun findConflictIndexes(times: List<String>): Set<Int> {
+    val parsed = times.map { parseTimeRangeToMinutesOrNull(it) }
+    val conflicts = mutableSetOf<Int>()
+
+    for (i in parsed.indices) {
+        val left = parsed[i] ?: continue
+        if (left.first >= left.second) {
+            conflicts.add(i)
+            continue
+        }
+        for (j in i + 1 until parsed.size) {
+            val right = parsed[j] ?: continue
+            if (right.first >= right.second) {
+                conflicts.add(j)
+                continue
+            }
+            val overlap = left.first < right.second && right.first < left.second
+            if (overlap) {
+                conflicts.add(i)
+                conflicts.add(j)
+            }
+        }
+    }
+
+    return conflicts
+}
+
+private fun parseTimeRangeToMinutesOrNull(timeStr: String): Pair<Int, Int>? {
+    if (timeStr.isBlank()) return null
+    val parts = timeStr.split("-")
+    if (parts.size != 2) return null
+    val start = parseSingleTimeToMinutes(parts[0]) ?: return null
+    val end = parseSingleTimeToMinutes(parts[1]) ?: return null
+    return start to end
+}
+
+private fun parseSingleTimeToMinutes(time: String): Int? {
+    val hm = time.split(":")
+    if (hm.size != 2) return null
+    val h = hm[0].toIntOrNull() ?: return null
+    val m = hm[1].toIntOrNull() ?: return null
+    if (h !in 0..23 || m !in 0..59) return null
+    return h * 60 + m
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
