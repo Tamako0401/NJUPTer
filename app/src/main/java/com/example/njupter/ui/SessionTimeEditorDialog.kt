@@ -2,20 +2,28 @@
 
 package com.example.njupter.ui
 
+import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.njupter.R
-import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,7 +32,6 @@ fun SessionTimeEditorDialog(
     onDismiss: () -> Unit,
     onConfirm: (List<String>) -> Unit
 ) {
-    // Ensure we have 12 items to edit
     var times by remember {
         mutableStateOf(
             if (initialTimes.size < 12) {
@@ -35,16 +42,26 @@ fun SessionTimeEditorDialog(
         )
     }
 
-    // State for the currently editing index
     var editingIndex by remember { mutableStateOf<Int?>(null) }
-    val conflictIndexes = remember(times) { findConflictIndexes(times) }
+    val validationResult = remember(times) { validateSessionTimes(times) }
+    val invalidIndexes = validationResult.invalidIndexes
+    val conflictIndexes = validationResult.overlapIndexes
+    val hasValidationError = invalidIndexes.isNotEmpty() || conflictIndexes.isNotEmpty()
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val screenWidthDp = configuration.screenWidthDp
+
+    val columnCount = when {
+        isLandscape && screenWidthDp >= 1000 -> 3
+        isLandscape -> 2
+        else -> 1
+    }
 
     if (editingIndex != null) {
         val index = editingIndex!!
-        val currentTimeStr = times[index]
-        
         SessionTimePickerDialog(
-            initialTimeStr = currentTimeStr,
+            initialTimeStr = times[index],
             sessionIndex = index + 1,
             onDismiss = { editingIndex = null },
             onConfirm = { newTimeStr ->
@@ -56,25 +73,56 @@ fun SessionTimeEditorDialog(
         )
     }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Session Times") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(if (isLandscape) 0.82f else 0.92f)
+                .wrapContentHeight(),
+            shape = MaterialTheme.shapes.extraLarge,
+            tonalElevation = 6.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp)
+            ) {
+                Text(
+                    text = "Edit Session Times",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (invalidIndexes.isNotEmpty()) {
+                    Text(
+                        text = "Some sessions have invalid ranges. End time must be later than start time.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
                 if (conflictIndexes.isNotEmpty()) {
                     Text(
                         text = "Some sessions overlap. Conflicting cards are highlighted in red.",
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                LazyColumn(
-                    modifier = Modifier.heightIn(max = 400.dp),
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columnCount),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = configuration.screenHeightDp.dp * 0.65f),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     itemsIndexed(times) { index, time ->
-                        val hasConflict = index in conflictIndexes
+                        val hasConflict = index in conflictIndexes || index in invalidIndexes
+
                         OutlinedCard(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -84,83 +132,121 @@ fun SessionTimeEditorDialog(
                             ),
                             border = BorderStroke(
                                 width = if (hasConflict) 2.dp else 1.dp,
-                                color = if (hasConflict) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant
+                                color = if (hasConflict) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.outlineVariant
+                                }
                             )
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(12.dp)
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "${index + 1}",
-                                    modifier = Modifier.width(36.dp),
-                                    style = MaterialTheme.typography.titleMedium
+                                    text = "第 ${index + 1} 节",
+                                    modifier = Modifier
+                                        .width(68.dp)
+                                        .padding(start = 8.dp),
+                                    textAlign = TextAlign.Start,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
 
                                 Text(
                                     text = if (time.isNotBlank()) time else "Set time...",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = if (hasConflict) {
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 8.dp),
+                                    textAlign = TextAlign.End,
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = when {
+                                        hasConflict -> MaterialTheme.colorScheme.error
+                                        time.isNotBlank() -> MaterialTheme.colorScheme.primary
+                                        else -> MaterialTheme.colorScheme.outline
+                                    }
+                                )
+
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = if (hasConflict) {
                                         MaterialTheme.colorScheme.error
-                                    } else if (time.isNotBlank()) {
-                                        MaterialTheme.colorScheme.onSurface
                                     } else {
-                                        MaterialTheme.colorScheme.outline
+                                        MaterialTheme.colorScheme.onSurfaceVariant
                                     }
                                 )
                             }
                         }
                     }
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(times) }) {
-                Text(stringResource(R.string.confirm))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                    TextButton(
+                        onClick = { onConfirm(times) },
+                        enabled = !hasValidationError
+                    ) {
+                        Text(stringResource(R.string.confirm))
+                    }
+                }
             }
         }
-    )
+    }
 }
 
-private fun findConflictIndexes(times: List<String>): Set<Int> {
+private data class SessionTimeValidationResult(
+    val invalidIndexes: Set<Int>,
+    val overlapIndexes: Set<Int>
+)
+
+private fun validateSessionTimes(times: List<String>): SessionTimeValidationResult {
     val parsed = times.map { parseTimeRangeToMinutesOrNull(it) }
-    val conflicts = mutableSetOf<Int>()
+    val invalidIndexes = mutableSetOf<Int>()
+    val overlapIndexes = mutableSetOf<Int>()
 
     for (i in parsed.indices) {
         val left = parsed[i] ?: continue
         if (left.first >= left.second) {
-            conflicts.add(i)
+            invalidIndexes.add(i)
             continue
         }
         for (j in i + 1 until parsed.size) {
             val right = parsed[j] ?: continue
             if (right.first >= right.second) {
-                conflicts.add(j)
+                invalidIndexes.add(j)
                 continue
             }
             val overlap = left.first < right.second && right.first < left.second
             if (overlap) {
-                conflicts.add(i)
-                conflicts.add(j)
+                overlapIndexes.add(i)
+                overlapIndexes.add(j)
             }
         }
     }
 
-    return conflicts
+    return SessionTimeValidationResult(
+        invalidIndexes = invalidIndexes,
+        overlapIndexes = overlapIndexes
+    )
 }
 
 private fun parseTimeRangeToMinutesOrNull(timeStr: String): Pair<Int, Int>? {
     if (timeStr.isBlank()) return null
-    val parts = timeStr.split("-")
+    val parts = timeStr.split("-").map { it.trim() }
     if (parts.size != 2) return null
     val start = parseSingleTimeToMinutes(parts[0]) ?: return null
     val end = parseSingleTimeToMinutes(parts[1]) ?: return null
@@ -168,7 +254,7 @@ private fun parseTimeRangeToMinutesOrNull(timeStr: String): Pair<Int, Int>? {
 }
 
 private fun parseSingleTimeToMinutes(time: String): Int? {
-    val hm = time.split(":")
+    val hm = time.trim().split(":")
     if (hm.size != 2) return null
     val h = hm[0].toIntOrNull() ?: return null
     val m = hm[1].toIntOrNull() ?: return null
@@ -186,6 +272,10 @@ fun SessionTimePickerDialog(
 ) {
     // Parse initial string "HH:mm-HH:mm"
     // If invalid, default to current time for start, +45m for end
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     val (startHour, startMinute, endHour, endMinute) = remember(initialTimeStr) {
         parseTimeRange(initialTimeStr)
     }
@@ -203,15 +293,38 @@ fun SessionTimePickerDialog(
 
     // 0 = Start, 1 = End
     var selectedTab by remember { mutableStateOf(0) }
+    val isRangeValid = remember(
+        startTimeState.hour,
+        startTimeState.minute,
+        endTimeState.hour,
+        endTimeState.minute
+    ) {
+        val startMinutes = startTimeState.hour * 60 + startTimeState.minute
+        val endMinutes = endTimeState.hour * 60 + endTimeState.minute
+        endMinutes > startMinutes
+    }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Session $sessionIndex Time") },
-        text = {
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(if (isLandscape) 0.75f else 0.9f)
+                .wrapContentHeight(),
+            shape = MaterialTheme.shapes.extraLarge,
+            tonalElevation = 6.dp
+        ) {
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Text(
+                    text = "Edit Session $sessionIndex Time",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
                 TabRow(selectedTabIndex = selectedTab) {
                     Tab(
                         selected = selectedTab == 0,
@@ -224,31 +337,40 @@ fun SessionTimePickerDialog(
                         text = { Text("End Time") }
                     )
                 }
-                
                 Spacer(modifier = Modifier.height(16.dp))
-
-                if (selectedTab == 0) {
-                    TimePicker(state = startTimeState)
-                } else {
-                    TimePicker(state = endTimeState)
+                val currentState = if (selectedTab == 0) startTimeState else endTimeState
+                TimePicker(state = currentState)
+                if (!isRangeValid) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "End time must be later than start time.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                    TextButton(
+                        onClick = {
+                            val start =
+                                "%02d:%02d".format(startTimeState.hour, startTimeState.minute)
+                            val end = "%02d:%02d".format(endTimeState.hour, endTimeState.minute)
+                            onConfirm("$start-$end")
+                        },
+                        enabled = isRangeValid
+                    ) {
+                        Text(stringResource(R.string.confirm))
+                    }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                val start = String.format("%02d:%02d", startTimeState.hour, startTimeState.minute)
-                val end = String.format("%02d:%02d", endTimeState.hour, endTimeState.minute)
-                onConfirm("$start-$end")
-            }) {
-                Text("OK")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
         }
-    )
+    }
 }
 
 fun parseTimeRange(timeStr: String): List<Int> {
@@ -256,11 +378,11 @@ fun parseTimeRange(timeStr: String): List<Int> {
     if (timeStr.isBlank()) return default
     
     return try {
-        val parts = timeStr.split("-")
+        val parts = timeStr.split("-").map { it.trim() }
         if (parts.size != 2) return default
         
-        val startParts = parts[0].split(":")
-        val endParts = parts[1].split(":")
+        val startParts = parts[0].split(":").map { it.trim() }
+        val endParts = parts[1].split(":").map { it.trim() }
         
         if (startParts.size != 2 || endParts.size != 2) return default
         
