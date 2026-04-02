@@ -88,7 +88,7 @@ fun SessionTimeEditorDialog(
                 modifier = Modifier.padding(24.dp)
             ) {
                 Text(
-                    text = "Edit Session Times",
+                    text = stringResource(R.string.edit_session_times),
                     style = MaterialTheme.typography.headlineSmall
                 )
 
@@ -96,7 +96,7 @@ fun SessionTimeEditorDialog(
 
                 if (invalidIndexes.isNotEmpty()) {
                     Text(
-                        text = "Some sessions have invalid ranges. End time must be later than start time.",
+                        text = stringResource(R.string.session_invalid_range),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -105,7 +105,7 @@ fun SessionTimeEditorDialog(
 
                 if (conflictIndexes.isNotEmpty()) {
                     Text(
-                        text = "Some sessions overlap. Conflicting cards are highlighted in red.",
+                        text = stringResource(R.string.session_overlap),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -146,7 +146,7 @@ fun SessionTimeEditorDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "第 ${index + 1} 节",
+                                    text = stringResource(R.string.session_section, index + 1),
                                     modifier = Modifier
                                         .width(68.dp)
                                         .padding(start = 8.dp),
@@ -158,7 +158,7 @@ fun SessionTimeEditorDialog(
                                 Spacer(modifier = Modifier.width(8.dp))
 
                                 Text(
-                                    text = if (time.isNotBlank()) time else "Set time...",
+                                    text = if (time.isNotBlank()) time else stringResource(R.string.set_time_placeholder),
                                     modifier = Modifier
                                         .weight(1f)
                                         .padding(end = 8.dp),
@@ -320,7 +320,7 @@ fun SessionTimePickerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Edit Session $sessionIndex Time",
+                    text = stringResource(R.string.edit_session_time, sessionIndex),
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -329,12 +329,12 @@ fun SessionTimePickerDialog(
                     Tab(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
-                        text = { Text("Start Time") }
+                        text = { Text(stringResource(R.string.start_time)) }
                     )
                     Tab(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
-                        text = { Text("End Time") }
+                        text = { Text(stringResource(R.string.end_time)) }
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -343,7 +343,7 @@ fun SessionTimePickerDialog(
                 if (!isRangeValid) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "End time must be later than start time.",
+                        text = stringResource(R.string.end_before_start),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )

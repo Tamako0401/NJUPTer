@@ -88,4 +88,45 @@
     <string name="session_times_desc">调整每节课的开始/结束时间</string>
     <string name="cur_timetable_settings">编辑当前课表</string>
 
+    <!-- Session Time Editor Dialog -->
+    <string name="edit_session_times">编辑节次时间</string>
+    <string name="session_invalid_range">部分节次时间设置无效。结束时间必须晚于开始时间。</string>
+    <string name="session_overlap">部分节次存在时间重叠，冲突项已标红。</string>
+    <string name="session_section">第%1$d节</string>
+    <string name="set_time_placeholder">点击设置...</string>
+    <string name="edit_session_time">编辑第%1$d节时间</string>
+    <string name="start_time">开始时间</string>
+    <string name="end_time">结束时间</string>
+    <string name="end_before_start">结束时间必须晚于开始时间。</string>
+
+    <!-- Import Preview Dialog -->
+    <string name="import_preview">导入预览</string>
+    <string name="imported_timetable_name">导入的课表</string>
+    <string name="new_timetable_name">新课表名称</string>
+    <string name="import_desc">将为你自动创建一个全新的课表。</string>
+    <string name="create_and_import">创建并导入</string>
+
+    <!-- Jwxt Import -->
+    <string name="jwxt_login_title">智慧校园统一认证</string>
+    <string name="cd_back">返回</string>
+    <string name="import_from_jwxt">从教务系统快捷导入</string>
+    <string name="session_times_label">节次时间</string>
+    <string name="edit">编辑</string>
+
+    <!-- Course Editor -->
+    <string name="save_btn">保存</string>
+    <string name="cd_timetable">课程表</string>
+    <string name="cd_settings">设置</string>
+
+    <!-- Validation Errors -->
+    <string name="error_start_after_end">错误：开始节次（%1$d）不能大于结束节次（%2$d）。</string>
+    <string name="error_no_week">错误：至少需要选择一周。</string>
+    <string name="error_time_conflict">错误：与已有时段冲突：周%1$d，第%2$d-%3$d节。</string>
+    <string name="error_course_duplicate">错误：课程 \'%1$s\'（教师：%2$s，教室：%3$s）已存在。</string>
+    <string name="error_unknown">未知错误</string>
+
+    <!-- Import Summary -->
+    <string name="import_summary">共发现新课程组合 %1$d 门，新增上课时段 %2$d 个。</string>
+    <string name="default_timetable_name">我的课表</string>
+
 </resources>

@@ -99,13 +99,13 @@ class MainActivity : ComponentActivity() {
                                 NavigationBarItem(
                                     selected = currentTab == 0,
                                     onClick = { currentTab = 0 },
-                                    icon = { Icon(Icons.Default.Home, contentDescription = "Timetable") },
-                                    label = { Text("Timetable") }
+                                    icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.cd_timetable)) },
+                                    label = { Text(stringResource(R.string.timetable)) }
                                 )
                                 NavigationBarItem(
                                     selected = currentTab == 1,
                                     onClick = { currentTab = 1 },
-                                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                                    icon = { Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.cd_settings)) },
                                     label = { Text(stringResource(R.string.settings)) }
                                 )
                             }

@@ -13,7 +13,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.njupter.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled")
@@ -22,8 +24,9 @@ fun JwxtImportScreen(
     onBack: () -> Unit,
     onCookiesObtained: (String, String) -> Unit
 ) {
-    var title by remember { mutableStateOf("智慧校园统一认证") }
-    
+    val defaultTitle = stringResource(R.string.jwxt_login_title)
+    var title by remember(defaultTitle) { mutableStateOf(defaultTitle) }
+
     // 为了防止多次触发成功回调
     var isSuccess by remember { mutableStateOf(false) }
 
@@ -33,7 +36,7 @@ fun JwxtImportScreen(
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 }
             )

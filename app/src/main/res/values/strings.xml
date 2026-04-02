@@ -89,4 +89,45 @@
     <string name="session_times_desc">Edit start/end times for each session</string>
     <string name="cur_timetable_settings">Edit Current Timetable</string>
 
+    <!-- Session Time Editor Dialog -->
+    <string name="edit_session_times">Edit Session Times</string>
+    <string name="session_invalid_range">Some sessions have invalid ranges. End time must be later than start time.</string>
+    <string name="session_overlap">Some sessions overlap. Conflicting cards are highlighted in red.</string>
+    <string name="session_section">Section %1$d</string>
+    <string name="set_time_placeholder">Set time...</string>
+    <string name="edit_session_time">Edit Session %1$d Time</string>
+    <string name="start_time">Start Time</string>
+    <string name="end_time">End Time</string>
+    <string name="end_before_start">End time must be later than start time.</string>
+
+    <!-- Import Preview Dialog -->
+    <string name="import_preview">Import Preview</string>
+    <string name="imported_timetable_name">Imported Timetable</string>
+    <string name="new_timetable_name">New Timetable Name</string>
+    <string name="import_desc">A new timetable will be created automatically.</string>
+    <string name="create_and_import">Create and Import</string>
+
+    <!-- Jwxt Import -->
+    <string name="jwxt_login_title">Campus Authentication</string>
+    <string name="cd_back">Back</string>
+    <string name="import_from_jwxt">Import from Academic System</string>
+    <string name="session_times_label">Session Times</string>
+    <string name="edit">Edit</string>
+
+    <!-- Course Editor -->
+    <string name="save_btn">Save</string>
+    <string name="cd_timetable">Timetable</string>
+    <string name="cd_settings">Settings</string>
+
+    <!-- Validation Errors -->
+    <string name="error_start_after_end">Error: Start section (%1$d) cannot be greater than End section (%2$d).</string>
+    <string name="error_no_week">Error: At least one week must be selected.</string>
+    <string name="error_time_conflict">Error: Time conflict with existing session: Day %1$d, Sections %2$d-%3$d.</string>
+    <string name="error_course_duplicate">Error: Course \'%1$s\' with teacher \'%2$s\' in room \'%3$s\' already exists.</string>
+    <string name="error_unknown">Unknown error</string>
+
+    <!-- Import Summary -->
+    <string name="import_summary">Found %1$d new courses, %2$d new sessions.</string>
+    <string name="default_timetable_name">My Timetable</string>
+
 </resources>

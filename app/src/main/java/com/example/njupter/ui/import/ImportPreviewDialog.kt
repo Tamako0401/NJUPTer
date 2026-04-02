@@ -14,7 +14,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.njupter.R
 import com.example.njupter.domain.import.TimetableImportMatcher
 
 @Composable
@@ -23,12 +25,13 @@ fun ImportPreviewDialog(
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var name by remember { mutableStateOf("导入的课表") }
+    val defaultName = stringResource(R.string.imported_timetable_name)
+    var name by remember(defaultName) { mutableStateOf(defaultName) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(text = "导入预览")
+            Text(text = stringResource(R.string.import_preview))
         },
         text = {
             Column(
@@ -39,11 +42,11 @@ fun ImportPreviewDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("新课表名称") },
+                    label = { Text(stringResource(R.string.new_timetable_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text(text = "将为你自动创建一个全新的课表。")
+                Text(text = stringResource(R.string.import_desc))
             }
         },
         confirmButton = {
@@ -51,12 +54,12 @@ fun ImportPreviewDialog(
                 onClick = { onConfirm(name) },
                 enabled = name.isNotBlank()
             ) {
-                Text("创建并导入")
+                Text(stringResource(R.string.create_and_import))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

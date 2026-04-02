@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
 import com.example.njupter.domain.validation.CourseValidator
+import com.example.njupter.domain.validation.ValidationError
 import kotlinx.coroutines.delay
 import java.util.UUID
 import kotlinx.coroutines.launch
@@ -38,7 +39,18 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import com.example.njupter.R
+import android.content.Context
+
+private fun ValidationError.toLocalizedString(context: Context): String {
+    return when (this) {
+        is ValidationError.StartAfterEnd -> context.getString(R.string.error_start_after_end, start, end)
+        is ValidationError.NoWeekSelected -> context.getString(R.string.error_no_week)
+        is ValidationError.TimeConflict -> context.getString(R.string.error_time_conflict, day, startSection, endSection)
+        is ValidationError.CourseDuplicate -> context.getString(R.string.error_course_duplicate, name, teacher, classroom)
+    }
+}
 
 @Composable
 fun CourseEditorDialog(
@@ -53,6 +65,8 @@ fun CourseEditorDialog(
     onSave: (CourseInfo, CourseSession, Boolean) -> Unit,
     onDelete: () -> Unit
 ) {
+    val context = LocalContext.current
+
     // Info
     var courseId by remember { mutableStateOf(initialCourse?.id ?: UUID.randomUUID().toString()) }
     var courseName by remember { mutableStateOf(initialCourse?.name ?: "") }
@@ -306,7 +320,7 @@ fun CourseEditorDialog(
                 )
 
                 if (timeError != null) {
-                    errorMessage = timeError
+                    errorMessage = timeError.toLocalizedString(context)
                     scope.launch {
                         delay(16)
                         scrollState.animateScrollTo(scrollState.maxValue)
@@ -324,7 +338,7 @@ fun CourseEditorDialog(
                 )
 
                 if (duplicationError != null) {
-                    errorMessage = duplicationError
+                    errorMessage = duplicationError.toLocalizedString(context)
                     scope.launch {
                         delay(16)
                         scrollState.animateScrollTo(scrollState.maxValue)
@@ -350,7 +364,7 @@ fun CourseEditorDialog(
                 )
                 
                 onSave(info, finalSession, initialCourse == null)
-            }) { Text("Save") }
+            }) { Text(stringResource(R.string.save_btn)) }
         },
         dismissButton = {
             if (initialSession != null) {

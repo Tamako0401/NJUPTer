@@ -4,6 +4,7 @@ import android.content.Context
 import java.util.UUID
 import java.io.File
 import com.google.gson.Gson
+import com.example.njupter.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -35,7 +36,7 @@ class LocalFileDataSource(private val context: Context) : TimetableDataSource {
         // Migration logic
         val oldFile = File(context.filesDir, oldFileName)
         val initialList = if (oldFile.exists()) {
-            val defaultMeta = TimetableMetadata(id = "default", name = "My Timetable", lastModified = System.currentTimeMillis())
+            val defaultMeta = TimetableMetadata(id = "default", name = context.getString(R.string.default_timetable_name), lastModified = System.currentTimeMillis())
             val newFile = getDataFile("default")
             oldFile.renameTo(newFile)
             listOf(defaultMeta)

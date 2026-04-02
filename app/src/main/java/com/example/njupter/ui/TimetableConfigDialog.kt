@@ -99,7 +99,7 @@ fun TimetableConfigDialog(
                             onClick = onImportClick,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("📥 从教务系统快捷导入")
+                            Text(stringResource(R.string.import_from_jwxt))
                         }
                     }
                 }
@@ -159,8 +159,8 @@ fun TimetableConfigDialog(
                 // Session Times
                 item {
                     ConfigItemRow(
-                        label = "Session Times", // TODO: resource
-                        value = "Edit",
+                        label = stringResource(R.string.session_times_label),
+                        value = stringResource(R.string.edit),
                         onClick = { showSessionTimeEditor = true }
                     )
                 }

@@ -20,7 +20,8 @@ class TimetableImportMatcher {
     fun matchAndConvert(
         remoteCourses: List<RemoteCourse>,
         existingCourses: List<CourseInfo>,
-        existingSessions: List<CourseSession>
+        existingSessions: List<CourseSession>,
+        summaryTemplate: (Int, Int) -> String = { courses, sessions -> "Found $courses new courses, $sessions new sessions." }
     ): ImportResult {
         
         val newInfos = mutableListOf<CourseInfo>()
@@ -87,7 +88,7 @@ class TimetableImportMatcher {
         return ImportResult(
             newCourses = newInfos,
             newSessions = newSessions,
-            summary = "共发现新课程组合 $totalNewCourses 门，新增上课时段 $importedCount 个。"
+            summary = summaryTemplate(totalNewCourses, importedCount)
         )
     }
 }
