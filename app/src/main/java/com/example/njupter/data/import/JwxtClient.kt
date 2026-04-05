@@ -15,11 +15,11 @@ class JwxtClient(private val cookieString: String, private val xh: String) {
         // 构建包含选课学号的课表 URL
         val timetableUrl = "http://jwxt.njupt.edu.cn/xskbcx.aspx?xh=$xh&gnmkdm=N121603"
 
-        // 第一步：构建请求并注入从 WebView 拿到的 Cookie
+        // 构建请求并注入从 WebView 拿到的 Cookie
         val request = Request.Builder()
             .url(timetableUrl)
             .addHeader("Cookie", cookieString)
-            // 有些正方系统查课表需要 Referer
+            // 查课表需要 Referer
             .addHeader("Referer", "http://jwxt.njupt.edu.cn/xs_main.aspx?xh=$xh")
             .build()
         
@@ -29,7 +29,7 @@ class JwxtClient(private val cookieString: String, private val xh: String) {
             }
             
             val bytes = response.body?.bytes() ?: throw Exception("Empty response body")
-            String(bytes, charset("GBK")) // 注意：这里根据课表页面 charset 设定为 GBK
+            String(bytes, charset("GBK"))
         }
     }
 }

@@ -41,7 +41,7 @@ class TimetableViewModel(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    val uiState: StateFlow<TimetableUiState> = combine(
+    val uiState: StateFlow<TimetableUiState> = combine(     // 数据层从这里开始 --> FileTimetableRepository
         combine(
             repository.getCourseInfos(),
             repository.getCourseSessions(),
@@ -51,7 +51,7 @@ class TimetableViewModel(
         repository.getCurrentTimetableId(),
         repository.getCurrentTimetable()
     ) { (courses, sessions, timetables), currentName, currentId, currentMeta ->
-        // Handle defaults for missing metadata (e.g. from older JSON files where fields are 0)
+        // 处理缺失元数据的默认值
         val safeTotalWeeks = currentMeta?.totalWeeks?.takeIf { it > 0 } ?: 20
         // If startDate is 0 (1970), maybe default to now? Or let user see 1970 to fix it.
         // User complained about 1970-01-01. Providing a default if 0 seems appropriate.

@@ -25,7 +25,7 @@ class JwxtParser {
         val document: Document = Jsoup.parse(html)
         val courses = mutableListOf<RemoteCourse>()
         
-        // 正方课表通常是一个 id 为 "Table1" 的表格
+        // 课表通常是一个 id 为 "Table1" 的表格
         val table = document.getElementById("Table1") ?: return emptyList()
         val tds = table.select("td[align=Center]")
         
@@ -35,7 +35,7 @@ class JwxtParser {
             if (htmlContent.isBlank() || htmlContent.contains("&nbsp;")) continue
             if (!htmlContent.contains("{") && !htmlContent.contains("}")) continue
             
-            // 有的 td 内包含多门课程，由于老系统常常用 <br><br> 分隔这些共占用一个单元格的课
+            // 有的 td 内包含多门课程，<br><br> 分隔这些共占用一个单元格的课
             val courseBlocks = htmlContent.split("<br><br>", "<br><br/>", "<br/><br/>")
             
             for (block in courseBlocks) {
@@ -44,9 +44,9 @@ class JwxtParser {
                 
                 if (lines.size >= 3) {
                     val name = lines[0]
-                    val timeWeekStr = lines[1] // 例如: "周四第3,4节{第1-17周|单周}"
+                    val timeWeekStr = lines[1] // 例: "周四第3,4节{第1-17周|单周}"
                     val teacher = lines[2]
-                    val classroom = if (lines.size >= 4) lines[3] else "" // 第四行可能是上课地点，有些可能缺失
+                    val classroom = if (lines.size >= 4) lines[3] else "" // 第四行是上课地点，有些可能缺失
                     
                     if (timeWeekStr.length >= 2) {
                         val dayOfWeek = parseDay(timeWeekStr.substring(0, 2))
