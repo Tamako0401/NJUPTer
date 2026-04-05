@@ -49,8 +49,9 @@ class TimetableViewModel(
         ) { courses, sessions, timetables -> Triple(courses, sessions, timetables) },
         repository.getCurrentTimetableName(),
         repository.getCurrentTimetableId(),
-        repository.getCurrentTimetable()
-    ) { (courses, sessions, timetables), currentName, currentId, currentMeta ->
+        repository.getCurrentTimetable(),
+        repository.getIsInitialized()
+    ) { (courses, sessions, timetables), currentName, currentId, currentMeta, initialized ->
         // 处理缺失元数据的默认值
         val safeTotalWeeks = currentMeta?.totalWeeks?.takeIf { it > 0 } ?: 20
         // If startDate is 0 (1970), maybe default to now? Or let user see 1970 to fix it.
@@ -62,7 +63,7 @@ class TimetableViewModel(
         TimetableUiState(
             courseInfos = courses,
             sessions = sessions,
-            isLoading = false,
+            isLoading = !initialized,
             timetables = timetables,
             currentTimetableName = currentName,
             currentTimetableId = currentId,

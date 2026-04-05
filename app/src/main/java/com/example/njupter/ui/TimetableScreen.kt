@@ -50,6 +50,7 @@ fun TimetableScreen(
     currentTotalWeeks: Int = 20,
     sessionTimes: List<String> = emptyList(),
     showWeekends: Boolean = true,
+    isLoading: Boolean = false,
     onAddCourse: (CourseInfo) -> Unit = {},
     onAddSession: (CourseSession) -> Unit = {},
     onUpdateCourse: (CourseInfo) -> Unit = {},
@@ -132,6 +133,16 @@ fun TimetableScreen(
             onSelect = onSwitchTimetable,
             onNewTimetable = { showNewTimetableDialog = true }
         )
+    }
+
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
     }
 
     // Show empty state if no timetables exist

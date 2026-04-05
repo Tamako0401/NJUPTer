@@ -2,12 +2,12 @@ package com.example.njupter.data
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -20,6 +20,8 @@ class FileTimetableRepository(
     private val settingsRepository: SettingsRepository
 ) : TimetableRepository {
 
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     // 持有5个MutableStateFlow，private 是因为外部只能读取，对外只暴露Flow，Mutable 是因为内部有权修改
     private val _courseInfos = MutableStateFlow<List<CourseInfo>>(emptyList())
     private val _courseSessions = MutableStateFlow<List<CourseSession>>(emptyList())
@@ -27,21 +29,24 @@ class FileTimetableRepository(
     private val _availableTimetables = MutableStateFlow<List<TimetableMetadata>>(emptyList())
     private val _currentTimetableName = MutableStateFlow("")
     private val _currentTimetableId = MutableStateFlow<String?>(null)
-    
+
+    private val _isInitialized = MutableStateFlow(false)
+
+    override fun getIsInitialized(): StateFlow<Boolean> = _isInitialized.asStateFlow()
+
     init {
-        CoroutineScope(Dispatchers.IO).launch {
+        repositoryScope.launch {
             refreshTimetableList()
-            // 尝试加载上次选择的时间表
-            val lastId = settingsRepository.getLastSelectedTimetableId().firstOrNull()
+            val lastId = settingsRepository.peekLastSelectedTimetableId()
             if (lastId != null && _availableTimetables.value.any { it.id == lastId }) {
                 switchTimetable(lastId)
             } else {
-                // 尝试选择第一个可用项
                 val first = _availableTimetables.value.firstOrNull()
                 if (first != null) {
                     switchTimetable(first.id)
                 }
             }
+            _isInitialized.value = true
         }
     }
 

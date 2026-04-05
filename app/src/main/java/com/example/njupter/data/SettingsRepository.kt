@@ -12,6 +12,9 @@ interface SettingsRepository {
     
     fun getLastSelectedTimetableId(): Flow<String?>
     suspend fun setLastSelectedTimetableId(id: String)
+    fun peekLastSelectedTimetableId(): String? {
+        return (getLastSelectedTimetableId() as? MutableStateFlow)?.value
+    }
 }
 
 class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository {

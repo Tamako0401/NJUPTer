@@ -123,6 +123,7 @@ class MainActivity : ComponentActivity() {
                                     currentTotalWeeks = uiState.currentTotalWeeks,
                                     sessionTimes = uiState.currentSessionTimes,
                                     showWeekends = uiState.showWeekends,
+                                    isLoading = uiState.isLoading,
                                     onAddCourse = viewModel::addCourse,
                                     onAddSession = viewModel::addSession,
                                     onUpdateCourse = viewModel::updateCourse,

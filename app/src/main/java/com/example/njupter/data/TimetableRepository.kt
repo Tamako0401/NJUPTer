@@ -13,6 +13,7 @@ interface TimetableRepository {
     fun getCurrentTimetableName(): StateFlow<String>
     fun getCurrentTimetableId(): StateFlow<String?>
     fun getCurrentTimetable(): Flow<TimetableMetadata?>
+    fun getIsInitialized(): StateFlow<Boolean>
     
     suspend fun switchTimetable(id: String)
     suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>)
