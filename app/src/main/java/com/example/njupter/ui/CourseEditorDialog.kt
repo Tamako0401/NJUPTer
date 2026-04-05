@@ -33,7 +33,6 @@ import kotlinx.coroutines.delay
 import java.util.UUID
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.HorizontalDivider
@@ -448,8 +447,12 @@ fun CustomWeekPickerDialog(
                             Text(stringResource(R.string.even_week), maxLines = 1)
                         }
                     }
-                    TextButton(onClick = { tempWeeks = emptySet() }) {
-                        Text(stringResource(R.string.clear), color = MaterialTheme.colorScheme.error)
+                    TextButton(
+                        onClick = { tempWeeks = emptySet() },
+                        modifier = Modifier.fillMaxWidth(1f / 3)
+
+                    ) {
+                        Text(stringResource(R.string.clear), color = MaterialTheme.colorScheme.error, maxLines = 1)
                     }
                 }
             }
