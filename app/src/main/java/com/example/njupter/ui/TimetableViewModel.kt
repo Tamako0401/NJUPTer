@@ -37,8 +37,7 @@ data class TimetableUiState(
 )
 
 class TimetableViewModel(
-    private val repository: TimetableRepository,
-    private val settingsRepository: SettingsRepository
+    private val repository: TimetableRepository
 ) : ViewModel() {
 
     val uiState: StateFlow<TimetableUiState> = combine(     // 数据层从这里开始 --> FileTimetableRepository
@@ -57,7 +56,7 @@ class TimetableViewModel(
         // If startDate is 0 (1970), maybe default to now? Or let user see 1970 to fix it.
         // User complained about 1970-01-01. Providing a default if 0 seems appropriate.
         val safeStartDate = if (currentMeta?.startDate != null && currentMeta.startDate > 0) currentMeta.startDate else System.currentTimeMillis()
-        val safeSessionTimes = currentMeta?.nonNullSessionTimes ?: com.example.njupter.data.TimetableMetadata("", "", 0).nonNullSessionTimes
+        val safeSessionTimes = currentMeta?.nonNullSessionTimes ?: TimetableMetadata("", "", 0).nonNullSessionTimes
         val safeShowWeekends = currentMeta?.showWeekends ?: true
 
         TimetableUiState(
@@ -174,12 +173,6 @@ class TimetableViewModel(
         }
     }
 
-    fun importTimetableData(newCourses: List<CourseInfo>, newSessions: List<CourseSession>) {
-        viewModelScope.launch {
-            repository.importTimetableData(newCourses, newSessions)
-        }
-    }
-
     // Factory模式用于依赖注入
     companion object {
         fun provideFactory(
@@ -188,7 +181,7 @@ class TimetableViewModel(
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return TimetableViewModel(repository, settingsRepository) as T
+                return TimetableViewModel(repository) as T
             }
         }
     }

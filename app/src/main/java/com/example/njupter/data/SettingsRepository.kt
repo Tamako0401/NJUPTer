@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.core.content.edit
 
 interface SettingsRepository {
     fun getShowWeekends(): Flow<Boolean>
@@ -25,14 +26,14 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
     override fun getShowWeekends(): Flow<Boolean> = _showWeekends.asStateFlow()
 
     override suspend fun setShowWeekends(show: Boolean) {
-        prefs.edit().putBoolean("show_weekends", show).apply()
+        prefs.edit { putBoolean("show_weekends", show) }
         _showWeekends.value = show
     }
 
     override fun getLastSelectedTimetableId(): Flow<String?> = _lastSelectedTimetableId.asStateFlow()
 
     override suspend fun setLastSelectedTimetableId(id: String) {
-        prefs.edit().putString("last_selected_timetable_id", id).apply()
+        prefs.edit { putString("last_selected_timetable_id", id) }
         _lastSelectedTimetableId.value = id
     }
 }
