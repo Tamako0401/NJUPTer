@@ -10,6 +10,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -44,6 +45,7 @@ fun TimetableScreen(
     currentTimetableId: String? = null,
     currentStartDate: Long = System.currentTimeMillis(),
     currentTotalWeeks: Int = 20,
+    currentWeek: Int = 1,
     sessionTimes: List<String> = emptyList(),
     showWeekends: Boolean = true,
     isLoading: Boolean = false,
@@ -53,6 +55,7 @@ fun TimetableScreen(
     onUpdateSession: (CourseSession, CourseSession) -> Unit = { _, _ -> },
     onDeleteSession: (CourseSession) -> Unit = {},
     onSwitchTimetable: (String) -> Unit = {},
+    onCurrentWeekChange: (Int) -> Unit = {},
     onCreateTimetable: (String, Long, Int, Boolean, List<String>) -> Unit = { _, _, _, _, _ -> },
     onImportClick: (() -> Unit)? = null
 ) {
@@ -94,8 +97,13 @@ fun TimetableScreen(
         )
     }
     val maxSection = 12
+    val initialPage = remember(currentTimetableId, currentTotalWeeks, currentWeek) {
+        (currentWeek - 1).coerceIn(0, (currentTotalWeeks - 1).coerceAtLeast(0))
+    }
 
-    val pagerState = rememberPagerState(pageCount = { currentTotalWeeks })
+    val pagerState = key(currentTimetableId, currentTotalWeeks, initialPage) {
+        rememberPagerState(initialPage = initialPage, pageCount = { currentTotalWeeks })
+    }
     val todayWeekIndex = remember(currentStartDate, currentTotalWeeks) {
         getTodayWeekIndex(currentStartDate, currentTotalWeeks)
     }
@@ -163,11 +171,23 @@ fun TimetableScreen(
         )
     }
 
-    LaunchedEffect(currentTimetableId, currentStartDate, currentTotalWeeks, todayWeekIndex) {
-        todayWeekIndex?.let { targetPage ->
-            if (pagerState.currentPage != targetPage && targetPage < pagerState.pageCount) {
-                pagerState.scrollToPage(targetPage)
+    LaunchedEffect(currentTimetableId, currentTotalWeeks, initialPage) {
+        if (pagerState.currentPage != initialPage && initialPage < pagerState.pageCount) {
+            pagerState.scrollToPage(initialPage)
+        }
+    }
+
+    LaunchedEffect(pagerState, currentTimetableId) {
+        if (currentTimetableId == null) return@LaunchedEffect
+        snapshotFlow { pagerState.settledPage }
+            .collect { page ->
+                onCurrentWeekChange(page + 1)
             }
+    }
+
+    LaunchedEffect(currentTimetableId) {
+        if (currentTimetableId != null) {
+            onCurrentWeekChange(pagerState.currentPage + 1)
         }
     }
 
@@ -216,7 +236,7 @@ fun TimetableScreen(
                                 }
                             }) {
                                 Icon(
-                                    Icons.Default.KeyboardArrowLeft,
+                                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                                     contentDescription = stringResource(R.string.cd_previous_week)
                                 )
                             }

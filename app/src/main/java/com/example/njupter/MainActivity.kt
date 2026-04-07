@@ -5,14 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -25,8 +23,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.ui.res.stringResource
-import com.example.njupter.data.CourseInfo
-import com.example.njupter.data.CourseSession
 import com.example.njupter.data.FileTimetableRepository
 import com.example.njupter.ui.TimetableScreen
 import com.example.njupter.ui.TimetableViewModel
@@ -58,7 +54,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             NJUPTerTheme {  // 主题包装
                 val uiState by viewModel.uiState.collectAsState()   // 观察状态，将StateFlow转换成Compose的State
-                val importState by viewModel.importState.collectAsState()
+                val importState by viewModel.importState.collectAsState()   // 同上
                 var currentTab by remember { mutableStateOf(0) }
                 var showJwxtImport by remember { mutableStateOf(false) }
 
@@ -121,6 +117,7 @@ class MainActivity : ComponentActivity() {
                                     currentTimetableId = uiState.currentTimetableId,
                                     currentStartDate = uiState.currentStartDate,
                                     currentTotalWeeks = uiState.currentTotalWeeks,
+                                    currentWeek = uiState.currentWeek,
                                     sessionTimes = uiState.currentSessionTimes,
                                     showWeekends = uiState.showWeekends,
                                     isLoading = uiState.isLoading,
@@ -130,6 +127,7 @@ class MainActivity : ComponentActivity() {
                                     onUpdateSession = viewModel::updateSession,
                                     onDeleteSession = viewModel::deleteSession,
                                     onSwitchTimetable = viewModel::switchTimetable,
+                                    onCurrentWeekChange = viewModel::setCurrentWeek,
                                     onCreateTimetable = viewModel::createTimetable,
                                     onImportClick = { showJwxtImport = true }
                                 )
@@ -149,25 +147,5 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    NJUPTerTheme {
-        // ... (Preview data setup)
-        val courseInfos = listOf(
-            CourseInfo("math", "高等数学", "李", "教1-145"),
-            CourseInfo("physics", "大学物理", "田", "教1-4191"),
-            CourseInfo("cs", "计算机导论", "所", "教9-810")
-        )
-        val sessions = listOf(
-            CourseSession("math", 1, 1, 2),
-            CourseSession("math", 3, 3, 4),
-            CourseSession("physics", 2, 2, 4),
-            CourseSession("cs", 5, 1, 1)
-        )
-        TimetableScreen(courseInfos, sessions)
     }
 }
