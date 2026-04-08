@@ -16,19 +16,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-)
-
 @Composable
 fun NJUPTerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -41,9 +28,10 @@ fun NJUPTerTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> darkColorScheme()
+        else -> lightColorScheme()
     }
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -55,7 +43,6 @@ fun NJUPTerTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = AppTypography,
         content = content
     )
 }
@@ -66,12 +53,12 @@ fun getCourseColors(): List<Color> {
     return if (isDark) {
         listOf(
             CourseDark1, CourseDark2, CourseDark3, CourseDark4, CourseDark5,
-            CourseDark6, CourseDark7, CourseDark8, CourseDark9, CourseDark10
+            CourseDark6, CourseDark7, CourseDark8,
         )
     } else {
         listOf(
             CourseLight1, CourseLight2, CourseLight3, CourseLight4, CourseLight5,
-            CourseLight6, CourseLight7, CourseLight8, CourseLight9, CourseLight10
+            CourseLight6, CourseLight7, CourseLight8
         )
     }
 }

@@ -41,6 +41,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import com.example.njupter.R
 import android.content.Context
+import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
+import com.example.njupter.ui.theme.getCourseColors
 
 private fun ValidationError.toLocalizedString(context: Context): String {
     return when (this) {
@@ -145,7 +147,7 @@ fun CourseEditorDialog(
                     )
                 }
 
-                Divider()
+                HorizontalDivider(Modifier.padding(10.dp, vertical = 10.dp))
 
                 // --- Time & Week Settings ---
                 Text(
@@ -222,65 +224,97 @@ fun CourseEditorDialog(
                     )
                 }
 
-                Divider()
+                HorizontalDivider(Modifier.padding(10.dp, vertical = 1.dp))
 
                 // Card Color
                 Text(stringResource(R.string.card_color), style = MaterialTheme.typography.titleSmall)
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
-                ) {
-                    // Auto 选项
-                    val isAutoSelected = (selectedColorIndex == -1)
-                    val autoBorderColor = if (isAutoSelected) primaryColor else outlineColor
-                    val autoBorderWidth = if (isAutoSelected) 2.dp else 1.dp
-
-                    Box(
-                        modifier = Modifier
-                            .size(35.dp)
-                            .clip(CircleShape)
-                            .background(Color.Transparent) // Auto 背景透明
-                            .border(autoBorderWidth, autoBorderColor, CircleShape)
-                            .clickable { selectedColorIndex = -1 },
-                        contentAlignment = Alignment.Center
+                Column(){
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
                     ) {
-                        // 显示 "A" 代表 Auto
-                        Text(
-                            stringResource(R.string.auto),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isDarkTheme) Color.White else Color.Black
-                        )
-                    }
-
-                    // 5 个颜色圆点
-                    colorsList.forEachIndexed { index, color ->
-                        val isSelected = (selectedColorIndex == index)
-                        val borderWidth = if (isSelected) 2.dp else 1.dp
-                        val borderColor = if (isSelected) primaryColor else outlineColor
+                        // Auto 选项
+                        val isAutoSelected = (selectedColorIndex == -1)
+                        val autoBorderColor = if (isAutoSelected) primaryColor else outlineColor
+                        val autoBorderWidth = if (isAutoSelected) 2.dp else 1.dp
 
                         Box(
                             modifier = Modifier
-                                .size(34.dp)
+                                .size(35.dp)
                                 .clip(CircleShape)
-                                .background(color)
-                                .border(borderWidth, borderColor, CircleShape) // 描边防止混色
-                                .clickable { selectedColorIndex = index },
+                                .background(Color.Transparent) // Auto 背景透明
+                                .border(autoBorderWidth, autoBorderColor, CircleShape)
+                                .clickable { selectedColorIndex = -1 },
                             contentAlignment = Alignment.Center
                         ) {
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = stringResource(R.string.cd_selected),
-                                    tint = MaterialTheme.colorScheme.onSurface, // 自适配文字颜色
-                                    modifier = Modifier.size(16.dp)
-                                )
+                            // 显示 "A" 代表 Auto
+                            Text(
+                                stringResource(R.string.auto),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDarkTheme) Color.White else Color.Black
+                            )
+                        }
+
+                        // 第一行仅显示前 5 个颜色
+                        colorsList.take(5).forEachIndexed { index, color ->
+                            val isSelected = (selectedColorIndex == index)
+                            val borderWidth = if (isSelected) 2.dp else 1.dp
+                            val borderColor = if (isSelected) primaryColor else outlineColor
+
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .border(borderWidth, borderColor, CircleShape) // 描边防止混色
+                                    .clickable { selectedColorIndex = index },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = stringResource(R.string.cd_selected),
+                                        tint = MaterialTheme.colorScheme.onSurface, // 自适配文字颜色
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    // 第二行仅显示第 6-8 个颜色
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                    ){
+                        colorsList.drop(5).take(3).forEachIndexed { offset, color ->
+                            val actualIndex = offset + 5
+                            val isSelected = (selectedColorIndex == actualIndex)
+                            val borderWidth = if (isSelected) 2.dp else 1.dp
+                            val borderColor = if (isSelected) primaryColor else outlineColor
+
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .border(borderWidth, borderColor, CircleShape) // 描边防止混色
+                                    .clickable { selectedColorIndex = actualIndex },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = stringResource(R.string.cd_selected),
+                                        tint = MaterialTheme.colorScheme.onSurface, // 自适配文字颜色
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
-
 
                 if (errorMessage != null) {
                     Text(
@@ -529,11 +563,15 @@ fun CourseEditorDialogPreview() {
             existingCourses = sampleCourses,
             existingSessions = sampleSessions,
             colorsList = listOf(
-                Color(0xFFE3F2FD),
-                Color(0xFFE8F5E9),
-                Color(0xFFFFF3E0),
-                Color(0xFFF3E5F5),
-                Color(0xFFE0F7FA)
+                getCourseColors()[0],
+                getCourseColors()[1],
+                getCourseColors()[2],
+                getCourseColors()[3],
+                getCourseColors()[4],
+                getCourseColors()[5],
+                getCourseColors()[6],
+                getCourseColors()[7]
+
             ),
             isDarkTheme = false,
             totalWeeks = 20,
