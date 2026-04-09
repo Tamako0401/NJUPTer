@@ -72,6 +72,7 @@
     <string name="cd_next_week">Next Week</string>
     <string name="cd_add_course">Add Course</string>
     <string name="cd_selected">Selected</string>
+    <string name="today">Today</string>
 
     <!-- Settings Screen -->
     <string name="settings">Settings</string>

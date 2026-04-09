@@ -264,12 +264,29 @@ fun TimetableScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                showDialog = true
-                editingSession = null
-                editingCourse = null
-            }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_course))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (todayWeekIndex != null && pagerState.currentPage != todayWeekIndex) {
+                    FloatingActionButton(
+                        onClick = {
+                            scope.launch {
+                                pagerState.animateScrollToPage(todayWeekIndex)
+                            }
+                        },
+                    ) {
+                        Text(text = stringResource(R.string.today))
+                    }
+                }
+
+                FloatingActionButton(onClick = {
+                    showDialog = true
+                    editingSession = null
+                    editingCourse = null
+                }) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_course))
+                }
             }
         }
     ) { innerPadding ->
