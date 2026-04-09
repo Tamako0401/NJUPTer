@@ -130,5 +130,9 @@
     <!-- Import Summary -->
     <string name="import_summary">Found %1$d new courses, %2$d new sessions.</string>
     <string name="default_timetable_name">My Timetable</string>
+    <string name="course_reminder_channel_name">Course Reminder</string>
+    <string name="course_reminder_channel_desc">Notifies 10 minutes before class starts</string>
+    <string name="course_reminder_title">Class starts in 10 minutes</string>
+    <string name="course_reminder_content">%1$s · %2$s · %3$s · %4$s</string>
 
 </resources>

@@ -40,7 +40,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class) // 使用实验性的 Material3 API
 @Composable
 fun TimetableScreen(
     courseInfos: List<CourseInfo>,

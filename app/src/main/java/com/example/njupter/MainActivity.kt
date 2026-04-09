@@ -1,10 +1,16 @@
 package com.example.njupter
 
+import android.Manifest
 import android.os.Bundle
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +39,7 @@ import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.ui.import.JwxtImportScreen
 import com.example.njupter.ui.import.ImportPreviewDialog
 import com.example.njupter.data.defaultSessionTimes
+import com.example.njupter.notification.CourseReminderScheduler
 
 /**
  * 初始化依赖关系，连接ViewModel与UI，设置应用主题
@@ -43,9 +50,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()  // 全面屏适配
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    1001
+                )
+            }
+        }
+
         val dataSource = LocalFileDataSource(this)
         val settingsRepository = SharedPreferencesSettingsRepository(this)
         val repository = FileTimetableRepository(dataSource, settingsRepository)    // 实例化TimetableRepository，传入MainActivity的Context来读取assets下的JSON
+        val reminderScheduler = CourseReminderScheduler(this)
 
         val viewModel by viewModels<TimetableViewModel> {
             TimetableViewModel.provideFactory(repository, settingsRepository)
@@ -78,6 +100,24 @@ class MainActivity : ComponentActivity() {
                         onDismiss = {
                             viewModel.clearImportState()
                         }
+                    )
+                }
+
+                LaunchedEffect(
+                    uiState.currentTimetableId,
+                    uiState.currentStartDate,
+                    uiState.currentTotalWeeks,
+                    uiState.currentSessionTimes,
+                    uiState.courseInfos,
+                    uiState.sessions
+                ) {
+                    reminderScheduler.scheduleUpcomingReminders(
+                        courseInfos = uiState.courseInfos,
+                        sessions = uiState.sessions,
+                        currentTimetableId = uiState.currentTimetableId,
+                        startDate = uiState.currentStartDate,
+                        totalWeeks = uiState.currentTotalWeeks,
+                        sessionTimes = uiState.currentSessionTimes
                     )
                 }
 
