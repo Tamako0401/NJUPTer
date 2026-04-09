@@ -21,12 +21,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.njupter.R
 import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
 import com.example.njupter.data.TimetableMetadata
+import com.example.njupter.data.defaultSessionTimes
 import com.example.njupter.ui.theme.getCourseColors
+import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.domain.getDateForWeekDay
 import com.example.njupter.domain.getTodayDayOfWeek
 import com.example.njupter.domain.getTodayWeekIndex
@@ -295,11 +298,11 @@ fun TimetableScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(gridHeaderBg)
-                        .border(0.5.dp, gridBorderColor)
                 ) {
                     Box(
-                        modifier = Modifier.width(sidebarWidth).height(45.dp)
-                            .border(0.5.dp, gridBorderColor)
+                        modifier = Modifier
+                            .width(sidebarWidth)
+                            .height(45.dp)
                     )
 
                     dayLabels.forEachIndexed { index, dayLabel ->
@@ -309,34 +312,64 @@ fun TimetableScreen(
                             index + 1
                         )
                         val isToday = todayWeekIndex == page && todayDayOfWeek == index + 1
-                        val headerTextColor = if (isToday) {
-                            MaterialTheme.colorScheme.primary
+
+                        val cellContainerColor = if (isToday) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                        } else {
+                            Color.Transparent
+                        }
+                        val dayTextColor = if (isToday) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
                         } else {
                             MaterialTheme.colorScheme.onSurface
                         }
-                        val headerDateColor = if (isToday) {
-                            MaterialTheme.colorScheme.primary
+                        val dateTextColor = if (isToday) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         }
+                        val cellBorderColor = if (isToday) {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+                        } else {
+                            Color.Transparent
+                        }
+
                         Box(
-                            modifier = Modifier.weight(1f).height(45.dp)
-                                .border(0.5.dp, gridBorderColor),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(45.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = dayLabel,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = headerTextColor
-                                )
-                                Text(
-                                    text = dateString,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = headerDateColor,
-                                    fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
-                                )
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 2.dp, vertical = 3.dp)
+                                    .border(
+                                        width = 1.dp,
+                                        color = cellBorderColor,
+                                        shape = MaterialTheme.shapes.small
+                                    ),
+                                shape = MaterialTheme.shapes.small,
+                                color = cellContainerColor
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = dayLabel,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Medium,
+                                        color = dayTextColor
+                                    )
+                                    Text(
+                                        text = dateString,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = dateTextColor,
+                                        fontWeight = FontWeight.Normal
+                                    )
+                                }
                             }
                         }
                     }
@@ -354,9 +387,8 @@ fun TimetableScreen(
                         (1..maxSection).forEach { section ->
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth().height(sectionHeight)
-                                    .height(sectionHeight)
-                                    .border(0.5.dp, gridBorderColor),
+                                    .fillMaxWidth()
+                                    .height(sectionHeight),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -492,5 +524,70 @@ fun TimetableScreen(
                 }
             )
         }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 420, heightDp = 860)
+@Composable
+fun TimetableScreenPreview() {
+    val sampleCourses = listOf(
+        CourseInfo(
+            id = "c1",
+            name = "Data Structures",
+            teacher = "Prof. Li",
+            classroom = "A-203",
+            colorIndex = 0
+        ),
+        CourseInfo(
+            id = "c2",
+            name = "Mobile Development",
+            teacher = "Prof. Wang",
+            classroom = "B-512",
+            colorIndex = 2
+        )
+    )
+
+    val sampleSessions = listOf(
+        CourseSession(
+            courseId = "c1",
+            day = 1,
+            startSection = 1,
+            endSection = 2,
+            weeks = (1..16).toList()
+        ),
+        CourseSession(
+            courseId = "c2",
+            day = 3,
+            startSection = 5,
+            endSection = 6,
+            weeks = (1..16).toList()
+        )
+    )
+
+    val sampleTimetables = listOf(
+        TimetableMetadata(
+            id = "preview",
+            name = "2026 Spring",
+            lastModified = System.currentTimeMillis(),
+            totalWeeks = 16,
+            sessionTimes = defaultSessionTimes,
+            showWeekends = true
+        )
+    )
+
+    NJUPTerTheme {
+        TimetableScreen(
+            courseInfos = sampleCourses,
+            courseSessions = sampleSessions,
+            timetables = sampleTimetables,
+            currentTimetableName = "2026 Spring",
+            currentTimetableId = "preview",
+            currentStartDate = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000,
+            currentTotalWeeks = 16,
+            currentWeek = 2,
+            sessionTimes = defaultSessionTimes,
+            showWeekends = true,
+            isLoading = false
+        )
     }
 }
