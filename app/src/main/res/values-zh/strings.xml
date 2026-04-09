@@ -74,6 +74,7 @@
     <string name="cd_selected">已选择</string>
 
     <!-- Settings Screen -->
+    <string name="today">今日</string>
     <string name="settings">设置</string>
     <string name="current_timetable_settings">当前课表设置</string>
     <string name="timetable_name">课表名称</string>

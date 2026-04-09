@@ -14,7 +14,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -101,7 +100,7 @@ fun TimetableScreen(
         (currentWeek - 1).coerceIn(0, (currentTotalWeeks - 1).coerceAtLeast(0))
     }
 
-    val pagerState = key(currentTimetableId, currentTotalWeeks, initialPage) {
+    val pagerState = key(currentTimetableId, currentTotalWeeks) {
         rememberPagerState(initialPage = initialPage, pageCount = { currentTotalWeeks })
     }
     val todayWeekIndex = remember(currentStartDate, currentTotalWeeks) {
@@ -171,24 +170,12 @@ fun TimetableScreen(
         )
     }
 
-    LaunchedEffect(currentTimetableId, currentTotalWeeks, initialPage) {
-        if (pagerState.currentPage != initialPage && initialPage < pagerState.pageCount) {
-            pagerState.scrollToPage(initialPage)
-        }
-    }
-
     LaunchedEffect(pagerState, currentTimetableId) {
         if (currentTimetableId == null) return@LaunchedEffect
         snapshotFlow { pagerState.settledPage }
             .collect { page ->
                 onCurrentWeekChange(page + 1)
             }
-    }
-
-    LaunchedEffect(currentTimetableId) {
-        if (currentTimetableId != null) {
-            onCurrentWeekChange(pagerState.currentPage + 1)
-        }
     }
 
     Scaffold(
