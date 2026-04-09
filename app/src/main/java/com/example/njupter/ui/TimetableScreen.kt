@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -33,6 +34,8 @@ import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.domain.getDateForWeekDay
 import com.example.njupter.domain.getTodayDayOfWeek
 import com.example.njupter.domain.getTodayWeekIndex
+import java.util.Calendar
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -110,6 +113,14 @@ fun TimetableScreen(
         getTodayWeekIndex(currentStartDate, currentTotalWeeks)
     }
     val todayDayOfWeek = remember { getTodayDayOfWeek() }
+    val nowMillis = rememberCurrentTimeMillis()
+    val nowMinuteOfDay = remember(nowMillis) {
+        val calendar = Calendar.getInstance().apply { timeInMillis = nowMillis }
+        calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+    }
+    val currentSectionPosition = remember(sessionTimes, nowMinuteOfDay) {
+        findCurrentSectionPosition(sessionTimes, nowMinuteOfDay)
+    }
 
     var showTimetableSelector by remember { mutableStateOf(false) }
     var showWeekSelector by remember { mutableStateOf(false) }
@@ -289,6 +300,14 @@ fun TimetableScreen(
             verticalAlignment = Alignment.Top
         ) { page ->
             val currentWeek = page + 1
+            val showCurrentTimeIndicator = todayDayOfWeek <= daysCount && currentSectionPosition != null
+            val currentSectionIndex = currentSectionPosition?.first
+            val currentSectionProgress = currentSectionPosition?.second ?: 0f
+            val currentTimeLineOffset = if (showCurrentTimeIndicator && currentSectionIndex != null) {
+                sectionHeight * (currentSectionIndex + currentSectionProgress)
+            } else {
+                0.dp
+            }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -385,49 +404,78 @@ fun TimetableScreen(
                     // Sidebar
                     Column(modifier = Modifier.width(sidebarWidth).fillMaxHeight()) {
                         (1..maxSection).forEach { section ->
+                            val isCurrentSection = showCurrentTimeIndicator && currentSectionIndex == section - 1
+                            val sectionContainerColor = if (isCurrentSection) {
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                            } else {
+                                Color.Transparent
+                            }
+                            val sectionBorderColor = if (isCurrentSection) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                            } else {
+                                Color.Transparent
+                            }
+
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(sectionHeight),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = section.toString(),
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                    if (section - 1 < sessionTimes.size && sessionTimes[section - 1].isNotEmpty()) {
-                                        val timeStr = sessionTimes[section - 1]
-                                        val parts = timeStr.split("-")
-                                        if (parts.size == 2) {
-                                            Text(
-                                                text = parts[0],
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
-                                                fontSize = 9.sp,
-                                                lineHeight = 9.sp,
-                                                textAlign = TextAlign.Center,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Text(
-                                                text = parts[1],
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
-                                                fontSize = 9.sp,
-                                                lineHeight = 9.sp,
-                                                textAlign = TextAlign.Center,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        } else {
-                                            Text(
-                                                text = timeStr,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
-                                                fontSize = 9.sp,
-                                                lineHeight = 9.sp,
-                                                textAlign = TextAlign.Center,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 2.dp, vertical = 3.dp)
+                                        .border(
+                                            width = 1.dp,
+                                            color = sectionBorderColor,
+                                            shape = MaterialTheme.shapes.small
+                                        ),
+                                    shape = MaterialTheme.shapes.small,
+                                    color = sectionContainerColor
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize(),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = section.toString(),
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        if (section - 1 < sessionTimes.size && sessionTimes[section - 1].isNotEmpty()) {
+                                            val timeStr = sessionTimes[section - 1]
+                                            val parts = timeStr.split("-")
+                                            if (parts.size == 2) {
+                                                Text(
+                                                    text = parts[0],
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
+                                                    fontSize = 9.sp,
+                                                    lineHeight = 9.sp,
+                                                    textAlign = TextAlign.Center,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Text(
+                                                    text = parts[1],
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
+                                                    fontSize = 9.sp,
+                                                    lineHeight = 9.sp,
+                                                    textAlign = TextAlign.Center,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = timeStr,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
+                                                    fontSize = 9.sp,
+                                                    lineHeight = 9.sp,
+                                                    textAlign = TextAlign.Center,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -488,6 +536,31 @@ fun TimetableScreen(
                                 }
                             }
                         }
+
+                        // 4. Current time line
+                        if (showCurrentTimeIndicator) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .offset(y = currentTimeLineOffset)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(3.dp)
+                                        .background(MaterialTheme.colorScheme.primary)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .offset(x = (-4).dp, y = (-2.5).dp)
+                                        .background(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            shape = CircleShape
+                                        )
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -525,6 +598,45 @@ fun TimetableScreen(
             )
         }
     }
+}
+
+@Composable
+private fun rememberCurrentTimeMillis(tickMs: Long = 30_000L): Long {
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(tickMs)
+            now = System.currentTimeMillis()
+        }
+    }
+
+    return now
+}
+
+private fun findCurrentSectionPosition(sessionTimes: List<String>, currentMinuteOfDay: Int): Pair<Int, Float>? {
+    sessionTimes.forEachIndexed { index, timeStr ->
+        val parts = timeStr.split("-")
+        if (parts.size != 2) return@forEachIndexed
+
+        val startMinute = parseMinuteOfDay(parts[0]) ?: return@forEachIndexed
+        val endMinute = parseMinuteOfDay(parts[1]) ?: return@forEachIndexed
+        if (endMinute <= startMinute) return@forEachIndexed
+
+        if (currentMinuteOfDay in startMinute until endMinute) {
+            val progress = (currentMinuteOfDay - startMinute).toFloat() / (endMinute - startMinute).toFloat()
+            return index to progress.coerceIn(0f, 1f)
+        }
+    }
+    return null
+}
+
+private fun parseMinuteOfDay(text: String): Int? {
+    val parts = text.trim().split(":")
+    if (parts.size != 2) return null
+    val hour = parts[0].toIntOrNull() ?: return null
+    val minute = parts[1].toIntOrNull() ?: return null
+    return hour * 60 + minute
 }
 
 @Preview(showBackground = true, widthDp = 420, heightDp = 860)
