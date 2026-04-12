@@ -11,6 +11,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +41,8 @@ import com.example.njupter.ui.import.JwxtImportScreen
 import com.example.njupter.ui.import.ImportPreviewDialog
 import com.example.njupter.data.defaultSessionTimes
 import com.example.njupter.notification.CourseReminderScheduler
+import com.example.njupter.notification.ReminderBootstrapper
+import kotlinx.coroutines.launch
 
 /**
  * 初始化依赖关系，连接ViewModel与UI，设置应用主题
@@ -68,6 +71,10 @@ class MainActivity : ComponentActivity() {
         val settingsRepository = SharedPreferencesSettingsRepository(this)
         val repository = FileTimetableRepository(dataSource, settingsRepository)    // 实例化TimetableRepository，传入MainActivity的Context来读取assets下的JSON
         val reminderScheduler = CourseReminderScheduler(this)
+
+        lifecycleScope.launch {
+            ReminderBootstrapper.rescheduleCurrentTimetable(applicationContext)
+        }
 
         val viewModel by viewModels<TimetableViewModel> {
             TimetableViewModel.provideFactory(repository, settingsRepository)

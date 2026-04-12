@@ -129,5 +129,13 @@
     <!-- Import Summary -->
     <string name="import_summary">共发现新课程组合 %1$d 门，新增上课时段 %2$d 个。</string>
     <string name="default_timetable_name">我的课表</string>
+    <string name="course_reminder_channel_name">课程提醒</string>
+    <string name="course_reminder_channel_name">课程提醒</string>
+    <string name="course_reminder_channel_name">课程提醒</string>
+    <string name="course_reminder_channel_name">2</string>
+    <string name="course_reminder_channel_name">课程提醒</string>
+    <string name="course_reminder_channel_name">课程提醒</string>
+    <string name="course_reminder_channel_desc">1</string>
+    <string name="course_reminder_channel_name">课程提醒</string>
 
 </resources>

@@ -134,5 +134,12 @@
     <string name="course_reminder_channel_desc">Notifies 10 minutes before class starts</string>
     <string name="course_reminder_title">Class starts in 10 minutes</string>
     <string name="course_reminder_content">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="notification_permission">Notification Permission</string>
+    <string name="notification_permission_desc">Required to display class reminders</string>
+    <string name="battery_optimization">Battery Optimization</string>
+    <string name="battery_optimization_desc">Allow running in background for timely reminders</string>
+    <string name="status_enabled">Enabled</string>
+    <string name="status_disabled">Disabled</string>
+    <string name="go_to_settings">Go to settings</string>
 
 </resources>
