@@ -152,6 +152,21 @@ macOS / Linux:
 ./gradlew :app:compileDebugKotlin
 ```
 
+### CI 自动构建与 Artifacts
+
+项目已包含 GitHub Actions 工作流：`.github/workflows/android-ci.yml`。
+
+- Push / Pull Request / 手动触发（workflow_dispatch）会自动构建 Debug APK，并上传到 Actions Artifacts
+- 打 `v*` 标签（例如 `v1.0.0`）会自动构建 Release APK + AAB，并上传 Artifacts
+- 打 `v*` 标签时还会自动创建 GitHub Release，并附带 APK/AAB 文件
+
+使用示例：
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
 ## 网络与权限说明
 
 - 应用声明了 `INTERNET` 权限
