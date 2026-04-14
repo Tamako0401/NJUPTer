@@ -130,12 +130,13 @@
     <string name="import_summary">共发现新课程组合 %1$d 门，新增上课时段 %2$d 个。</string>
     <string name="default_timetable_name">我的课表</string>
     <string name="course_reminder_channel_name">课程提醒</string>
-    <string name="course_reminder_channel_name">课程提醒</string>
-    <string name="course_reminder_channel_name">课程提醒</string>
-    <string name="course_reminder_channel_name">2</string>
-    <string name="course_reminder_channel_name">课程提醒</string>
-    <string name="course_reminder_channel_name">课程提醒</string>
-    <string name="course_reminder_channel_desc">1</string>
-    <string name="course_reminder_channel_name">课程提醒</string>
+    <string name="course_reminder_channel_desc">上课前10分钟通知</string>
+    <string name="course_reminder_title">课程还有10分钟开始</string>
+    <string name="notification_permission">通知权限</string>
+    <string name="notification_permission_desc">用于显示课程提醒</string>
+    <string name="battery_optimization">电池优化</string>
+    <string name="battery_optimization_desc">允许后台提醒以发送通知</string>
+    <string name="status_enabled">已启用</string>
+    <string name="status_disabled">已禁用</string>
 
 </resources>
