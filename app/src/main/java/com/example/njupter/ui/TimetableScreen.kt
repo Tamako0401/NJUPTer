@@ -2,9 +2,9 @@ package com.example.njupter.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -14,11 +14,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -186,23 +186,21 @@ fun TimetableScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier
-                                .align(Alignment.CenterStart)
-                                .clickable { showTimetableSelector = true },
-                            verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .offset(x = (-20).dp)
+
                         ) {
-                            Text(
-                                text = if (currentTimetableName.isNotEmpty()) currentTimetableName else stringResource(
-                                    R.string.timetable
-                                ),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = stringResource(R.string.cd_switch_timetable),
-                                modifier = Modifier.size(20.dp)
+                            SplitButton(
+                                leftText = if (currentTimetableName.isNotEmpty()) {
+                                    currentTimetableName
+                                } else {
+                                    stringResource(R.string.timetable)
+                                },
+                                onRightClick = { showTimetableSelector = true }
                             )
                         }
 
@@ -212,9 +210,11 @@ fun TimetableScreen(
                         ) {
                             Text(
                                 text = stringResource(R.string.week, pagerState.currentPage + 1),
-                                style = MaterialTheme.typography.titleMedium
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.offset(x = (-8).dp)
                             )
                         }
+
 
                         Row(
                             modifier = Modifier.align(Alignment.CenterEnd),

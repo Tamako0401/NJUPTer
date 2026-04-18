@@ -428,7 +428,7 @@ fun CustomWeekPickerDialog(
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
+                        Text(   //TODO:M3强调效果
                             text = stringResource(R.string.at_least_one_week),
                             modifier = Modifier.padding(12.dp),
                             color = MaterialTheme.colorScheme.onErrorContainer,
