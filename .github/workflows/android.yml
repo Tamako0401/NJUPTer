@@ -32,10 +32,34 @@ jobs:
     - name: Build debug APK
       run: ./gradlew :app:assembleDebug
       
-    - name: Upload split APKs
+    - name: Upload arm64-v8a APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug-splits-${{ github.sha }}
-        path: app/build/outputs/apk/debug/*-debug.apk
+        name: app-debug-arm64-v8a-${{ github.sha }}
+        path: app/build/outputs/apk/debug/*arm64-v8a*-debug.apk
+        if-no-files-found: error
+        retention-days: 14
+  
+    - name: Upload armeabi-v7a APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-armeabi-v7a-${{ github.sha }}
+        path: app/build/outputs/apk/debug/*armeabi-v7a*-debug.apk
+        if-no-files-found: error
+        retention-days: 14
+    
+    - name: Upload x86 APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-x86-${{ github.sha }}
+        path: app/build/outputs/apk/debug/*x86-debug.apk
+        if-no-files-found: error
+        retention-days: 14
+    
+    - name: Upload x86_64 APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-x86_64-${{ github.sha }}
+        path: app/build/outputs/apk/debug/*x86_64*-debug.apk
         if-no-files-found: error
         retention-days: 14
