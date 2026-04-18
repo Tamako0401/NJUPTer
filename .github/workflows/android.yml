@@ -32,11 +32,10 @@ jobs:
     - name: Build debug APK
       run: ./gradlew :app:assembleDebug
       
-    - name: Upload debug APK Artifact
+    - name: Upload split APKs
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug-${{ github.sha }}
-        path: app/build/outputs/apk/debug/*.apk
-        if-no-file-found: error
+        name: app-debug-splits-${{ github.sha }}
+        path: app/build/outputs/apk/debug/*-debug.apk
+        if-no-files-found: error
         retention-days: 14
-        
