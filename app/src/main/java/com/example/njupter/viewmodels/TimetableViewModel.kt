@@ -1,4 +1,4 @@
-package com.example.njupter.ui
+package com.example.njupter.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -8,7 +8,10 @@ import com.example.njupter.data.CourseSession
 import com.example.njupter.data.SettingsRepository
 import com.example.njupter.data.TimetableMetadata
 import com.example.njupter.data.TimetableRepository
+import com.example.njupter.data.import.JwxtClient
+import com.example.njupter.data.import.JwxtParser
 import com.example.njupter.domain.getTodayWeekIndex
+import com.example.njupter.domain.import.TimetableImportMatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,7 +39,7 @@ data class TimetableUiState(
     val currentSessionTimes: List<String> = emptyList(),
     
     // Import state
-    val importResult: com.example.njupter.domain.import.TimetableImportMatcher.ImportResult? = null,
+    val importResult: TimetableImportMatcher.ImportResult? = null,
     val isImporting: Boolean = false,
     val importError: String? = null
 )
@@ -127,12 +130,12 @@ class TimetableViewModel(
     )
 
     // A separate StateFlow for import process so we can overlay it on top of the combined flow above.
-    private val _importState = kotlinx.coroutines.flow.MutableStateFlow(ImportState())
+    private val _importState = MutableStateFlow(ImportState())
     val importState = _importState.asStateFlow()
 
     data class ImportState(
         val isImporting: Boolean = false,
-        val result: com.example.njupter.domain.import.TimetableImportMatcher.ImportResult? = null,
+        val result: TimetableImportMatcher.ImportResult? = null,
         val error: String? = null
     )
 
@@ -152,15 +155,15 @@ class TimetableViewModel(
             _importState.value = ImportState(isImporting = true)
             try {
                 // 1. Fetch HTML
-                val client = com.example.njupter.data.import.JwxtClient(cookieString, xh)
+                val client = JwxtClient(cookieString, xh)
                 val html = client.fetchTimetableHtml()
 
                 // 2. Parse HTML
-                val parser = com.example.njupter.data.import.JwxtParser()
+                val parser = JwxtParser()
                 val remoteCourses = parser.parseHtml(html)
 
                 // 3. Match and Convert
-                val matcher = com.example.njupter.domain.import.TimetableImportMatcher()
+                val matcher = TimetableImportMatcher()
                 
                 // For a new timetable, we match against empty lists to treat all courses as new
                 val result = matcher.matchAndConvert(remoteCourses, emptyList(), emptyList())

@@ -19,7 +19,7 @@ class JwxtClient(private val cookieString: String, private val xh: String) {
         val request = Request.Builder()
             .url(timetableUrl)
             .addHeader("Cookie", cookieString)
-            // 查课表需要 Referer
+            // 查课表必须要 Referer，否则会Object moved to here (而且 href='')
             .addHeader("Referer", "http://jwxt.njupt.edu.cn/xs_main.aspx?xh=$xh")
             .build()
         

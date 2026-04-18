@@ -3,12 +3,14 @@ package com.example.njupter
 import android.Manifest
 import android.os.Bundle
 import android.os.Build
+import android.view.animation.DecelerateInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import android.content.pm.PackageManager
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.lifecycleScope
@@ -32,7 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.example.njupter.data.FileTimetableRepository
 import com.example.njupter.ui.TimetableScreen
-import com.example.njupter.ui.TimetableViewModel
+import com.example.njupter.viewmodels.TimetableViewModel
 import com.example.njupter.data.LocalFileDataSource
 import com.example.njupter.data.SharedPreferencesSettingsRepository
 import com.example.njupter.ui.SettingsScreen
@@ -42,6 +44,7 @@ import com.example.njupter.ui.import.ImportPreviewDialog
 import com.example.njupter.data.defaultSessionTimes
 import com.example.njupter.notification.CourseReminderScheduler
 import com.example.njupter.notification.ReminderBootstrapper
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
@@ -50,6 +53,17 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
+        var keepSplash = true
+        splashScreen.setKeepOnScreenCondition { keepSplash }
+        splashScreen.setOnExitAnimationListener { splashScreenViewProvider ->
+            splashScreenViewProvider.view.animate()
+                .alpha(0f)
+                .setDuration(220L)
+                .setInterpolator(DecelerateInterpolator())
+                .withEndAction { splashScreenViewProvider.remove() }
+                .start()
+        }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()  // 全面屏适配
 
@@ -78,6 +92,12 @@ class MainActivity : ComponentActivity() {
 
         val viewModel by viewModels<TimetableViewModel> {
             TimetableViewModel.provideFactory(repository, settingsRepository)
+        }
+
+        lifecycleScope.launch {
+            viewModel.uiState.collectLatest { uiState ->
+                keepSplash = uiState.isLoading
+            }
         }
 
         setContent {

@@ -152,16 +152,6 @@ fun TimetableScreen(
         )
     }
 
-    if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
-        }
-        return
-    }
-
     // Show empty state if no timetables exist
     if (timetables.isEmpty()) {
         EmptyGuidePlaceholder(
