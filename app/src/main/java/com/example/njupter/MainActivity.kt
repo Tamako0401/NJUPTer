@@ -10,6 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.os.LocaleListCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import android.content.pm.PackageManager
 import androidx.compose.runtime.LaunchedEffect
@@ -18,11 +19,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
@@ -83,6 +86,9 @@ class MainActivity : ComponentActivity() {
 
         val dataSource = LocalFileDataSource(this)
         val settingsRepository = SharedPreferencesSettingsRepository(this)
+        AppCompatDelegate.setApplicationLocales(
+            LocaleListCompat.forLanguageTags(settingsRepository.peekAppLanguageTag())
+        )
         val repository = FileTimetableRepository(dataSource, settingsRepository)    // 实例化TimetableRepository，传入MainActivity的Context来读取assets下的JSON
         val reminderScheduler = CourseReminderScheduler(this)
 
@@ -104,8 +110,14 @@ class MainActivity : ComponentActivity() {
             NJUPTerTheme {  // 主题包装
                 val uiState by viewModel.uiState.collectAsState()   // 观察状态，将StateFlow转换成Compose的State
                 val importState by viewModel.importState.collectAsState()   // 同上
+                val appLanguageTag by settingsRepository.getAppLanguageTag().collectAsState(initial = settingsRepository.peekAppLanguageTag())
+                val scope = rememberCoroutineScope()
                 var currentTab by remember { mutableStateOf(0) }
                 var showJwxtImport by remember { mutableStateOf(false) }
+
+                LaunchedEffect(appLanguageTag) {
+                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(appLanguageTag))
+                }
 
                 // 导入预览对话框
                 importState.result?.let { result ->
@@ -206,6 +218,12 @@ class MainActivity : ComponentActivity() {
                                     currentTotalWeeks = uiState.currentTotalWeeks,
                                     currentSessionTimes = uiState.currentSessionTimes,
                                     currentShowWeekends = uiState.showWeekends,
+                                    currentLanguageTag = appLanguageTag,
+                                    onLanguageChange = { languageTag ->
+                                        scope.launch {
+                                            settingsRepository.setAppLanguageTag(languageTag)
+                                        }
+                                    },
                                     onUpdateTimetableMetadata = viewModel::updateTimetableMetadata
                                 )
                             }

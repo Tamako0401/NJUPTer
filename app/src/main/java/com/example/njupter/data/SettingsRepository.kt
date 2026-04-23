@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.asStateFlow
 interface SettingsRepository {
     fun getShowWeekends(): Flow<Boolean>
     suspend fun setShowWeekends(show: Boolean)
+    fun getAppLanguageTag(): Flow<String>
+    suspend fun setAppLanguageTag(languageTag: String)
     fun getLastSelectedTimetableId(): Flow<String?>
     suspend fun setLastSelectedTimetableId(id: String)
     fun getLastWeekRecords(): Flow<Map<String, Int>>
@@ -18,12 +20,17 @@ interface SettingsRepository {
     fun peekLastSelectedTimetableId(): String? {
         return (getLastSelectedTimetableId() as? MutableStateFlow)?.value
     }
+
+    fun peekAppLanguageTag(): String {
+        return (getAppLanguageTag() as? MutableStateFlow)?.value ?: ""
+    }
 }
 
 class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository {
     companion object {
         private const val PREFS_NAME = "app_settings"
         private const val KEY_SHOW_WEEKENDS = "show_weekends"
+        private const val KEY_APP_LANGUAGE_TAG = "app_language_tag"
         private const val KEY_LAST_SELECTED_TIMETABLE_ID = "last_selected_timetable_id"
         private const val KEY_LAST_WEEK_PREFIX = "last_week_"
     }
@@ -44,6 +51,7 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val _showWeekends = MutableStateFlow(prefs.getBoolean(KEY_SHOW_WEEKENDS, false))
+    private val _appLanguageTag = MutableStateFlow(prefs.getString(KEY_APP_LANGUAGE_TAG, "") ?: "")
     private val _lastSelectedTimetableId = MutableStateFlow<String?>(prefs.getString(KEY_LAST_SELECTED_TIMETABLE_ID, null))
     private val _lastWeekRecords = MutableStateFlow(readLastWeekRecords())
 
@@ -52,6 +60,13 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
     override suspend fun setShowWeekends(show: Boolean) {
         prefs.edit { putBoolean(KEY_SHOW_WEEKENDS, show) }
         _showWeekends.value = show
+    }
+
+    override fun getAppLanguageTag(): Flow<String> = _appLanguageTag.asStateFlow()
+
+    override suspend fun setAppLanguageTag(languageTag: String) {
+        prefs.edit { putString(KEY_APP_LANGUAGE_TAG, languageTag) }
+        _appLanguageTag.value = languageTag
     }
 
     override fun getLastSelectedTimetableId(): Flow<String?> = _lastSelectedTimetableId.asStateFlow()

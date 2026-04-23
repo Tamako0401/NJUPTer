@@ -23,6 +23,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.njupter.R
+import com.example.njupter.ui.settings.component.SettingsSectionHeader
+import com.example.njupter.ui.settings.dialog.LanguageSelectDialog
 import com.example.njupter.ui.timetable.dialog.TimetableConfigDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,12 +36,15 @@ fun SettingsScreen(
     currentTotalWeeks: Int,
     currentSessionTimes: List<String>,
     currentShowWeekends: Boolean,
+    currentLanguageTag: String,
+    onLanguageChange: (String) -> Unit,
     onUpdateTimetableMetadata: (String, String, Long, Int, Boolean, List<String>) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
     var showConfigDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
     var notificationEnabled by remember { mutableStateOf(isNotificationPermissionGranted(context)) }
     var batteryWhitelistEnabled by remember { mutableStateOf(isIgnoringBatteryOptimizations(context)) }
 
@@ -81,6 +86,17 @@ fun SettingsScreen(
         )
     }
 
+    if (showLanguageDialog) {
+        LanguageSelectDialog(
+            currentLanguageTag = currentLanguageTag,
+            onDismiss = { showLanguageDialog = false },
+            onSelectLanguage = { languageTag ->
+                onLanguageChange(languageTag)
+                showLanguageDialog = false
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -94,12 +110,7 @@ fun SettingsScreen(
                 .padding(innerPadding)
         ) {
             item {
-                Text(
-                    text = stringResource(R.string.current_timetable_settings),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(16.dp)
-                )
+                SettingsSectionHeader(title = stringResource(R.string.current_timetable_settings))
             }
             
             // If no timetable is selected/created, disable or hide specific settings
@@ -126,12 +137,22 @@ fun SettingsScreen(
             }
 
             item {
-                Text(
-                    text = stringResource(R.string.app_settings),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(16.dp)
+                SettingsSectionHeader(title = stringResource(R.string.app_settings))
+            }
+
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.language)) },
+                    supportingContent = {
+                        Text(
+                            if (currentLanguageTag.startsWith("zh")) stringResource(R.string.language_zh)
+                            else stringResource(R.string.language_en)
+                        )
+                    },
+                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+                    modifier = Modifier.clickable { showLanguageDialog = true }
                 )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             }
 
             item {
@@ -227,6 +248,8 @@ fun SettingsScreenPreview() {
             currentTotalWeeks = 20,
             currentShowWeekends = false,
             currentSessionTimes = listOf("08:00-08:45"),
+            currentLanguageTag = "zh",
+            onLanguageChange = {},
             onUpdateTimetableMetadata = { _, _, _, _, _, _ -> },
         )
     }
