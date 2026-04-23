@@ -145,8 +145,8 @@ fun SettingsScreen(
                     headlineContent = { Text(stringResource(R.string.language)) },
                     supportingContent = {
                         Text(
-                            if (currentLanguageTag.startsWith("zh")) stringResource(R.string.language_zh)
-                            else stringResource(R.string.language_en)
+                            if (currentLanguageTag.startsWith("zh")) "简体中文"
+                            else "English"
                         )
                     },
                     trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
@@ -221,7 +221,10 @@ private fun openNotificationSettings(context: android.content.Context) {
     val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
         putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
     }
-    context.startActivity(intent)
+    val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.parse("package:${context.packageName}")
+    }
+    startActivitySafely(context, intent, fallbackIntent)
 }
 
 private fun openBatteryOptimizationSettings(context: android.content.Context) {
@@ -229,12 +232,31 @@ private fun openBatteryOptimizationSettings(context: android.content.Context) {
         data = Uri.parse("package:${context.packageName}")
     }
     val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-    val safeIntent = if (requestIntent.resolveActivity(context.packageManager) != null) {
-        requestIntent
-    } else {
-        fallbackIntent
+    val finalFallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.parse("package:${context.packageName}")
     }
-    context.startActivity(safeIntent)
+
+    if (!startActivitySafely(context, requestIntent, fallbackIntent)) {
+        startActivitySafely(context, finalFallbackIntent)
+    }
+}
+
+private fun startActivitySafely(
+    context: android.content.Context,
+    primaryIntent: Intent,
+    secondaryIntent: Intent? = null
+): Boolean {
+    return try {
+        val launchIntent = when {
+            primaryIntent.resolveActivity(context.packageManager) != null -> primaryIntent
+            secondaryIntent != null && secondaryIntent.resolveActivity(context.packageManager) != null -> secondaryIntent
+            else -> return false
+        }
+        context.startActivity(launchIntent)
+        true
+    } catch (_: Exception) {
+        false
+    }
 }
 
 @Preview(showBackground = true)

@@ -1,6 +1,7 @@
 package com.example.njupter
 
 import android.Manifest
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Build
 import android.view.animation.DecelerateInterpolator
@@ -10,9 +11,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.os.LocaleListCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import android.content.pm.PackageManager
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.collectAsState
@@ -25,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
@@ -34,6 +34,8 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.example.njupter.data.FileTimetableRepository
 import com.example.njupter.ui.timetable.TimetableScreen
@@ -49,12 +51,32 @@ import com.example.njupter.notification.CourseReminderScheduler
 import com.example.njupter.notification.ReminderBootstrapper
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /**
  * 初始化依赖关系，连接ViewModel与UI，设置应用主题
  */
 
 class MainActivity : ComponentActivity() {
+    private fun applyLocaleToActivityResources(languageTag: String) {
+        val locale = when {
+            languageTag.startsWith("zh") -> Locale.SIMPLIFIED_CHINESE
+            languageTag.startsWith("en") -> Locale.ENGLISH
+            else -> Locale.getDefault()
+        }
+        Locale.setDefault(locale)
+
+        val config = Configuration(resources.configuration)
+        config.setLocale(locale)
+        @Suppress("DEPRECATION")
+        resources.updateConfiguration(config, resources.displayMetrics)
+
+        applicationContext.resources.updateConfiguration(
+            Configuration(applicationContext.resources.configuration).apply { setLocale(locale) },
+            applicationContext.resources.displayMetrics
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         var keepSplash = true
@@ -86,9 +108,6 @@ class MainActivity : ComponentActivity() {
 
         val dataSource = LocalFileDataSource(this)
         val settingsRepository = SharedPreferencesSettingsRepository(this)
-        AppCompatDelegate.setApplicationLocales(
-            LocaleListCompat.forLanguageTags(settingsRepository.peekAppLanguageTag())
-        )
         val repository = FileTimetableRepository(dataSource, settingsRepository)    // 实例化TimetableRepository，传入MainActivity的Context来读取assets下的JSON
         val reminderScheduler = CourseReminderScheduler(this)
 
@@ -112,35 +131,53 @@ class MainActivity : ComponentActivity() {
                 val importState by viewModel.importState.collectAsState()   // 同上
                 val appLanguageTag by settingsRepository.getAppLanguageTag().collectAsState(initial = settingsRepository.peekAppLanguageTag())
                 val scope = rememberCoroutineScope()
+                val baseContext = LocalContext.current
+                val currentConfig = LocalConfiguration.current
                 var currentTab by remember { mutableStateOf(0) }
                 var showJwxtImport by remember { mutableStateOf(false) }
 
-                LaunchedEffect(appLanguageTag) {
-                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(appLanguageTag))
+                val localizedContext = remember(baseContext, currentConfig, appLanguageTag) {
+                    val locale = when {
+                        appLanguageTag.startsWith("zh") -> Locale.SIMPLIFIED_CHINESE
+                        appLanguageTag.startsWith("en") -> Locale.ENGLISH
+                        else -> null
+                    }
+                    if (locale == null) {
+                        baseContext
+                    } else {
+                        val config = Configuration(currentConfig)
+                        config.setLocale(locale)
+                        baseContext.createConfigurationContext(config)
+                    }
                 }
 
-                // 导入预览对话框
-                importState.result?.let { result ->
-                    ImportPreviewDialog(
-                        importResult = result,
-                        onConfirm = { name ->
-                            viewModel.createAndImportTimetable(
-                                name = name,
-                                startDate = System.currentTimeMillis(),
-                                totalWeeks = 20,
-                                showWeekends = true,
-                                sessionTimes = defaultSessionTimes,
-                                newCourses = result.newCourses,
-                                newSessions = result.newSessions
-                            )
-                            viewModel.clearImportState()
-                            showJwxtImport = false
-                        },
-                        onDismiss = {
-                            viewModel.clearImportState()
-                        }
-                    )
+                LaunchedEffect(appLanguageTag) {
+                    applyLocaleToActivityResources(appLanguageTag)
                 }
+
+                CompositionLocalProvider(LocalContext provides localizedContext) {
+                    // 导入预览对话框
+                    importState.result?.let { result ->
+                        ImportPreviewDialog(
+                            importResult = result,
+                            onConfirm = { name ->
+                                viewModel.createAndImportTimetable(
+                                    name = name,
+                                    startDate = System.currentTimeMillis(),
+                                    totalWeeks = 20,
+                                    showWeekends = true,
+                                    sessionTimes = defaultSessionTimes,
+                                    newCourses = result.newCourses,
+                                    newSessions = result.newSessions
+                                )
+                                viewModel.clearImportState()
+                                showJwxtImport = false
+                            },
+                            onDismiss = {
+                                viewModel.clearImportState()
+                            }
+                        )
+                    }
 
                 LaunchedEffect(
                     uiState.currentTimetableId,
@@ -160,72 +197,73 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                if (showJwxtImport) {
-                    JwxtImportScreen(
-                        onBack = { showJwxtImport = false },
-                        onCookiesObtained = { cookie, xh ->
-                            viewModel.fetchAndProcessImport(cookie, xh)
-                        }
-                    )
-                } else {
-                    Scaffold(
-                        bottomBar = {
-                            NavigationBar {
-                                NavigationBarItem(
-                                    selected = currentTab == 0,
-                                    onClick = { currentTab = 0 },
-                                    icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.cd_timetable)) },
-                                    label = { Text(stringResource(R.string.timetable)) }
-                                )
-                                NavigationBarItem(
-                                    selected = currentTab == 1,
-                                    onClick = { currentTab = 1 },
-                                    icon = { Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.cd_settings)) },
-                                    label = { Text(stringResource(R.string.settings)) }
-                                )
+                    if (showJwxtImport) {
+                        JwxtImportScreen(
+                            onBack = { showJwxtImport = false },
+                            onCookiesObtained = { cookie, xh ->
+                                viewModel.fetchAndProcessImport(cookie, xh)
                             }
-                        }
-                    ) { innerPadding ->
-                        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                            if (currentTab == 0) {
-                                TimetableScreen(
-                                    courseInfos = uiState.courseInfos,
-                                    courseSessions = uiState.sessions,
-                                    timetables = uiState.timetables,
-                                    currentTimetableName = uiState.currentTimetableName,
-                                    currentTimetableId = uiState.currentTimetableId,
-                                    currentStartDate = uiState.currentStartDate,
-                                    currentTotalWeeks = uiState.currentTotalWeeks,
-                                    currentWeek = uiState.currentWeek,
-                                    sessionTimes = uiState.currentSessionTimes,
-                                    showWeekends = uiState.showWeekends,
-                                    isLoading = uiState.isLoading,
-                                    onAddCourse = viewModel::addCourse,
-                                    onAddSession = viewModel::addSession,
-                                    onUpdateCourse = viewModel::updateCourse,
-                                    onUpdateSession = viewModel::updateSession,
-                                    onDeleteSession = viewModel::deleteSession,
-                                    onSwitchTimetable = viewModel::switchTimetable,
-                                    onCurrentWeekChange = viewModel::setCurrentWeek,
-                                    onCreateTimetable = viewModel::createTimetable,
-                                    onImportClick = { showJwxtImport = true }
-                                )
-                            } else {
-                                SettingsScreen(
-                                    currentTimetableId = uiState.currentTimetableId,
-                                    currentTimetableName = uiState.currentTimetableName,
-                                    currentStartDate = uiState.currentStartDate,
-                                    currentTotalWeeks = uiState.currentTotalWeeks,
-                                    currentSessionTimes = uiState.currentSessionTimes,
-                                    currentShowWeekends = uiState.showWeekends,
-                                    currentLanguageTag = appLanguageTag,
-                                    onLanguageChange = { languageTag ->
-                                        scope.launch {
-                                            settingsRepository.setAppLanguageTag(languageTag)
-                                        }
-                                    },
-                                    onUpdateTimetableMetadata = viewModel::updateTimetableMetadata
-                                )
+                        )
+                    } else {
+                        Scaffold(
+                            bottomBar = {
+                                NavigationBar {
+                                    NavigationBarItem(
+                                        selected = currentTab == 0,
+                                        onClick = { currentTab = 0 },
+                                        icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.cd_timetable)) },
+                                        label = { Text(stringResource(R.string.timetable)) }
+                                    )
+                                    NavigationBarItem(
+                                        selected = currentTab == 1,
+                                        onClick = { currentTab = 1 },
+                                        icon = { Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.cd_settings)) },
+                                        label = { Text(stringResource(R.string.settings)) }
+                                    )
+                                }
+                            }
+                        ) { innerPadding ->
+                            Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                                if (currentTab == 0) {
+                                    TimetableScreen(
+                                        courseInfos = uiState.courseInfos,
+                                        courseSessions = uiState.sessions,
+                                        timetables = uiState.timetables,
+                                        currentTimetableName = uiState.currentTimetableName,
+                                        currentTimetableId = uiState.currentTimetableId,
+                                        currentStartDate = uiState.currentStartDate,
+                                        currentTotalWeeks = uiState.currentTotalWeeks,
+                                        currentWeek = uiState.currentWeek,
+                                        sessionTimes = uiState.currentSessionTimes,
+                                        showWeekends = uiState.showWeekends,
+                                        isLoading = uiState.isLoading,
+                                        onAddCourse = viewModel::addCourse,
+                                        onAddSession = viewModel::addSession,
+                                        onUpdateCourse = viewModel::updateCourse,
+                                        onUpdateSession = viewModel::updateSession,
+                                        onDeleteSession = viewModel::deleteSession,
+                                        onSwitchTimetable = viewModel::switchTimetable,
+                                        onCurrentWeekChange = viewModel::setCurrentWeek,
+                                        onCreateTimetable = viewModel::createTimetable,
+                                        onImportClick = { showJwxtImport = true }
+                                    )
+                                } else {
+                                    SettingsScreen(
+                                        currentTimetableId = uiState.currentTimetableId,
+                                        currentTimetableName = uiState.currentTimetableName,
+                                        currentStartDate = uiState.currentStartDate,
+                                        currentTotalWeeks = uiState.currentTotalWeeks,
+                                        currentSessionTimes = uiState.currentSessionTimes,
+                                        currentShowWeekends = uiState.showWeekends,
+                                        currentLanguageTag = appLanguageTag,
+                                        onLanguageChange = { languageTag ->
+                                            scope.launch {
+                                                settingsRepository.setAppLanguageTag(languageTag)
+                                            }
+                                        },
+                                        onUpdateTimetableMetadata = viewModel::updateTimetableMetadata
+                                    )
+                                }
                             }
                         }
                     }
