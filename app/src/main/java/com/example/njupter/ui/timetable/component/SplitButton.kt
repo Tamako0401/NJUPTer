@@ -1,4 +1,4 @@
-package com.example.njupter.ui
+package com.example.njupter.ui.timetable.component
 
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width

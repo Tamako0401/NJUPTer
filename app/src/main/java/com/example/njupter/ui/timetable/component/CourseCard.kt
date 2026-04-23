@@ -1,4 +1,4 @@
-package com.example.njupter.ui
+package com.example.njupter.ui.timetable.component
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.sp
 import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
 import androidx.compose.ui.tooling.preview.Preview
-import kotlin.math.abs
 
 @Composable
 fun CourseCard(

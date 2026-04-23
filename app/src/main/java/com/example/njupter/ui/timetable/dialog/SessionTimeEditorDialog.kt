@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 
-package com.example.njupter.ui
+package com.example.njupter.ui.timetable.dialog
 
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke

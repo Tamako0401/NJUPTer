@@ -1,4 +1,4 @@
-package com.example.njupter.ui
+package com.example.njupter.ui.settings
 
 import android.Manifest
 import android.content.Intent
@@ -23,6 +23,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.njupter.R
+import com.example.njupter.ui.timetable.dialog.TimetableConfigDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +67,14 @@ fun SettingsScreen(
             onDismiss = { showConfigDialog = false },
             onConfirm = { name, startDate, weeks, showWeekends, sessionTimes ->
                 if (currentTimetableId != null) {
-                    onUpdateTimetableMetadata(currentTimetableId, name, startDate, weeks, showWeekends, sessionTimes)
+                    onUpdateTimetableMetadata(
+                        currentTimetableId,
+                        name,
+                        startDate,
+                        weeks,
+                        showWeekends,
+                        sessionTimes
+                    )
                 }
                 showConfigDialog = false
             }

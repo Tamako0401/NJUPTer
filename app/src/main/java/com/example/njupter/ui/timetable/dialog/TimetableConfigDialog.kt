@@ -1,9 +1,8 @@
-package com.example.njupter.ui
+package com.example.njupter.ui.timetable.dialog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,9 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -95,7 +93,7 @@ fun TimetableConfigDialog(
             ) {
                 if (!isEditMode && onImportClick != null) {
                     item {
-                        androidx.compose.material3.FilledTonalButton(
+                        FilledTonalButton(
                             onClick = onImportClick,
                             modifier = Modifier.fillMaxWidth()
                         ) {

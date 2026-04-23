@@ -1,4 +1,4 @@
-package com.example.njupter.ui
+package com.example.njupter.ui.timetable.dialog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,7 +41,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import com.example.njupter.R
 import android.content.Context
-import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import com.example.njupter.ui.theme.getCourseColors
 
 private fun ValidationError.toLocalizedString(context: Context): String {

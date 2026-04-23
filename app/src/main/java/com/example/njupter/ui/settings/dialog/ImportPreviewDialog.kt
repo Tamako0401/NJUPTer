@@ -1,4 +1,4 @@
-package com.example.njupter.ui.import
+package com.example.njupter.ui.settings.dialog
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

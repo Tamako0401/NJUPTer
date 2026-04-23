@@ -1,4 +1,4 @@
-package com.example.njupter.ui
+package com.example.njupter.ui.timetable.dialog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -78,4 +78,3 @@ fun WeekSelectorDialogPreview() {
         )
     }
 }
-

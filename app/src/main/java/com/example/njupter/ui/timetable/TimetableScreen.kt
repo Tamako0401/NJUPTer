@@ -1,4 +1,4 @@
-package com.example.njupter.ui
+package com.example.njupter.ui.timetable
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,7 +18,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -39,6 +38,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.example.njupter.ui.timetable.component.CourseCard
+import com.example.njupter.ui.timetable.component.SplitButton
+import com.example.njupter.ui.timetable.component.EmptyGuidePlaceholder
+import com.example.njupter.ui.timetable.dialog.CourseEditorDialog
+import com.example.njupter.ui.timetable.dialog.TimetableConfigDialog
+import com.example.njupter.ui.timetable.dialog.TimetableSelectorDialog
+import com.example.njupter.ui.timetable.dialog.WeekSelectorDialog
 
 @OptIn(ExperimentalMaterial3Api::class) // 使用实验性的 Material3 API
 @Composable

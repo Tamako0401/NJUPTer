@@ -1,4 +1,4 @@
-package com.example.njupter.ui.import
+package com.example.njupter.ui.settings
 
 import android.annotation.SuppressLint
 import android.webkit.CookieManager
@@ -53,7 +53,7 @@ fun JwxtImportScreen(
                     WebView(context).apply {
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
-                        
+
                         // 需要支持 Cookie
                         val cookieManager = CookieManager.getInstance()
                         cookieManager.setAcceptCookie(true)
