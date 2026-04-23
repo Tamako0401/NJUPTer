@@ -49,8 +49,8 @@ class JwxtParser {
                     val timeWeekStr = lines[1] // 例: "周四第3,4节{第1-17周|单周}"
                     val teacher = lines[2]
                     val classroom = if (lines.size >= 4) lines[3] else "" // 第四行是上课地点，有些可能缺失
-                    
-                    if (timeWeekStr.contains("周[一二三四五六日天]")) {  // 至少要有 "周X" 这样的格式
+
+                    if (timeWeekStr.length >= 2) {
                         val dayOfWeek = parseDay(timeWeekStr.substring(0, 2))
                         val (startSection, endSection) = parseSections(timeWeekStr)
                         val weeks = parseWeeks(timeWeekStr)
