@@ -42,6 +42,7 @@ import com.example.njupter.ui.timetable.TimetableScreen
 import com.example.njupter.viewmodels.TimetableViewModel
 import com.example.njupter.data.LocalFileDataSource
 import com.example.njupter.data.SharedPreferencesSettingsRepository
+import com.example.njupter.ui.settings.LanguageSelectScreen
 import com.example.njupter.ui.settings.SettingsScreen
 import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.ui.settings.JwxtImportScreen
@@ -135,6 +136,7 @@ class MainActivity : ComponentActivity() {
                 val currentConfig = LocalConfiguration.current
                 var currentTab by remember { mutableStateOf(0) }
                 var showJwxtImport by remember { mutableStateOf(false) }
+                var showLanguageSelect by remember { mutableStateOf(false) }
 
                 val localizedContext = remember(baseContext, currentConfig, appLanguageTag) {
                     val locale = when {
@@ -204,6 +206,17 @@ class MainActivity : ComponentActivity() {
                                 viewModel.fetchAndProcessImport(cookie, xh)
                             }
                         )
+                    } else if (showLanguageSelect) {
+                        LanguageSelectScreen(
+                            currentLanguageTag = appLanguageTag,
+                            onBack = { showLanguageSelect = false },
+                            onSelectLanguage = { languageTag ->
+                                scope.launch {
+                                    settingsRepository.setAppLanguageTag(languageTag)
+                                }
+                                showLanguageSelect = false
+                            }
+                        )
                     } else {
                         Scaffold(
                             bottomBar = {
@@ -256,11 +269,7 @@ class MainActivity : ComponentActivity() {
                                         currentSessionTimes = uiState.currentSessionTimes,
                                         currentShowWeekends = uiState.showWeekends,
                                         currentLanguageTag = appLanguageTag,
-                                        onLanguageChange = { languageTag ->
-                                            scope.launch {
-                                                settingsRepository.setAppLanguageTag(languageTag)
-                                            }
-                                        },
+                                        onLanguageSelectClick = { showLanguageSelect = true },
                                         onUpdateTimetableMetadata = viewModel::updateTimetableMetadata
                                     )
                                 }
