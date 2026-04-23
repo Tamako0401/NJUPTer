@@ -6,15 +6,18 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.BatterySaver
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -23,32 +26,33 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.njupter.R
-import com.example.njupter.ui.settings.component.SettingsSectionHeader
-import com.example.njupter.ui.timetable.dialog.TimetableConfigDialog
+import com.example.njupter.ui.settings.component.SettingsSectionCard
+import com.example.njupter.ui.settings.model.SettingsItem
+import com.example.njupter.ui.settings.model.SettingsSection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     currentTimetableId: String?,
     currentTimetableName: String,
-    currentStartDate: Long,
-    currentTotalWeeks: Int,
-    currentSessionTimes: List<String>,
-    currentShowWeekends: Boolean,
     currentLanguageTag: String,
     onLanguageSelectClick: () -> Unit,
-    onUpdateTimetableMetadata: (String, String, Long, Int, Boolean, List<String>) -> Unit
+    onTimetableSettingsClick: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val isInspectionMode = LocalInspectionMode.current
 
-    var showConfigDialog by remember { mutableStateOf(false) }
-    var notificationEnabled by remember { mutableStateOf(isNotificationPermissionGranted(context)) }
-    var batteryWhitelistEnabled by remember { mutableStateOf(isIgnoringBatteryOptimizations(context)) }
+    var notificationEnabled by remember { 
+        mutableStateOf(if (isInspectionMode) true else isNotificationPermissionGranted(context)) 
+    }
+    var batteryWhitelistEnabled by remember { 
+        mutableStateOf(if (isInspectionMode) false else isIgnoringBatteryOptimizations(context)) 
+    }
 
-    DisposableEffect(lifecycleOwner, context) {
+    DisposableEffect(lifecycleOwner, context, isInspectionMode) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
+            if (event == Lifecycle.Event.ON_RESUME && !isInspectionMode) {
                 notificationEnabled = isNotificationPermissionGranted(context)
                 batteryWhitelistEnabled = isIgnoringBatteryOptimizations(context)
             }
@@ -59,30 +63,56 @@ fun SettingsScreen(
         }
     }
 
-    if (showConfigDialog) {
-        TimetableConfigDialog(
-            initialName = currentTimetableName,
-            initialStartDate = currentStartDate,
-            initialTotalWeeks = currentTotalWeeks,
-            initialShowWeekends = currentShowWeekends,
-            initialSessionTimes = currentSessionTimes,
-            isEditMode = true,
-            onDismiss = { showConfigDialog = false },
-            onConfirm = { name, startDate, weeks, showWeekends, sessionTimes ->
-                if (currentTimetableId != null) {
-                    onUpdateTimetableMetadata(
-                        currentTimetableId,
-                        name,
-                        startDate,
-                        weeks,
-                        showWeekends,
-                        sessionTimes
-                    )
-                }
-                showConfigDialog = false
-            }
+    val currentLanguageLabel = if (currentLanguageTag.startsWith("zh")) {
+        stringResource(R.string.language_zh)
+    } else {
+        stringResource(R.string.language_en)
+    }
+
+    val timetableSectionItems = if (currentTimetableId == null) {
+        emptyList()
+    } else {
+        listOf(
+            SettingsItem.Navigation(
+                icon = Icons.Default.CalendarMonth,
+                title = stringResource(R.string.cur_timetable_settings),
+                value = currentTimetableName,
+                onClick = onTimetableSettingsClick
+            )
         )
     }
+
+    val appSectionItems = listOf(
+        SettingsItem.Navigation(
+            icon = Icons.Default.Language,
+            title = stringResource(R.string.language),
+            value = currentLanguageLabel,
+            onClick = onLanguageSelectClick
+        ),
+        SettingsItem.Toggle(
+            icon = Icons.Default.Notifications,
+            title = stringResource(R.string.notification_permission),
+            checked = notificationEnabled,
+            onToggle = { openNotificationSettings(context) }
+        ),
+        SettingsItem.Toggle(
+            icon = Icons.Default.BatterySaver,
+            title = stringResource(R.string.battery_optimization),
+            checked = batteryWhitelistEnabled,
+            onToggle = { openBatteryOptimizationSettings(context) }
+        )
+    )
+
+    val settingsSections = listOf(
+        SettingsSection(
+            title = stringResource(R.string.current_timetable_settings),
+            items = timetableSectionItems
+        ),
+        SettingsSection(
+            title = stringResource(R.string.app_settings),
+            items = appSectionItems
+        )
+    )
 
     Scaffold(
         topBar = {
@@ -95,97 +125,25 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                SettingsSectionHeader(title = stringResource(R.string.current_timetable_settings))
-            }
-            
-            // If no timetable is selected/created, disable or hide specific settings
             if (currentTimetableId == null) {
                  item {
                      Text(
                          text = stringResource(R.string.no_timetable_desc),
-                         modifier = Modifier.padding(16.dp),
+                         modifier = Modifier.padding(horizontal = 8.dp),
                          style = MaterialTheme.typography.bodyMedium,
                          color = MaterialTheme.colorScheme.error
                      )
                  }
-            } else {
+            }
 
-                item {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.cur_timetable_settings)) },
-                        supportingContent = { Text(currentTimetableName) },
-                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
-                        modifier = Modifier.clickable { showConfigDialog = true }
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            items(settingsSections.size) { index ->
+                val section = settingsSections[index]
+                if (section.items.isNotEmpty()) {
+                    SettingsSectionCard(section = section)
                 }
-            }
-
-            item {
-                SettingsSectionHeader(title = stringResource(R.string.app_settings))
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.language)) },
-                    supportingContent = {
-                        Text(
-                            if (currentLanguageTag.startsWith("zh")) "简体中文"
-                            else "English"
-                        )
-                    },
-                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
-                    modifier = Modifier.clickable(onClick = onLanguageSelectClick)
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.notification_permission)) },
-                    supportingContent = { Text(stringResource(R.string.notification_permission_desc)) },
-                    trailingContent = {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SuggestionChip(
-                                onClick = { openNotificationSettings(context) },
-                                label = {
-                                    Text(
-                                        if (notificationEnabled) stringResource(R.string.status_enabled)
-                                        else stringResource(R.string.go_to_settings)
-                                    )
-                                }
-                            )
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-                        }
-                    },
-                    modifier = Modifier.clickable { openNotificationSettings(context) }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            }
-
-            item {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.battery_optimization)) },
-                    supportingContent = { Text(stringResource(R.string.battery_optimization_desc)) },
-                    trailingContent = {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SuggestionChip(
-                                onClick = { openBatteryOptimizationSettings(context) },
-                                label = {
-                                    Text(
-                                        if (batteryWhitelistEnabled) stringResource(R.string.status_enabled)
-                                        else stringResource(R.string.go_to_settings)
-                                    )
-                                }
-                            )
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-                        }
-                    },
-                    modifier = Modifier.clickable { openBatteryOptimizationSettings(context) }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             }
         }
     }
@@ -200,8 +158,12 @@ private fun isNotificationPermissionGranted(context: android.content.Context): B
 }
 
 private fun isIgnoringBatteryOptimizations(context: android.content.Context): Boolean {
-    val powerManager = context.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
-    return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+    return try {
+        val powerManager = context.getSystemService(android.content.Context.POWER_SERVICE) as? PowerManager
+        powerManager?.isIgnoringBatteryOptimizations(context.packageName) ?: false
+    } catch (e: Exception) {
+        false
+    }
 }
 
 private fun openNotificationSettings(context: android.content.Context) {
@@ -253,13 +215,9 @@ fun SettingsScreenPreview() {
         SettingsScreen(
             currentTimetableId = "1",
             currentTimetableName = "2026 春季学期",
-            currentStartDate = System.currentTimeMillis(),
-            currentTotalWeeks = 20,
-            currentShowWeekends = false,
-            currentSessionTimes = listOf("08:00-08:45"),
             currentLanguageTag = "zh",
             onLanguageSelectClick = {},
-            onUpdateTimetableMetadata = { _, _, _, _, _, _ -> },
+            onTimetableSettingsClick = {},
         )
     }
 }

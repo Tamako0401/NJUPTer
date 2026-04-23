@@ -44,6 +44,7 @@ import com.example.njupter.data.LocalFileDataSource
 import com.example.njupter.data.SharedPreferencesSettingsRepository
 import com.example.njupter.ui.settings.LanguageSelectScreen
 import com.example.njupter.ui.settings.SettingsScreen
+import com.example.njupter.ui.settings.TimetableSettingsScreen
 import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.ui.settings.JwxtImportScreen
 import com.example.njupter.ui.settings.dialog.ImportPreviewDialog
@@ -136,7 +137,7 @@ class MainActivity : ComponentActivity() {
                 val currentConfig = LocalConfiguration.current
                 var currentTab by remember { mutableStateOf(0) }
                 var showJwxtImport by remember { mutableStateOf(false) }
-                var showLanguageSelect by remember { mutableStateOf(false) }
+                var settingsSubPage by remember { mutableStateOf("main") }
 
                 val localizedContext = remember(baseContext, currentConfig, appLanguageTag) {
                     val locale = when {
@@ -206,24 +207,16 @@ class MainActivity : ComponentActivity() {
                                 viewModel.fetchAndProcessImport(cookie, xh)
                             }
                         )
-                    } else if (showLanguageSelect) {
-                        LanguageSelectScreen(
-                            currentLanguageTag = appLanguageTag,
-                            onBack = { showLanguageSelect = false },
-                            onSelectLanguage = { languageTag ->
-                                scope.launch {
-                                    settingsRepository.setAppLanguageTag(languageTag)
-                                }
-                                showLanguageSelect = false
-                            }
-                        )
                     } else {
                         Scaffold(
                             bottomBar = {
                                 NavigationBar {
                                     NavigationBarItem(
                                         selected = currentTab == 0,
-                                        onClick = { currentTab = 0 },
+                                        onClick = {
+                                            currentTab = 0
+                                            settingsSubPage = "main"
+                                        },
                                         icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.cd_timetable)) },
                                         label = { Text(stringResource(R.string.timetable)) }
                                     )
@@ -261,17 +254,53 @@ class MainActivity : ComponentActivity() {
                                         onImportClick = { showJwxtImport = true }
                                     )
                                 } else {
-                                    SettingsScreen(
-                                        currentTimetableId = uiState.currentTimetableId,
-                                        currentTimetableName = uiState.currentTimetableName,
-                                        currentStartDate = uiState.currentStartDate,
-                                        currentTotalWeeks = uiState.currentTotalWeeks,
-                                        currentSessionTimes = uiState.currentSessionTimes,
-                                        currentShowWeekends = uiState.showWeekends,
-                                        currentLanguageTag = appLanguageTag,
-                                        onLanguageSelectClick = { showLanguageSelect = true },
-                                        onUpdateTimetableMetadata = viewModel::updateTimetableMetadata
-                                    )
+                                    when (settingsSubPage) {
+                                        "language" -> {
+                                            LanguageSelectScreen(
+                                                currentLanguageTag = appLanguageTag,
+                                                onBack = { settingsSubPage = "main" },
+                                                onSelectLanguage = { languageTag ->
+                                                    scope.launch {
+                                                        settingsRepository.setAppLanguageTag(languageTag)
+                                                    }
+                                                    settingsSubPage = "main"
+                                                }
+                                            )
+                                        }
+
+                                        "timetable" -> {
+                                            TimetableSettingsScreen(
+                                                currentTimetableName = uiState.currentTimetableName,
+                                                currentStartDate = uiState.currentStartDate,
+                                                currentTotalWeeks = uiState.currentTotalWeeks,
+                                                currentShowWeekends = uiState.showWeekends,
+                                                currentSessionTimes = uiState.currentSessionTimes,
+                                                onBack = { settingsSubPage = "main" },
+                                                onSave = { name, startDate, weeks, showWeekends, sessionTimes ->
+                                                    uiState.currentTimetableId?.let { timetableId ->
+                                                        viewModel.updateTimetableMetadata(
+                                                            timetableId,
+                                                            name,
+                                                            startDate,
+                                                            weeks,
+                                                            showWeekends,
+                                                            sessionTimes
+                                                        )
+                                                    }
+                                                }
+                                            )
+                                        }
+
+                                        else -> {
+                                            SettingsScreen(
+                                                currentTimetableId = uiState.currentTimetableId,
+                                                currentTimetableName = uiState.currentTimetableName,
+                                                currentLanguageTag = appLanguageTag,
+                                                onLanguageSelectClick = { settingsSubPage = "language" },
+                                                onTimetableSettingsClick = { settingsSubPage = "timetable" }
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
