@@ -1,0 +1,65 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "dev" ]
+  pull_request:
+    branches: [ "dev" ]
+  workflow_dispatch:
+
+jobs:
+  build-debug:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Build debug APK
+      run: ./gradlew :app:assembleDebug
+      
+    - name: Upload arm64-v8a APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-arm64-v8a-${{ github.sha }}
+        path: app/build/outputs/apk/debug/*arm64-v8a*-debug.apk
+        if-no-files-found: error
+        retention-days: 14
+  
+    - name: Upload armeabi-v7a APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-armeabi-v7a-${{ github.sha }}
+        path: app/build/outputs/apk/debug/*armeabi-v7a*-debug.apk
+        if-no-files-found: error
+        retention-days: 14
+    
+    - name: Upload x86 APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-x86-${{ github.sha }}
+        path: app/build/outputs/apk/debug/*x86-debug.apk
+        if-no-files-found: error
+        retention-days: 14
+    
+    - name: Upload x86_64 APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-x86_64-${{ github.sha }}
+        path: app/build/outputs/apk/debug/*x86_64*-debug.apk
+        if-no-files-found: error
+        retention-days: 14

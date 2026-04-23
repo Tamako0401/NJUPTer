@@ -1,7 +1,7 @@
 package com.example.njupter.data
 
 /**
- * 只关心 JSON 文件的 CRUD，不持有状态
+ * 本地持久化数据源接口，只关心 JSON 文件的 CRUD，不持有状态
  */
 
 interface TimetableDataSource {

@@ -1,9 +1,8 @@
-package com.example.njupter.ui
+package com.example.njupter.ui.timetable.dialog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,9 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -33,9 +31,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.njupter.R
 import com.example.njupter.data.defaultSessionTimes
+import com.example.njupter.ui.theme.NJUPTerTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -95,11 +95,11 @@ fun TimetableConfigDialog(
             ) {
                 if (!isEditMode && onImportClick != null) {
                     item {
-                        androidx.compose.material3.FilledTonalButton(
+                        FilledTonalButton(
                             onClick = onImportClick,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("📥 从教务系统快捷导入")
+                            Text(stringResource(R.string.import_from_jwxt))
                         }
                     }
                 }
@@ -159,8 +159,8 @@ fun TimetableConfigDialog(
                 // Session Times
                 item {
                     ConfigItemRow(
-                        label = "Session Times", // TODO: resource
-                        value = "Edit",
+                        label = stringResource(R.string.session_times_label),
+                        value = stringResource(R.string.edit),
                         onClick = { showSessionTimeEditor = true }
                     )
                 }
@@ -212,5 +212,32 @@ fun ConfigItemRow(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TimetableConfigDialogPreview() {
+    NJUPTerTheme {
+        TimetableConfigDialog(
+            initialName = "2026 Spring",
+            initialStartDate = System.currentTimeMillis(),
+            initialTotalWeeks = 20,
+            initialShowWeekends = false,
+            onDismiss = {},
+            onConfirm = { _, _, _, _, _ -> }
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ConfigItemRowPreview() {
+    NJUPTerTheme {
+        ConfigItemRow(
+            label = "Session Times",
+            value = "Edit",
+            onClick = {}
+        )
     }
 }

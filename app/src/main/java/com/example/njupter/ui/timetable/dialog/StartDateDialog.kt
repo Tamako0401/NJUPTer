@@ -1,4 +1,4 @@
-package com.example.njupter.ui
+package com.example.njupter.ui.timetable.dialog
 
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog

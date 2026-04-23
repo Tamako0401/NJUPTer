@@ -1,17 +1,24 @@
-package com.example.njupter.ui
+package com.example.njupter.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
+import com.example.njupter.data.SettingsRepository
 import com.example.njupter.data.TimetableMetadata
 import com.example.njupter.data.TimetableRepository
-import com.example.njupter.data.SettingsRepository
+import com.example.njupter.data.import.JwxtClient
+import com.example.njupter.data.import.JwxtParser
+import com.example.njupter.domain.getTodayWeekIndex
+import com.example.njupter.domain.import.TimetableImportMatcher
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -27,11 +34,12 @@ data class TimetableUiState(
     val currentTimetableId: String? = null,
     val currentStartDate: Long = System.currentTimeMillis(),
     val currentTotalWeeks: Int = 20,
+    val currentWeek: Int = 1,
     val showWeekends: Boolean = false,
     val currentSessionTimes: List<String> = emptyList(),
     
     // Import state
-    val importResult: com.example.njupter.domain.import.TimetableImportMatcher.ImportResult? = null,
+    val importResult: TimetableImportMatcher.ImportResult? = null,
     val isImporting: Boolean = false,
     val importError: String? = null
 )
@@ -41,33 +49,77 @@ class TimetableViewModel(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    val uiState: StateFlow<TimetableUiState> = combine(
+    private val _currentWeek = MutableStateFlow(1)
+
+    init {
+        viewModelScope.launch {
+            combine(
+                repository.getCurrentTimetable(),
+                settingsRepository.getLastWeekRecords()
+            ) { currentMeta, lastWeekRecords ->
+                val safeTotalWeeks = currentMeta?.totalWeeks?.takeIf { it > 0 } ?: 20
+                val safeStartDate = currentMeta?.startDate ?: System.currentTimeMillis()
+                val timetableId = currentMeta?.id
+
+                val restoredWeek = timetableId
+                    ?.let { id -> lastWeekRecords[id] }
+                    ?: getTodayWeekIndex(safeStartDate, safeTotalWeeks)?.plus(1)
+                    ?: 1
+
+                restoredWeek.coerceIn(1, safeTotalWeeks)
+            }.collect { week ->
+                _currentWeek.value = week
+            }
+        }
+    }
+
+    private val timetableState = combine(
         combine(
             repository.getCourseInfos(),
             repository.getCourseSessions(),
             repository.getAvailableTimetables()
         ) { courses, sessions, timetables -> Triple(courses, sessions, timetables) },
-        repository.getCurrentTimetableName(),
-        repository.getCurrentTimetableId(),
-        repository.getCurrentTimetable()
-    ) { (courses, sessions, timetables), currentName, currentId, currentMeta ->
-        // Handle defaults for missing metadata (e.g. from older JSON files where fields are 0)
-        val safeTotalWeeks = currentMeta?.totalWeeks?.takeIf { it > 0 } ?: 20
+        combine(
+            repository.getCurrentTimetableName(),
+            repository.getCurrentTimetableId(),
+            repository.getCurrentTimetable()
+        ) { currentName, currentId, currentMeta -> Triple(currentName, currentId, currentMeta) },
+        combine(
+            repository.getIsInitialized(),
+            _currentWeek
+        ) { initialized, currentWeek -> initialized to currentWeek }
+    ) { courseData, currentData, stateData ->
+        TimetableBundle(
+            courses = courseData.first,
+            sessions = courseData.second,
+            timetables = courseData.third,
+            currentName = currentData.first,
+            currentId = currentData.second,
+            currentMeta = currentData.third,
+            initialized = stateData.first,
+            currentWeek = stateData.second
+        )
+    }
+
+    val uiState: StateFlow<TimetableUiState> = timetableState.map { bundle ->     // 数据层从这里开始 --> FileTimetableRepository
+        // 处理缺失元数据的默认值
+        val safeTotalWeeks = bundle.currentMeta?.totalWeeks?.takeIf { it > 0 } ?: 20
         // If startDate is 0 (1970), maybe default to now? Or let user see 1970 to fix it.
         // User complained about 1970-01-01. Providing a default if 0 seems appropriate.
-        val safeStartDate = if (currentMeta?.startDate != null && currentMeta.startDate > 0) currentMeta.startDate else System.currentTimeMillis()
-        val safeSessionTimes = currentMeta?.nonNullSessionTimes ?: com.example.njupter.data.TimetableMetadata("", "", 0).nonNullSessionTimes
-        val safeShowWeekends = currentMeta?.showWeekends ?: true
+        val safeStartDate = if (bundle.currentMeta?.startDate != null && bundle.currentMeta.startDate > 0) bundle.currentMeta.startDate else System.currentTimeMillis()
+        val safeSessionTimes = bundle.currentMeta?.nonNullSessionTimes ?: TimetableMetadata("", "", 0).nonNullSessionTimes
+        val safeShowWeekends = bundle.currentMeta?.showWeekends ?: true
 
         TimetableUiState(
-            courseInfos = courses,
-            sessions = sessions,
-            isLoading = false,
-            timetables = timetables,
-            currentTimetableName = currentName,
-            currentTimetableId = currentId,
+            courseInfos = bundle.courses,
+            sessions = bundle.sessions,
+            isLoading = !bundle.initialized,
+            timetables = bundle.timetables,
+            currentTimetableName = bundle.currentName,
+            currentTimetableId = bundle.currentId,
             currentStartDate = safeStartDate,
             currentTotalWeeks = safeTotalWeeks,
+            currentWeek = bundle.currentWeek.coerceIn(1, safeTotalWeeks),
             showWeekends = safeShowWeekends,
             currentSessionTimes = safeSessionTimes
         )
@@ -78,13 +130,24 @@ class TimetableViewModel(
     )
 
     // A separate StateFlow for import process so we can overlay it on top of the combined flow above.
-    private val _importState = kotlinx.coroutines.flow.MutableStateFlow(ImportState())
+    private val _importState = MutableStateFlow(ImportState())
     val importState = _importState.asStateFlow()
 
     data class ImportState(
         val isImporting: Boolean = false,
-        val result: com.example.njupter.domain.import.TimetableImportMatcher.ImportResult? = null,
+        val result: TimetableImportMatcher.ImportResult? = null,
         val error: String? = null
+    )
+
+    private data class TimetableBundle(
+        val courses: List<CourseInfo>,
+        val sessions: List<CourseSession>,
+        val timetables: List<TimetableMetadata>,
+        val currentName: String,
+        val currentId: String?,
+        val currentMeta: TimetableMetadata?,
+        val initialized: Boolean,
+        val currentWeek: Int
     )
 
     fun fetchAndProcessImport(cookieString: String, xh: String) {
@@ -92,15 +155,15 @@ class TimetableViewModel(
             _importState.value = ImportState(isImporting = true)
             try {
                 // 1. Fetch HTML
-                val client = com.example.njupter.data.import.JwxtClient(cookieString, xh)
+                val client = JwxtClient(cookieString, xh)
                 val html = client.fetchTimetableHtml()
 
                 // 2. Parse HTML
-                val parser = com.example.njupter.data.import.JwxtParser()
+                val parser = JwxtParser()
                 val remoteCourses = parser.parseHtml(html)
 
                 // 3. Match and Convert
-                val matcher = com.example.njupter.domain.import.TimetableImportMatcher()
+                val matcher = TimetableImportMatcher()
                 
                 // For a new timetable, we match against empty lists to treat all courses as new
                 val result = matcher.matchAndConvert(remoteCourses, emptyList(), emptyList())
@@ -131,6 +194,22 @@ class TimetableViewModel(
     fun switchTimetable(id: String) {
         viewModelScope.launch {
             repository.switchTimetable(id)
+        }
+    }
+
+    fun setCurrentWeek(week: Int) {
+        viewModelScope.launch {
+            val currentTimetableId = repository.getCurrentTimetableId().value ?: return@launch
+            val totalWeeks = repository.getCurrentTimetable()
+                .first()
+                ?.totalWeeks
+                ?.takeIf { it > 0 }
+                ?: 20
+            val safeWeek = week.coerceIn(1, totalWeeks)
+            if (_currentWeek.value != safeWeek) {
+                _currentWeek.value = safeWeek
+            }
+            settingsRepository.setLastWeekForTimetable(currentTimetableId, safeWeek)
         }
     }
 
@@ -169,12 +248,6 @@ class TimetableViewModel(
             repository.createTimetable(name, startDate, totalWeeks, showWeekends, sessionTimes)
             // The active timetable is automatically switched inside createTimetable,
             // so we can now safely import.
-            repository.importTimetableData(newCourses, newSessions)
-        }
-    }
-
-    fun importTimetableData(newCourses: List<CourseInfo>, newSessions: List<CourseSession>) {
-        viewModelScope.launch {
             repository.importTimetableData(newCourses, newSessions)
         }
     }

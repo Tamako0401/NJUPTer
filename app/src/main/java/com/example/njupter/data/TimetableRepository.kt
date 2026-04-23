@@ -1,18 +1,19 @@
 package com.example.njupter.data
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * 课表数据仓库接口，Flow使数据源支持订阅，数据变化时会主动推送给MainViewModel
  */
 interface TimetableRepository {
-    fun getCourseInfos(): Flow<List<CourseInfo>>
-    fun getCourseSessions(): Flow<List<CourseSession>>
-    // New methods
-    fun getAvailableTimetables(): Flow<List<TimetableMetadata>>
-    fun getCurrentTimetableName(): Flow<String>
-    fun getCurrentTimetableId(): Flow<String?>
+    fun getCourseInfos(): StateFlow<List<CourseInfo>>
+    fun getCourseSessions(): StateFlow<List<CourseSession>>
+    fun getAvailableTimetables(): StateFlow<List<TimetableMetadata>>
+    fun getCurrentTimetableName(): StateFlow<String>
+    fun getCurrentTimetableId(): StateFlow<String?>
     fun getCurrentTimetable(): Flow<TimetableMetadata?>
+    fun getIsInitialized(): StateFlow<Boolean>
     
     suspend fun switchTimetable(id: String)
     suspend fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>)

@@ -5,6 +5,13 @@ import com.example.njupter.data.CourseSession
 import kotlin.math.max
 import kotlin.math.min
 
+sealed class ValidationError {
+    data class StartAfterEnd(val start: Int, val end: Int) : ValidationError()
+    object NoWeekSelected : ValidationError()
+    data class TimeConflict(val day: Int, val startSection: Int, val endSection: Int) : ValidationError()
+    data class CourseDuplicate(val name: String, val teacher: String, val classroom: String) : ValidationError()
+}
+
 object CourseValidator {
 
     fun validateSessionInput(
@@ -14,40 +21,28 @@ object CourseValidator {
         weeks: List<Int>,
         editingSession: CourseSession?,
         allSessions: List<CourseSession>
-    ): String? {
-        // Basic Logic
+    ): ValidationError? {
         if (start > end) {
-            return "Error: Start section ($start) cannot be greater than End section ($end)."
+            return ValidationError.StartAfterEnd(start, end)
         }
 
-        if (weeks.isEmpty()){
-            return "Error: At least one week must be selected."
+        if (weeks.isEmpty()) {
+            return ValidationError.NoWeekSelected
         }
 
-        // Time Conflict Check
         val conflict = allSessions.find { target ->
-            // Ignore self when editing
             if (editingSession != null && target == editingSession) return@find false
-
-            // Must be same day
             if (target.day != day) return@find false
-
-            // Check section overlap
             val sectionOverlap = max(target.startSection, start) <= min(target.endSection, end)
-
-            // Check week overlap
             val weekOverlap = target.weeks.intersect(weeks.toSet()).isNotEmpty()
-
-            // Conflict if sections overlap AND weeks overlap
             sectionOverlap && weekOverlap
         }
 
         if (conflict != null) {
-            // Found a conflict
-            return "Error: Time conflict with existing session: Day ${conflict.day}, Sections ${conflict.startSection}-${conflict.endSection}."
+            return ValidationError.TimeConflict(conflict.day, conflict.startSection, conflict.endSection)
         }
 
-        return null // No error
+        return null
     }
 
     fun validateCourseDuplication(
@@ -56,11 +51,7 @@ object CourseValidator {
         teacher: String,
         classroom: String,
         existingCourses: List<CourseInfo>
-    ): String? {
-        // Check if there is another course with same name, teacher, and classroom
-        // but different ID.
-        // We *do* allow same name/teacher/room IF it is the same course object (same ID)
-        
+    ): ValidationError? {
         val duplicate = existingCourses.find {
             it.name == name &&
             it.teacher == teacher &&
@@ -69,10 +60,9 @@ object CourseValidator {
         }
 
         if (duplicate != null) {
-            return "Error: Course '$name' with teacher '$teacher' in room '$classroom' already exists."
+            return ValidationError.CourseDuplicate(name, teacher, classroom)
         }
 
         return null
     }
 }
-

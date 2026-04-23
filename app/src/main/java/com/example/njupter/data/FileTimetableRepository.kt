@@ -2,11 +2,12 @@ package com.example.njupter.data
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -19,28 +20,33 @@ class FileTimetableRepository(
     private val settingsRepository: SettingsRepository
 ) : TimetableRepository {
 
-    // 状态持有，private 是因为外部只能读取，Mutable 是因为内部有权修改
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // 持有5个MutableStateFlow，private 是因为外部只能读取，对外只暴露Flow，Mutable 是因为内部有权修改
     private val _courseInfos = MutableStateFlow<List<CourseInfo>>(emptyList())
     private val _courseSessions = MutableStateFlow<List<CourseSession>>(emptyList())
-    
+
     private val _availableTimetables = MutableStateFlow<List<TimetableMetadata>>(emptyList())
     private val _currentTimetableName = MutableStateFlow("")
     private val _currentTimetableId = MutableStateFlow<String?>(null)
-    
+
+    private val _isInitialized = MutableStateFlow(false)
+
+    override fun getIsInitialized(): StateFlow<Boolean> = _isInitialized.asStateFlow()
+
     init {
-        CoroutineScope(Dispatchers.IO).launch {
+        repositoryScope.launch {
             refreshTimetableList()
-            // 尝试加载上次选择的时间表
-            val lastId = settingsRepository.getLastSelectedTimetableId().firstOrNull()
+            val lastId = settingsRepository.peekLastSelectedTimetableId()
             if (lastId != null && _availableTimetables.value.any { it.id == lastId }) {
                 switchTimetable(lastId)
             } else {
-                // 尝试选择第一个可用项
                 val first = _availableTimetables.value.firstOrNull()
                 if (first != null) {
                     switchTimetable(first.id)
                 }
             }
+            _isInitialized.value = true
         }
     }
 
@@ -50,7 +56,7 @@ class FileTimetableRepository(
     
     private suspend fun saveData() {
         val id = _currentTimetableId.value ?: return
-        // 启动一个新的协程任务，在IO线程中执行保存操作，避免阻塞主线程
+        // 已注释掉的启动一个新的协程任务，在IO线程中执行保存操作，避免阻塞主线程
         // 但是把持久化操作丢到后台线程，不保证完成时间、不保证顺序、不保证成功
         // CoroutineScope(Dispatchers.IO).launch {
         // 那就 suspend + 上层控制
@@ -64,13 +70,13 @@ class FileTimetableRepository(
         // }
     }
 
-    // 对外暴露只读流
-    override fun getCourseInfos(): Flow<List<CourseInfo>> = _courseInfos.asStateFlow()
-    override fun getCourseSessions(): Flow<List<CourseSession>> = _courseSessions.asStateFlow()
+    // asStateFlow() 将 MutableStateFlow 转换为只读的 StateFlow，外部只能订阅，不能修改
+    override fun getCourseInfos(): StateFlow<List<CourseInfo>> = _courseInfos.asStateFlow()  // 想知道当前状态，类内部直接访问 _courseInfos.value 就行了，类外部想订阅状态变化，使用 getCourseInfos() 返回的 Flow 来观察
+    override fun getCourseSessions(): StateFlow<List<CourseSession>> = _courseSessions.asStateFlow()
     
-    override fun getAvailableTimetables(): Flow<List<TimetableMetadata>> = _availableTimetables.asStateFlow()
-    override fun getCurrentTimetableName(): Flow<String> = _currentTimetableName.asStateFlow()
-    override fun getCurrentTimetableId(): Flow<String?> = _currentTimetableId.asStateFlow()
+    override fun getAvailableTimetables(): StateFlow<List<TimetableMetadata>> = _availableTimetables.asStateFlow()
+    override fun getCurrentTimetableName(): StateFlow<String> = _currentTimetableName.asStateFlow()
+    override fun getCurrentTimetableId(): StateFlow<String?> = _currentTimetableId.asStateFlow()
 
     override fun getCurrentTimetable(): Flow<TimetableMetadata?> =
         combine(_availableTimetables, _currentTimetableId) { list, id ->
@@ -100,7 +106,7 @@ class FileTimetableRepository(
         val currentList = dataSource.getAllTimetables()
         _availableTimetables.value = currentList
         
-        // 如果列表中找不到刚创建的表（极端情况），手动添加进去以确保 switchTimetable 成功
+        // 如果列表中找不到刚创建的表，手动添加进去以确保 switchTimetable 成功
         if (_availableTimetables.value.none { it.id == meta.id }) {
             _availableTimetables.value = _availableTimetables.value + meta
         }
@@ -129,10 +135,10 @@ class FileTimetableRepository(
     }
 
     override suspend fun addCourse(course: CourseInfo) {
-        _courseInfos.update { current ->
+        _courseInfos.update { current ->    // 先改内存中的状态持有
             current + course
         }
-        saveData()
+        saveData()  // 再统一写入
     }
 
     override suspend fun addSession(session: CourseSession) {

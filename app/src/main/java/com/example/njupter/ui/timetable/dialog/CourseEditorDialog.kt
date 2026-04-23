@@ -1,4 +1,4 @@
-package com.example.njupter.ui
+package com.example.njupter.ui.timetable.dialog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,17 +28,29 @@ import androidx.compose.ui.unit.sp
 import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
 import com.example.njupter.domain.validation.CourseValidator
+import com.example.njupter.domain.validation.ValidationError
 import kotlinx.coroutines.delay
 import java.util.UUID
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import com.example.njupter.R
+import android.content.Context
+import com.example.njupter.ui.theme.getCourseColors
+
+private fun ValidationError.toLocalizedString(context: Context): String {
+    return when (this) {
+        is ValidationError.StartAfterEnd -> context.getString(R.string.error_start_after_end, start, end)
+        is ValidationError.NoWeekSelected -> context.getString(R.string.error_no_week)
+        is ValidationError.TimeConflict -> context.getString(R.string.error_time_conflict, day, startSection, endSection)
+        is ValidationError.CourseDuplicate -> context.getString(R.string.error_course_duplicate, name, teacher, classroom)
+    }
+}
 
 @Composable
 fun CourseEditorDialog(
@@ -53,6 +65,8 @@ fun CourseEditorDialog(
     onSave: (CourseInfo, CourseSession, Boolean) -> Unit,
     onDelete: () -> Unit
 ) {
+    val context = LocalContext.current
+
     // Info
     var courseId by remember { mutableStateOf(initialCourse?.id ?: UUID.randomUUID().toString()) }
     var courseName by remember { mutableStateOf(initialCourse?.name ?: "") }
@@ -132,7 +146,7 @@ fun CourseEditorDialog(
                     )
                 }
 
-                Divider()
+                HorizontalDivider(Modifier.padding(10.dp, vertical = 10.dp))
 
                 // --- Time & Week Settings ---
                 Text(
@@ -209,65 +223,97 @@ fun CourseEditorDialog(
                     )
                 }
 
-                Divider()
+                HorizontalDivider(Modifier.padding(10.dp, vertical = 1.dp))
 
                 // Card Color
                 Text(stringResource(R.string.card_color), style = MaterialTheme.typography.titleSmall)
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
-                ) {
-                    // Auto 选项
-                    val isAutoSelected = (selectedColorIndex == -1)
-                    val autoBorderColor = if (isAutoSelected) primaryColor else outlineColor
-                    val autoBorderWidth = if (isAutoSelected) 2.dp else 1.dp
-
-                    Box(
-                        modifier = Modifier
-                            .size(35.dp)
-                            .clip(CircleShape)
-                            .background(Color.Transparent) // Auto 背景透明
-                            .border(autoBorderWidth, autoBorderColor, CircleShape)
-                            .clickable { selectedColorIndex = -1 },
-                        contentAlignment = Alignment.Center
+                Column(){
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
                     ) {
-                        // 显示 "A" 代表 Auto
-                        Text(
-                            stringResource(R.string.auto),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isDarkTheme) Color.White else Color.Black
-                        )
-                    }
-
-                    // 5 个颜色圆点
-                    colorsList.forEachIndexed { index, color ->
-                        val isSelected = (selectedColorIndex == index)
-                        val borderWidth = if (isSelected) 2.dp else 1.dp
-                        val borderColor = if (isSelected) primaryColor else outlineColor
+                        // Auto 选项
+                        val isAutoSelected = (selectedColorIndex == -1)
+                        val autoBorderColor = if (isAutoSelected) primaryColor else outlineColor
+                        val autoBorderWidth = if (isAutoSelected) 2.dp else 1.dp
 
                         Box(
                             modifier = Modifier
-                                .size(34.dp)
+                                .size(35.dp)
                                 .clip(CircleShape)
-                                .background(color)
-                                .border(borderWidth, borderColor, CircleShape) // 描边防止混色
-                                .clickable { selectedColorIndex = index },
+                                .background(Color.Transparent) // Auto 背景透明
+                                .border(autoBorderWidth, autoBorderColor, CircleShape)
+                                .clickable { selectedColorIndex = -1 },
                             contentAlignment = Alignment.Center
                         ) {
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = stringResource(R.string.cd_selected),
-                                    tint = MaterialTheme.colorScheme.onSurface, // 自适配文字颜色
-                                    modifier = Modifier.size(16.dp)
-                                )
+                            // 显示 "A" 代表 Auto
+                            Text(
+                                stringResource(R.string.auto),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDarkTheme) Color.White else Color.Black
+                            )
+                        }
+
+                        // 第一行仅显示前 5 个颜色
+                        colorsList.take(5).forEachIndexed { index, color ->
+                            val isSelected = (selectedColorIndex == index)
+                            val borderWidth = if (isSelected) 2.dp else 1.dp
+                            val borderColor = if (isSelected) primaryColor else outlineColor
+
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .border(borderWidth, borderColor, CircleShape) // 描边防止混色
+                                    .clickable { selectedColorIndex = index },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = stringResource(R.string.cd_selected),
+                                        tint = MaterialTheme.colorScheme.onSurface, // 自适配文字颜色
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    // 第二行仅显示第 6-8 个颜色
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                    ){
+                        colorsList.drop(5).take(3).forEachIndexed { offset, color ->
+                            val actualIndex = offset + 5
+                            val isSelected = (selectedColorIndex == actualIndex)
+                            val borderWidth = if (isSelected) 2.dp else 1.dp
+                            val borderColor = if (isSelected) primaryColor else outlineColor
+
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .border(borderWidth, borderColor, CircleShape) // 描边防止混色
+                                    .clickable { selectedColorIndex = actualIndex },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = stringResource(R.string.cd_selected),
+                                        tint = MaterialTheme.colorScheme.onSurface, // 自适配文字颜色
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
-
 
                 if (errorMessage != null) {
                     Text(
@@ -306,7 +352,7 @@ fun CourseEditorDialog(
                 )
 
                 if (timeError != null) {
-                    errorMessage = timeError
+                    errorMessage = timeError.toLocalizedString(context)
                     scope.launch {
                         delay(16)
                         scrollState.animateScrollTo(scrollState.maxValue)
@@ -324,7 +370,7 @@ fun CourseEditorDialog(
                 )
 
                 if (duplicationError != null) {
-                    errorMessage = duplicationError
+                    errorMessage = duplicationError.toLocalizedString(context)
                     scope.launch {
                         delay(16)
                         scrollState.animateScrollTo(scrollState.maxValue)
@@ -350,7 +396,7 @@ fun CourseEditorDialog(
                 )
                 
                 onSave(info, finalSession, initialCourse == null)
-            }) { Text("Save") }
+            }) { Text(stringResource(R.string.save_btn)) }
         },
         dismissButton = {
             if (initialSession != null) {
@@ -381,7 +427,7 @@ fun CustomWeekPickerDialog(
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
+                        Text(   //TODO:M3强调效果
                             text = stringResource(R.string.at_least_one_week),
                             modifier = Modifier.padding(12.dp),
                             color = MaterialTheme.colorScheme.onErrorContainer,
@@ -434,8 +480,12 @@ fun CustomWeekPickerDialog(
                             Text(stringResource(R.string.even_week), maxLines = 1)
                         }
                     }
-                    TextButton(onClick = { tempWeeks = emptySet() }) {
-                        Text(stringResource(R.string.clear), color = MaterialTheme.colorScheme.error)
+                    TextButton(
+                        onClick = { tempWeeks = emptySet() },
+                        modifier = Modifier.fillMaxWidth(1f / 3)
+
+                    ) {
+                        Text(stringResource(R.string.clear), color = MaterialTheme.colorScheme.error, maxLines = 1)
                     }
                 }
             }
@@ -512,11 +562,15 @@ fun CourseEditorDialogPreview() {
             existingCourses = sampleCourses,
             existingSessions = sampleSessions,
             colorsList = listOf(
-                Color(0xFFE3F2FD),
-                Color(0xFFE8F5E9),
-                Color(0xFFFFF3E0),
-                Color(0xFFF3E5F5),
-                Color(0xFFE0F7FA)
+                getCourseColors()[0],
+                getCourseColors()[1],
+                getCourseColors()[2],
+                getCourseColors()[3],
+                getCourseColors()[4],
+                getCourseColors()[5],
+                getCourseColors()[6],
+                getCourseColors()[7]
+
             ),
             isDarkTheme = false,
             totalWeeks = 20,
