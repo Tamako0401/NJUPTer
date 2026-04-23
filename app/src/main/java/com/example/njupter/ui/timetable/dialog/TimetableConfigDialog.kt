@@ -31,9 +31,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.njupter.R
 import com.example.njupter.data.defaultSessionTimes
+import com.example.njupter.ui.theme.NJUPTerTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -210,5 +212,32 @@ fun ConfigItemRow(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TimetableConfigDialogPreview() {
+    NJUPTerTheme {
+        TimetableConfigDialog(
+            initialName = "2026 Spring",
+            initialStartDate = System.currentTimeMillis(),
+            initialTotalWeeks = 20,
+            initialShowWeekends = false,
+            onDismiss = {},
+            onConfirm = { _, _, _, _, _ -> }
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ConfigItemRowPreview() {
+    NJUPTerTheme {
+        ConfigItemRow(
+            label = "Session Times",
+            value = "Edit",
+            onClick = {}
+        )
     }
 }

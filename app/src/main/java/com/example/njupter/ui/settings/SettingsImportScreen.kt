@@ -13,9 +13,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.njupter.R
+import com.example.njupter.ui.theme.NJUPTerTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled")
@@ -23,7 +27,7 @@ import com.example.njupter.R
 fun JwxtImportScreen(
     onBack: () -> Unit,
     onCookiesObtained: (String, String) -> Unit
-) {
+    ) {
     val defaultTitle = stringResource(R.string.jwxt_login_title)
     var title by remember(defaultTitle) { mutableStateOf(defaultTitle) }
 
@@ -47,50 +51,68 @@ fun JwxtImportScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { context ->
-                    WebView(context).apply {
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
+            if (LocalInspectionMode.current) {
+                Text(
+                    text = "WebView is not available in Preview",
+                    modifier = Modifier.padding(16.dp)
+                )
+            } else {
+                AndroidView(
+                    modifier = Modifier.fillMaxSize(),
+                    factory = { context ->
+                        WebView(context).apply {
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
 
-                        // 需要支持 Cookie
-                        val cookieManager = CookieManager.getInstance()
-                        cookieManager.setAcceptCookie(true)
-                        cookieManager.setAcceptThirdPartyCookies(this, true)
+                            // 需要支持 Cookie
+                            val cookieManager = CookieManager.getInstance()
+                            cookieManager.setAcceptCookie(true)
+                            cookieManager.setAcceptThirdPartyCookies(this, true)
 
-                        webViewClient = object : WebViewClient() {
-                            override fun onPageFinished(view: WebView?, url: String?) {
-                                super.onPageFinished(view, url)
-                                view?.title?.let { title = it }
+                            webViewClient = object : WebViewClient() {
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    super.onPageFinished(view, url)
+                                    view?.title?.let { title = it }
 
-                                // 检查当前 URL 域名的 Cookie
-                                url?.let { currentUrl ->
-                                    val cookies = cookieManager.getCookie(currentUrl)
-                                    // 获取登录后重定向的主页面链接，提取学号 xh
-                                    val xhMatch = Regex("xh=([A-Za-z0-9]+)").find(currentUrl)
-                                    val xh = xhMatch?.groupValues?.get(1)
+                                    // 检查当前 URL 域名的 Cookie
+                                    url?.let { currentUrl ->
+                                        val cookies = cookieManager.getCookie(currentUrl)
+                                        // 获取登录后重定向的主页面链接，提取学号 xh
+                                        val xhMatch = Regex("xh=([A-Za-z0-9]+)").find(currentUrl)
+                                        val xh = xhMatch?.groupValues?.get(1)
 
-                                    if (currentUrl.contains("jwxt.njupt.edu.cn") && xh != null && !isSuccess) {
-                                        isSuccess = true
-                                        onCookiesObtained(cookies ?: "", xh)
+                                        if (currentUrl.contains("jwxt.njupt.edu.cn") && xh != null && !isSuccess) {
+                                            isSuccess = true
+                                            onCookiesObtained(cookies ?: "", xh)
+                                        }
                                     }
+                                }
+
+                                override fun shouldOverrideUrlLoading(
+                                    view: WebView?,
+                                    request: WebResourceRequest?
+                                ): Boolean {
+                                    return super.shouldOverrideUrlLoading(view, request)
                                 }
                             }
 
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?
-                            ): Boolean {
-                                return super.shouldOverrideUrlLoading(view, request)
-                            }
+                            // 会重定向到统一身份认证
+                            loadUrl("http://jwxt.njupt.edu.cn/login_cas.aspx")
                         }
-
-                        // 会重定向到统一身份认证
-                        loadUrl("http://jwxt.njupt.edu.cn/login_cas.aspx")
                     }
-                }
-            )
+                )
+            }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun JwxtImportScreenPreview() {
+    NJUPTerTheme {
+        JwxtImportScreen(
+            onBack = {},
+            onCookiesObtained = { _, _ -> }
+        )
     }
 }

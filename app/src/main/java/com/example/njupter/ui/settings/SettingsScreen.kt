@@ -24,7 +24,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.njupter.R
 import com.example.njupter.ui.settings.component.SettingsSectionHeader
-import com.example.njupter.ui.settings.dialog.LanguageSelectDialog
 import com.example.njupter.ui.timetable.dialog.TimetableConfigDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,14 +36,13 @@ fun SettingsScreen(
     currentSessionTimes: List<String>,
     currentShowWeekends: Boolean,
     currentLanguageTag: String,
-    onLanguageChange: (String) -> Unit,
+    onLanguageSelectClick: () -> Unit,
     onUpdateTimetableMetadata: (String, String, Long, Int, Boolean, List<String>) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
     var showConfigDialog by remember { mutableStateOf(false) }
-    var showLanguageDialog by remember { mutableStateOf(false) }
     var notificationEnabled by remember { mutableStateOf(isNotificationPermissionGranted(context)) }
     var batteryWhitelistEnabled by remember { mutableStateOf(isIgnoringBatteryOptimizations(context)) }
 
@@ -82,17 +80,6 @@ fun SettingsScreen(
                     )
                 }
                 showConfigDialog = false
-            }
-        )
-    }
-
-    if (showLanguageDialog) {
-        LanguageSelectDialog(
-            currentLanguageTag = currentLanguageTag,
-            onDismiss = { showLanguageDialog = false },
-            onSelectLanguage = { languageTag ->
-                onLanguageChange(languageTag)
-                showLanguageDialog = false
             }
         )
     }
@@ -150,7 +137,7 @@ fun SettingsScreen(
                         )
                     },
                     trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
-                    modifier = Modifier.clickable { showLanguageDialog = true }
+                    modifier = Modifier.clickable(onClick = onLanguageSelectClick)
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             }
@@ -271,7 +258,7 @@ fun SettingsScreenPreview() {
             currentShowWeekends = false,
             currentSessionTimes = listOf("08:00-08:45"),
             currentLanguageTag = "zh",
-            onLanguageChange = {},
+            onLanguageSelectClick = {},
             onUpdateTimetableMetadata = { _, _, _, _, _, _ -> },
         )
     }
