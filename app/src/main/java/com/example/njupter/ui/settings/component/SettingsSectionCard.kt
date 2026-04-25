@@ -5,9 +5,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -18,9 +22,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.njupter.ui.settings.model.SettingsItem
 import com.example.njupter.ui.settings.model.SettingsSection
+import com.example.njupter.ui.theme.NJUPTerTheme
 
 @Composable
 fun SettingsSectionCard(
@@ -30,7 +36,9 @@ fun SettingsSectionCard(
     Column(modifier = modifier) {
         SettingsSectionHeader(
             title = section.title,
-            modifier = Modifier.padding(horizontal = 8.dp)
+            modifier = Modifier
+                .padding(horizontal = 8.dp)
+                .offset(x = (-8).dp)
         )
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
@@ -125,3 +133,34 @@ private fun ToggleSettingsRow(item: SettingsItem.Toggle) {
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+fun SettingsSectionCardPreview() {
+    NJUPTerTheme {
+        SettingsSectionCard(
+            section = SettingsSection(
+                title = "General Settings",
+                items = listOf(
+                    SettingsItem.Navigation(
+                        icon = Icons.Default.Settings,
+                        title = "Language",
+                        value = "English",
+                        onClick = {}
+                    ),
+                    SettingsItem.Toggle(
+                        icon = Icons.Default.Notifications,
+                        title = "Enable Notifications",
+                        checked = true,
+                        onToggle = {}
+                    ),
+                    SettingsItem.Navigation(
+                        icon = Icons.Default.Info,
+                        title = "About",
+                        onClick = {}
+                    )
+                )
+            ),
+            modifier = Modifier.padding(16.dp)
+        )
+    }
+}
