@@ -3,6 +3,7 @@ package com.example.njupter.ui.timetable.component
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -38,7 +39,8 @@ fun SplitButton(
             ) {
                 Icon(
                     imageVector = Icons.Filled.CalendarMonth,
-                    contentDescription = null
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(leftText)
@@ -54,7 +56,8 @@ fun SplitButton(
             ) {
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = null
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }

@@ -1,3 +1,6 @@
+/*
+    数据层：定义条目长什么样
+ */
 package com.example.njupter.ui.settings.model
 
 import androidx.compose.ui.graphics.vector.ImageVector

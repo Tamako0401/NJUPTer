@@ -1,3 +1,6 @@
+/*
+    控制层：决定有哪些条目
+ */
 package com.example.njupter.ui.settings
 
 import androidx.compose.animation.animateContentSize
@@ -11,6 +14,7 @@ import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Language
@@ -31,6 +35,8 @@ import com.example.njupter.R
 import com.example.njupter.ui.settings.component.SettingsSectionCard
 import com.example.njupter.ui.settings.model.SettingsItem
 import com.example.njupter.ui.settings.model.SettingsSection
+import android.widget.Toast
+import com.example.njupter.ui.theme.NJUPTerTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,25 +44,31 @@ fun SettingsScreen(
     currentTimetableId: String?,
     currentTimetableName: String,
     currentLanguageTag: String,
+    enableCurrentTimeIndicator: Boolean,
     onLanguageSelectClick: () -> Unit,
-    onTimetableSettingsClick: () -> Unit
+    onTimetableSettingsClick: () -> Unit,
+    onToggleCurrentTimeIndicator: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val isInspectionMode = LocalInspectionMode.current
 
     var notificationEnabled by remember { 
-        mutableStateOf(if (isInspectionMode) true else isNotificationPermissionGranted(context)) 
+        mutableStateOf(
+            runCatching { isNotificationPermissionGranted(context) }.getOrDefault(true)
+        ) 
     }
     var batteryWhitelistEnabled by remember { 
-        mutableStateOf(if (isInspectionMode) false else isIgnoringBatteryOptimizations(context)) 
+        mutableStateOf(
+            runCatching { isIgnoringBatteryOptimizations(context) }.getOrDefault(false)
+        ) 
     }
 
-    DisposableEffect(lifecycleOwner, context, isInspectionMode) {
+    DisposableEffect(lifecycleOwner, context) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME && !isInspectionMode) {
-                notificationEnabled = isNotificationPermissionGranted(context)
-                batteryWhitelistEnabled = isIgnoringBatteryOptimizations(context)
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationEnabled = runCatching { isNotificationPermissionGranted(context) }.getOrDefault(true)
+                batteryWhitelistEnabled = runCatching { isIgnoringBatteryOptimizations(context) }.getOrDefault(false)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -92,16 +104,32 @@ fun SettingsScreen(
             onClick = onLanguageSelectClick
         ),
         SettingsItem.Toggle(
+            icon = Icons.Default.AccessTime,
+            title = stringResource(R.string.current_time_indicator),
+            checked = enableCurrentTimeIndicator,
+            onToggle = { onToggleCurrentTimeIndicator(!enableCurrentTimeIndicator) }
+        ),
+        SettingsItem.Toggle(
             icon = Icons.Default.Notifications,
             title = stringResource(R.string.notification_permission),
             checked = notificationEnabled,
-            onToggle = { openNotificationSettings(context) }
+            onToggle = {
+                val ok = openNotificationSettings(context)
+                if (!ok) {
+                    Toast.makeText(context, R.string.cannot_open_settings, Toast.LENGTH_SHORT).show()
+                }
+            }
         ),
         SettingsItem.Toggle(
             icon = Icons.Default.BatterySaver,
             title = stringResource(R.string.battery_optimization),
             checked = batteryWhitelistEnabled,
-            onToggle = { openBatteryOptimizationSettings(context) }
+            onToggle = {
+                val ok = openBatteryOptimizationSettings(context)
+                if (!ok) {
+                    Toast.makeText(context, R.string.cannot_open_settings, Toast.LENGTH_SHORT).show()
+                }
+            }
         )
     )
 
@@ -112,7 +140,7 @@ fun SettingsScreen(
         ),
         SettingsSection(
             title = stringResource(R.string.app_settings),
-            items = appSectionItems
+            items = appSectionItems     // 条目定义
         )
     )
 
@@ -169,17 +197,17 @@ private fun isIgnoringBatteryOptimizations(context: android.content.Context): Bo
     }
 }
 
-private fun openNotificationSettings(context: android.content.Context) {
+private fun openNotificationSettings(context: android.content.Context): Boolean {
     val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
         putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
     }
     val fallbackIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
         data = Uri.parse("package:${context.packageName}")
     }
-    startActivitySafely(context, intent, fallbackIntent)
+    return startActivitySafely(context, intent, fallbackIntent)
 }
 
-private fun openBatteryOptimizationSettings(context: android.content.Context) {
+private fun openBatteryOptimizationSettings(context: android.content.Context): Boolean {
     val requestIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
         data = Uri.parse("package:${context.packageName}")
     }
@@ -188,9 +216,8 @@ private fun openBatteryOptimizationSettings(context: android.content.Context) {
         data = Uri.parse("package:${context.packageName}")
     }
 
-    if (!startActivitySafely(context, requestIntent, fallbackIntent)) {
-        startActivitySafely(context, finalFallbackIntent)
-    }
+    if (startActivitySafely(context, requestIntent, fallbackIntent)) return true
+    return startActivitySafely(context, finalFallbackIntent)
 }
 
 private fun startActivitySafely(
@@ -214,13 +241,15 @@ private fun startActivitySafely(
 @Preview(showBackground = true)
 @Composable
 fun SettingsScreenPreview() {
-    MaterialTheme {
+    NJUPTerTheme {
         SettingsScreen(
             currentTimetableId = "1",
             currentTimetableName = "2026 春季学期",
             currentLanguageTag = "zh",
+            enableCurrentTimeIndicator = true,
             onLanguageSelectClick = {},
             onTimetableSettingsClick = {},
+            onToggleCurrentTimeIndicator = {}
         )
     }
 }

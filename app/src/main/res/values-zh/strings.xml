@@ -136,6 +136,8 @@
     <string name="notification_permission_desc">用于显示课程提醒</string>
     <string name="battery_optimization">电池优化</string>
     <string name="battery_optimization_desc">允许后台提醒以发送通知</string>
+    <string name="current_time_indicator">当前时间指示器</string>
+    <string name="cannot_open_settings">无法打开系统设置</string>
     <string name="language">语言</string>
     <string name="language_en">English</string>
     <string name="language_zh">中文</string>

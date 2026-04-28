@@ -141,6 +141,7 @@ class MainActivity : ComponentActivity() {
                 val uiState by viewModel.uiState.collectAsState()   // 观察状态，将StateFlow转换成Compose的State
                 val importState by viewModel.importState.collectAsState()   // 同上
                 val appLanguageTag by settingsRepository.getAppLanguageTag().collectAsState(initial = settingsRepository.peekAppLanguageTag())
+                val enableCurrentTimeIndicator by settingsRepository.getEnableCurrentTimeIndicator().collectAsState(initial = true)
                 val scope = rememberCoroutineScope()
                 val baseContext = LocalContext.current
                 val currentConfig = LocalConfiguration.current
@@ -273,8 +274,9 @@ class MainActivity : ComponentActivity() {
                                                     currentTotalWeeks = uiState.currentTotalWeeks,
                                                     currentWeek = uiState.currentWeek,
                                                     sessionTimes = uiState.currentSessionTimes,
-                                                    showWeekends = uiState.showWeekends,
-                                                    isLoading = uiState.isLoading,
+                                        showWeekends = uiState.showWeekends,
+                                        enableCurrentTimeIndicator = enableCurrentTimeIndicator,
+                                        isLoading = uiState.isLoading,
                                                     onAddCourse = viewModel::addCourse,
                                                     onAddSession = viewModel::addSession,
                                                     onUpdateCourse = viewModel::updateCourse,
@@ -325,8 +327,14 @@ class MainActivity : ComponentActivity() {
                                                     currentTimetableId = uiState.currentTimetableId,
                                                     currentTimetableName = uiState.currentTimetableName,
                                                     currentLanguageTag = appLanguageTag,
+                                                    enableCurrentTimeIndicator = enableCurrentTimeIndicator,
                                                     onLanguageSelectClick = { settingsSubPage = "language" },
-                                                    onTimetableSettingsClick = { settingsSubPage = "timetable" }
+                                                    onTimetableSettingsClick = { settingsSubPage = "timetable" },
+                                                    onToggleCurrentTimeIndicator = { enabled ->
+                                                        scope.launch {
+                                                            settingsRepository.setEnableCurrentTimeIndicator(enabled)
+                                                        }
+                                                    }
                                                 )
                                             }
                                         }

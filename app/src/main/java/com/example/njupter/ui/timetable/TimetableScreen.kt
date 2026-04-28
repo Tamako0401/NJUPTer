@@ -61,6 +61,7 @@ fun TimetableScreen(
     currentWeek: Int = 1,
     sessionTimes: List<String> = emptyList(),
     showWeekends: Boolean = true,
+    enableCurrentTimeIndicator: Boolean = true,
     isLoading: Boolean = false,
     onAddCourse: (CourseInfo) -> Unit = {},
     onAddSession: (CourseSession) -> Unit = {},
@@ -194,45 +195,37 @@ fun TimetableScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Box(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .animateContentSize(animationSpec = spring())
+                            .padding(start = 0.dp)
+                            .offset(x = (-13).dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .offset(x = (-20).dp)
-
-                        ) {
-                            SplitButton(
-                                leftText = if (currentTimetableName.isNotEmpty()) {
-                                    currentTimetableName
-                                } else {
-                                    stringResource(R.string.timetable)
-                                },
-                                onRightClick = { showTimetableSelector = true },
-                                modifier = Modifier.animateContentSize(animationSpec = spring())
-                            )
-                        }
+                        SplitButton(
+                            leftText = if (currentTimetableName.isNotEmpty()) {
+                                currentTimetableName
+                            } else {
+                                stringResource(R.string.timetable)
+                            },
+                            onRightClick = { showTimetableSelector = true },
+                            modifier = Modifier
+                                .animateContentSize(animationSpec = spring())
+                        )
 
                         TextButton(
                             onClick = { showWeekSelector = true },
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .animateContentSize(animationSpec = spring())
+                            modifier = Modifier.animateContentSize(animationSpec = spring())
                         ) {
                             Text(
                                 text = stringResource(R.string.week, pagerState.currentPage + 1),
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.offset(x = (-8).dp)
+                                style = MaterialTheme.typography.titleMedium
                             )
                         }
 
-
                         Row(
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .animateContentSize(animationSpec = spring()),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             IconButton(onClick = {
@@ -307,7 +300,7 @@ fun TimetableScreen(
             verticalAlignment = Alignment.Top
         ) { page ->
             val currentWeek = page + 1
-            val showCurrentTimeIndicator = todayDayOfWeek <= daysCount && currentSectionPosition != null
+            val showCurrentTimeIndicator = enableCurrentTimeIndicator && todayDayOfWeek <= daysCount && currentSectionPosition != null
             val currentSectionIndex = currentSectionPosition?.first
             val currentSectionProgress = currentSectionPosition?.second ?: 0f
             val currentTimeLineOffset = if (showCurrentTimeIndicator && currentSectionIndex != null) {

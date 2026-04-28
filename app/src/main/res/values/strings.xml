@@ -138,6 +138,8 @@
     <string name="notification_permission_desc">Required to display class reminders</string>
     <string name="battery_optimization">Battery Optimization</string>
     <string name="battery_optimization_desc">Allow running in background for timely reminders</string>
+    <string name="current_time_indicator">Current Time Indicator</string>
+    <string name="cannot_open_settings">Unable to open settings</string>
     <string name="language">Language</string>
     <string name="language_en">English</string>
     <string name="language_zh">Chinese</string>

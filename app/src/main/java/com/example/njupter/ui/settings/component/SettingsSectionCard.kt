@@ -1,3 +1,6 @@
+/*
+    视图层：决定条目怎么画
+ */
 package com.example.njupter.ui.settings.component
 
 import androidx.compose.animation.animateContentSize

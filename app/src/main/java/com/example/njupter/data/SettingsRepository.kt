@@ -16,6 +16,8 @@ interface SettingsRepository {
     suspend fun setLastSelectedTimetableId(id: String)
     fun getLastWeekRecords(): Flow<Map<String, Int>>
     suspend fun setLastWeekForTimetable(id: String, week: Int)
+    fun getEnableCurrentTimeIndicator(): Flow<Boolean>
+    suspend fun setEnableCurrentTimeIndicator(enabled: Boolean)
 
     fun peekLastSelectedTimetableId(): String? {
         return (getLastSelectedTimetableId() as? MutableStateFlow)?.value
@@ -33,6 +35,7 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         private const val KEY_APP_LANGUAGE_TAG = "app_language_tag"
         private const val KEY_LAST_SELECTED_TIMETABLE_ID = "last_selected_timetable_id"
         private const val KEY_LAST_WEEK_PREFIX = "last_week_"
+        private const val KEY_CURRENT_TIME_INDICATOR = "enable_current_time_indicator"
     }
 
     private fun readLastWeekRecords(): Map<String, Int> {
@@ -54,6 +57,7 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
     private val _appLanguageTag = MutableStateFlow(prefs.getString(KEY_APP_LANGUAGE_TAG, "") ?: "")
     private val _lastSelectedTimetableId = MutableStateFlow<String?>(prefs.getString(KEY_LAST_SELECTED_TIMETABLE_ID, null))
     private val _lastWeekRecords = MutableStateFlow(readLastWeekRecords())
+    private val _enableCurrentTimeIndicator = MutableStateFlow(prefs.getBoolean(KEY_CURRENT_TIME_INDICATOR, true))
 
     override fun getShowWeekends(): Flow<Boolean> = _showWeekends.asStateFlow()
 
@@ -83,5 +87,12 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         _lastWeekRecords.value = _lastWeekRecords.value.toMutableMap().apply {
             put(id, week)
         }
+    }
+
+    override fun getEnableCurrentTimeIndicator(): Flow<Boolean> = _enableCurrentTimeIndicator.asStateFlow()
+
+    override suspend fun setEnableCurrentTimeIndicator(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_CURRENT_TIME_INDICATOR, enabled) }
+        _enableCurrentTimeIndicator.value = enabled
     }
 }
