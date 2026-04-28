@@ -4,9 +4,12 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -16,10 +19,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -41,12 +48,9 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.njupter.ui.timetable.component.CourseCard
-import com.example.njupter.ui.timetable.component.SplitButton
 import com.example.njupter.ui.timetable.component.EmptyGuidePlaceholder
 import com.example.njupter.ui.timetable.dialog.CourseEditorDialog
 import com.example.njupter.ui.timetable.dialog.TimetableConfigDialog
-import com.example.njupter.ui.timetable.dialog.TimetableSelectorDialog
-import com.example.njupter.ui.timetable.dialog.WeekSelectorDialog
 
 @OptIn(ExperimentalMaterial3Api::class) // 使用实验性的 Material3 API
 @Composable
@@ -131,10 +135,7 @@ fun TimetableScreen(
         findCurrentSectionPosition(sessionTimes, nowMinuteOfDay)
     }
 
-    var showTimetableSelector by remember { mutableStateOf(false) }
-    var showWeekSelector by remember { mutableStateOf(false) }
-
-    // New state for NewTimetableDialog
+    var showTimetableSheet by remember { mutableStateOf(false) }
     var showNewTimetableDialog by remember { mutableStateOf(false) }
 
     if (showNewTimetableDialog) {
@@ -151,14 +152,63 @@ fun TimetableScreen(
         )
     }
 
-    if (showTimetableSelector) {
-        TimetableSelectorDialog(
-            timetables = timetables,
-            currentId = currentTimetableId,
-            onDismiss = { showTimetableSelector = false },
-            onSelect = onSwitchTimetable,
-            onNewTimetable = { showNewTimetableDialog = true }
-        )
+    if (showTimetableSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+        ModalBottomSheet(
+            onDismissRequest = { showTimetableSheet = false },
+            sheetState = sheetState,
+            shape = MaterialTheme.shapes.extraLarge
+        ) {
+            Column(modifier = Modifier.padding(bottom = 32.dp)) {
+                Text(
+                    text = stringResource(R.string.select_timetable),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                )
+                Spacer(Modifier.height(12.dp))
+
+                LazyColumn(modifier = Modifier.heightIn(max = 350.dp)) {
+                    items(timetables) { meta ->
+                        val isCurrent = meta.id == currentTimetableId
+                        ListItem(
+                            headlineContent = { Text(meta.name) },
+                            supportingContent = {
+                                val date = java.util.Date(meta.lastModified)
+                                val format = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+                                Text(stringResource(R.string.last_modified, format.format(date)))
+                            },
+                            trailingContent = {
+                                if (isCurrent) {
+                                    Icon(Icons.Default.Check, contentDescription = stringResource(R.string.cd_selected))
+                                }
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable {
+                                onSwitchTimetable(meta.id)
+                                showTimetableSheet = false
+                            }
+                        )
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+
+                TextButton(
+                    onClick = {
+                        showTimetableSheet = false
+                        showNewTimetableDialog = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.new_timetable))
+                }
+            }
+        }
     }
 
     // Show empty state if no timetables exist
@@ -167,20 +217,6 @@ fun TimetableScreen(
             onCreateTimetable = { showNewTimetableDialog = true }
         )
         return
-    }
-
-    if (showWeekSelector) {
-        WeekSelectorDialog(
-            currentWeek = pagerState.currentPage + 1,
-            totalWeeks = currentTotalWeeks,
-            onDismiss = { showWeekSelector = false },
-            onWeekSelected = { week ->
-                scope.launch {
-                    pagerState.animateScrollToPage(week - 1)
-                }
-                showWeekSelector = false
-            }
-        )
     }
 
     LaunchedEffect(pagerState, currentTimetableId) {
@@ -193,74 +229,76 @@ fun TimetableScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Row(
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .animateContentSize(animationSpec = spring())
-                            .padding(start = 0.dp)
-                            .offset(x = (-13).dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .weight(1f)
+                            .clickable(
+                                indication = null,
+                                interactionSource = null,
+                                onClick = { showTimetableSheet = true }
+                            )
+                            .padding(vertical = 4.dp)
                     ) {
-                        SplitButton(
-                            leftText = if (currentTimetableName.isNotEmpty()) {
-                                currentTimetableName
-                            } else {
-                                stringResource(R.string.timetable)
-                            },
-                            onRightClick = { showTimetableSelector = true },
-                            modifier = Modifier
-                                .animateContentSize(animationSpec = spring())
-                        )
-
-                        TextButton(
-                            onClick = { showWeekSelector = true },
-                            modifier = Modifier.animateContentSize(animationSpec = spring())
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = stringResource(R.string.week, pagerState.currentPage + 1),
-                                style = MaterialTheme.typography.titleMedium
+                                text = currentTimetableName.ifEmpty { stringResource(R.string.timetable) },
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Icon(
+                                Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(R.string.week, pagerState.currentPage + 1),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(onClick = {
-                                scope.launch {
-                                    val prev = (pagerState.currentPage - 1).coerceAtLeast(0)
-                                    pagerState.animateScrollToPage(prev)
-                                }
-                            }) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                    contentDescription = stringResource(R.string.cd_previous_week)
-                                )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = {
+                            scope.launch {
+                                val prev = (pagerState.currentPage - 1).coerceAtLeast(0)
+                                pagerState.animateScrollToPage(prev)
                             }
-                            IconButton(onClick = {
-                                scope.launch {
-                                    val next =
-                                        (pagerState.currentPage + 1).coerceAtMost(currentTotalWeeks - 1)
-                                    pagerState.animateScrollToPage(next)
-                                }
-                            }) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    contentDescription = stringResource(R.string.cd_next_week)
-                                )
+                        }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                contentDescription = stringResource(R.string.cd_previous_week)
+                            )
+                        }
+                        IconButton(onClick = {
+                            scope.launch {
+                                val next =
+                                    (pagerState.currentPage + 1).coerceAtMost(currentTotalWeeks - 1)
+                                pagerState.animateScrollToPage(next)
                             }
+                        }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = stringResource(R.string.cd_next_week)
+                            )
                         }
                     }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = Color.Transparent
-                ),
-                modifier = Modifier,
-                windowInsets = WindowInsets(0.dp)
-            )
+                }
+            }
         },
         floatingActionButton = {
             Row(
@@ -335,7 +373,7 @@ fun TimetableScreen(
                         val isToday = todayWeekIndex == page && todayDayOfWeek == index + 1
 
                         val cellContainerColor = if (isToday) {
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
                         } else {
                             Color.Transparent
                         }
@@ -349,49 +387,33 @@ fun TimetableScreen(
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         }
-                        val cellBorderColor = if (isToday) {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
-                        } else {
-                            Color.Transparent
-                        }
 
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(45.dp),
+                                .height(45.dp)
+                                .padding(horizontal = 2.dp, vertical = 3.dp)
+                                .clip(MaterialTheme.shapes.small)
+                                .background(cellContainerColor)
+                                .animateContentSize(animationSpec = spring()),
                             contentAlignment = Alignment.Center
                         ) {
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 2.dp, vertical = 3.dp)
-                                    .animateContentSize(animationSpec = spring())
-                                    .border(
-                                        width = 1.dp,
-                                        color = cellBorderColor,
-                                        shape = MaterialTheme.shapes.small
-                                    ),
-                                shape = MaterialTheme.shapes.small,
-                                color = cellContainerColor
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
-                                Column(
-                                    modifier = Modifier.fillMaxSize(),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        text = dayLabel,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Medium,
-                                        color = dayTextColor
-                                    )
-                                    Text(
-                                        text = dateString,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = dateTextColor,
-                                        fontWeight = FontWeight.Normal
-                                    )
-                                }
+                                Text(
+                                    text = dayLabel,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Medium,
+                                    color = dayTextColor
+                                )
+                                Text(
+                                    text = dateString,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = dateTextColor,
+                                    fontWeight = FontWeight.Normal
+                                )
                             }
                         }
                     }
@@ -409,12 +431,7 @@ fun TimetableScreen(
                         (1..maxSection).forEach { section ->
                             val isCurrentSection = showCurrentTimeIndicator && currentSectionIndex == section - 1
                             val sectionContainerColor = if (isCurrentSection) {
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                            } else {
-                                Color.Transparent
-                            }
-                            val sectionBorderColor = if (isCurrentSection) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
                             } else {
                                 Color.Transparent
                             }
@@ -422,64 +439,54 @@ fun TimetableScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(sectionHeight),
+                                    .height(sectionHeight)
+                                    .padding(horizontal = 2.dp, vertical = 3.dp)
+                                    .clip(MaterialTheme.shapes.small)
+                                    .background(sectionContainerColor)
+                                    .animateContentSize(animationSpec = spring()),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 2.dp, vertical = 3.dp)
-                                        .animateContentSize(animationSpec = spring())
-                                        .border(
-                                            width = 1.dp,
-                                            color = sectionBorderColor,
-                                            shape = MaterialTheme.shapes.small
-                                        ),
-                                    shape = MaterialTheme.shapes.small,
-                                    color = sectionContainerColor
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
                                 ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxSize(),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Text(
-                                            text = section.toString(),
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        if (section - 1 < sessionTimes.size && sessionTimes[section - 1].isNotEmpty()) {
-                                            val timeStr = sessionTimes[section - 1]
-                                            val parts = timeStr.split("-")
-                                            if (parts.size == 2) {
-                                                Text(
-                                                    text = parts[0],
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
-                                                    fontSize = 9.sp,
-                                                    lineHeight = 9.sp,
-                                                    textAlign = TextAlign.Center,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                                Text(
-                                                    text = parts[1],
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
-                                                    fontSize = 9.sp,
-                                                    lineHeight = 9.sp,
-                                                    textAlign = TextAlign.Center,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            } else {
-                                                Text(
-                                                    text = timeStr,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
-                                                    fontSize = 9.sp,
-                                                    lineHeight = 9.sp,
-                                                    textAlign = TextAlign.Center,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
+                                    Text(
+                                        text = section.toString(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (isCurrentSection) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (section - 1 < sessionTimes.size && sessionTimes[section - 1].isNotEmpty()) {
+                                        val timeStr = sessionTimes[section - 1]
+                                        val parts = timeStr.split("-")
+                                        if (parts.size == 2) {
+                                            Text(
+                                                text = parts[0],
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
+                                                fontSize = 9.sp,
+                                                lineHeight = 9.sp,
+                                                textAlign = TextAlign.Center,
+                                                color = if (isCurrentSection) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = parts[1],
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
+                                                fontSize = 9.sp,
+                                                lineHeight = 9.sp,
+                                                textAlign = TextAlign.Center,
+                                                color = if (isCurrentSection) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        } else {
+                                            Text(
+                                                text = timeStr,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Light,
+                                                fontSize = 9.sp,
+                                                lineHeight = 9.sp,
+                                                textAlign = TextAlign.Center,
+                                                color = if (isCurrentSection) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         }
                                     }
                                 }
