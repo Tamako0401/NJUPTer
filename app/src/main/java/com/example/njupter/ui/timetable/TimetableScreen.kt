@@ -1,5 +1,7 @@
 package com.example.njupter.ui.timetable
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -193,7 +195,9 @@ fun TimetableScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Box(
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateContentSize(animationSpec = spring())
                     ) {
                         Box(modifier = Modifier
                             .align(Alignment.CenterStart)
@@ -206,13 +210,16 @@ fun TimetableScreen(
                                 } else {
                                     stringResource(R.string.timetable)
                                 },
-                                onRightClick = { showTimetableSelector = true }
+                                onRightClick = { showTimetableSelector = true },
+                                modifier = Modifier.animateContentSize(animationSpec = spring())
                             )
                         }
 
                         TextButton(
                             onClick = { showWeekSelector = true },
-                            modifier = Modifier.align(Alignment.Center)
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .animateContentSize(animationSpec = spring())
                         ) {
                             Text(
                                 text = stringResource(R.string.week, pagerState.currentPage + 1),
@@ -223,7 +230,9 @@ fun TimetableScreen(
 
 
                         Row(
-                            modifier = Modifier.align(Alignment.CenterEnd),
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .animateContentSize(animationSpec = spring()),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             IconButton(onClick = {
@@ -262,6 +271,7 @@ fun TimetableScreen(
         },
         floatingActionButton = {
             Row(
+                modifier = Modifier.animateContentSize(animationSpec = spring()),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -292,7 +302,8 @@ fun TimetableScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(top = 0.dp),
+                .padding(top = 0.dp)
+                .animateContentSize(animationSpec = spring()),
             verticalAlignment = Alignment.Top
         ) { page ->
             val currentWeek = page + 1
@@ -308,11 +319,13 @@ fun TimetableScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
+                    .animateContentSize(animationSpec = spring())
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(gridHeaderBg)
+                        .animateContentSize(animationSpec = spring())
                 ) {
                     Box(
                         modifier = Modifier
@@ -359,6 +372,7 @@ fun TimetableScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(horizontal = 2.dp, vertical = 3.dp)
+                                    .animateContentSize(animationSpec = spring())
                                     .border(
                                         width = 1.dp,
                                         color = cellBorderColor,
@@ -422,6 +436,7 @@ fun TimetableScreen(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .padding(horizontal = 2.dp, vertical = 3.dp)
+                                        .animateContentSize(animationSpec = spring())
                                         .border(
                                             width = 1.dp,
                                             color = sectionBorderColor,
@@ -480,7 +495,12 @@ fun TimetableScreen(
                     }
 
                     // Course content area
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .animateContentSize(animationSpec = spring())
+                    ) {
                         // 1. Grid lines layer
                         Column(modifier = Modifier.fillMaxSize()) {
                             (1..maxSection).forEach { _ ->
@@ -539,6 +559,7 @@ fun TimetableScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .offset(y = currentTimeLineOffset)
+                                    .animateContentSize(animationSpec = spring())
                             ) {
                                 Box(
                                     modifier = Modifier

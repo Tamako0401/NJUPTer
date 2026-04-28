@@ -1,5 +1,7 @@
 package com.example.njupter.ui.timetable.component
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,7 +21,8 @@ fun EmptyGuidePlaceholder(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(32.dp)
+            .animateContentSize(animationSpec = spring()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -52,7 +55,9 @@ fun EmptyGuidePlaceholder(
         
         Button(
             onClick = onCreateTimetable,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .animateContentSize(animationSpec = spring())
         ) {
             Text(stringResource(R.string.create_timetable))
         }

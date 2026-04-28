@@ -1,5 +1,7 @@
 package com.example.njupter.ui.settings
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -118,6 +120,7 @@ fun TimetableSettingsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .animateContentSize(animationSpec = spring())
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -160,7 +163,9 @@ fun TimetableSettingsScreen(
                         value = name,
                         onValueChange = { name = it },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateContentSize(animationSpec = spring())
                     )
                 }
             }
@@ -177,7 +182,9 @@ fun TimetableSettingsScreen(
                     )
                     Text(
                         text = totalWeeks.toInt().toString(),
-                        modifier = Modifier.padding(top = 4.dp)
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .animateContentSize(animationSpec = spring())
                     )
                 }
             }

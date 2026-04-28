@@ -1,8 +1,11 @@
 package com.example.njupter.ui.timetable.dialog
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -23,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import com.example.njupter.ui.animation.pressScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.njupter.data.CourseInfo
@@ -114,7 +118,8 @@ fun CourseEditorDialog(
             Column(
                 modifier = Modifier
                     .verticalScroll(scrollState)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .animateContentSize(animationSpec = spring()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             )
             // Details
@@ -165,17 +170,24 @@ fun CourseEditorDialog(
                     days.forEachIndexed { index, label ->
                         val dayNum = index + 1
                         val isSelected = (day == dayNum)
+                        val dayInteractionSource = remember { MutableInteractionSource() }
+
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
                                 .background(if (isSelected) primaryColor else Color.Transparent)
+                                .animateContentSize(animationSpec = spring())
+                                .pressScale(dayInteractionSource)
                                 .border(
                                     1.dp,
                                     if (isSelected) primaryColor else outlineColor,
                                     CircleShape
                                 )
-                                .clickable { day = dayNum },
+                                .clickable(
+                                    interactionSource = dayInteractionSource,
+                                    onClick = { day = dayNum }
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -231,20 +243,30 @@ fun CourseEditorDialog(
                 Column(){
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                        modifier = Modifier
+                            .padding(vertical = 4.dp)
+                            .fillMaxWidth()
+                            .animateContentSize(animationSpec = spring())
                     ) {
                         // Auto 选项
                         val isAutoSelected = (selectedColorIndex == -1)
                         val autoBorderColor = if (isAutoSelected) primaryColor else outlineColor
                         val autoBorderWidth = if (isAutoSelected) 2.dp else 1.dp
 
+                        val autoColorInteractionSource = remember { MutableInteractionSource() }
+
                         Box(
                             modifier = Modifier
                                 .size(35.dp)
                                 .clip(CircleShape)
-                                .background(Color.Transparent) // Auto 背景透明
+                                .background(Color.Transparent)
+                                .animateContentSize(animationSpec = spring())
+                                .pressScale(autoColorInteractionSource)
                                 .border(autoBorderWidth, autoBorderColor, CircleShape)
-                                .clickable { selectedColorIndex = -1 },
+                                .clickable(
+                                    interactionSource = autoColorInteractionSource,
+                                    onClick = { selectedColorIndex = -1 }
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             // 显示 "A" 代表 Auto
@@ -262,13 +284,20 @@ fun CourseEditorDialog(
                             val borderWidth = if (isSelected) 2.dp else 1.dp
                             val borderColor = if (isSelected) primaryColor else outlineColor
 
+                            val colorInteractionSource = remember { MutableInteractionSource() }
+
                             Box(
                                 modifier = Modifier
                                     .size(34.dp)
                                     .clip(CircleShape)
                                     .background(color)
-                                    .border(borderWidth, borderColor, CircleShape) // 描边防止混色
-                                    .clickable { selectedColorIndex = index },
+                                    .animateContentSize(animationSpec = spring())
+                                    .pressScale(colorInteractionSource)
+                                    .border(borderWidth, borderColor, CircleShape)
+                                    .clickable(
+                                        interactionSource = colorInteractionSource,
+                                        onClick = { selectedColorIndex = index }
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (isSelected) {
@@ -285,7 +314,10 @@ fun CourseEditorDialog(
                     // 第二行仅显示第 6-8 个颜色
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
+                        modifier = Modifier
+                            .padding(vertical = 4.dp)
+                            .fillMaxWidth()
+                            .animateContentSize(animationSpec = spring())
                     ){
                         colorsList.drop(5).take(3).forEachIndexed { offset, color ->
                             val actualIndex = offset + 5
@@ -293,13 +325,20 @@ fun CourseEditorDialog(
                             val borderWidth = if (isSelected) 2.dp else 1.dp
                             val borderColor = if (isSelected) primaryColor else outlineColor
 
+                            val colorInteractionSource2 = remember { MutableInteractionSource() }
+
                             Box(
                                 modifier = Modifier
                                     .size(34.dp)
                                     .clip(CircleShape)
                                     .background(color)
-                                    .border(borderWidth, borderColor, CircleShape) // 描边防止混色
-                                    .clickable { selectedColorIndex = actualIndex },
+                                    .animateContentSize(animationSpec = spring())
+                                    .pressScale(colorInteractionSource2)
+                                    .border(borderWidth, borderColor, CircleShape)
+                                    .clickable(
+                                        interactionSource = colorInteractionSource2,
+                                        onClick = { selectedColorIndex = actualIndex }
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (isSelected) {
@@ -425,7 +464,9 @@ fun CustomWeekPickerDialog(
                     Surface(
                         color = MaterialTheme.colorScheme.errorContainer,
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateContentSize(animationSpec = spring())
                     ) {
                         Text(   //TODO:M3强调效果
                             text = stringResource(R.string.at_least_one_week),
@@ -516,7 +557,8 @@ fun WeekGrid(
         columns = GridCells.Adaptive(minSize = 48.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(max = 280.dp),
+            .heightIn(max = 280.dp)
+            .animateContentSize(animationSpec = spring()),
         contentPadding = PaddingValues(4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -527,13 +569,19 @@ fun WeekGrid(
 
             val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
             val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+            val gridInteractionSource = remember { MutableInteractionSource() }
 
             Box(
                 modifier = Modifier
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(8.dp))
                     .background(backgroundColor)
-                    .clickable { onWeekToggle(weekNum) },
+                    .animateContentSize(animationSpec = spring())
+                    .pressScale(gridInteractionSource)
+                    .clickable(
+                        interactionSource = gridInteractionSource,
+                        onClick = { onWeekToggle(weekNum) }
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(

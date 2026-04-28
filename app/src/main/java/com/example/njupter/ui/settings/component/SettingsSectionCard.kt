@@ -1,6 +1,9 @@
 package com.example.njupter.ui.settings.component
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,9 +22,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import com.example.njupter.ui.animation.pressScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.njupter.ui.settings.model.SettingsItem
@@ -41,10 +46,17 @@ fun SettingsSectionCard(
                 .offset(x = (-8).dp)
         )
         Surface(
+            modifier = Modifier.animateContentSize(
+                animationSpec = spring()
+            ),
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f)
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(animationSpec = spring())
+            ) {
                 section.items.forEachIndexed { index, item ->
                     when (item) {
                         is SettingsItem.Navigation -> NavigableSettingsRow(item = item)
@@ -64,10 +76,17 @@ fun SettingsSectionCard(
 
 @Composable
 private fun NavigableSettingsRow(item: SettingsItem.Navigation) {
+    val interactionSource = remember { MutableInteractionSource() }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = item.onClick)
+            .animateContentSize(animationSpec = spring())
+            .pressScale(interactionSource)
+            .clickable(
+                interactionSource = interactionSource,
+                onClick = item.onClick
+            )
             .padding(horizontal = 16.dp, vertical = 18.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -103,10 +122,17 @@ private fun NavigableSettingsRow(item: SettingsItem.Navigation) {
 
 @Composable
 private fun ToggleSettingsRow(item: SettingsItem.Toggle) {
+    val interactionSource = remember { MutableInteractionSource() }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = item.onToggle)
+            .animateContentSize(animationSpec = spring())
+            .pressScale(interactionSource)
+            .clickable(
+                interactionSource = interactionSource,
+                onClick = item.onToggle
+            )
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween

@@ -1,6 +1,9 @@
 package com.example.njupter.ui.settings
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -8,10 +11,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.njupter.ui.animation.pressScale
 import com.example.njupter.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,6 +43,7 @@ fun LanguageSelectScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .animateContentSize(animationSpec = spring())
                 .padding(innerPadding)
         ) {
             item {
@@ -73,10 +79,17 @@ private fun LanguageOptionRow(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .animateContentSize(animationSpec = spring())
+            .pressScale(interactionSource)
+            .clickable(
+                interactionSource = interactionSource,
+                onClick = onClick
+            )
             .padding(horizontal = 16.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween

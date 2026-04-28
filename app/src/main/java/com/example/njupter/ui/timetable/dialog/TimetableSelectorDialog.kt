@@ -1,6 +1,7 @@
 package com.example.njupter.ui.timetable.dialog
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.example.njupter.ui.animation.pressScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.res.stringResource
 import com.example.njupter.R
@@ -44,6 +46,8 @@ fun TimetableSelectorDialog(
                     modifier = Modifier.heightIn(max = 300.dp)
                 ) {
                     items(timetables) { meta ->
+                        val itemInteractionSource = remember { MutableInteractionSource() }
+
                         ListItem(
                             headlineContent = { Text(meta.name) },
                             supportingContent = {
@@ -56,10 +60,15 @@ fun TimetableSelectorDialog(
                                     Icon(Icons.Default.Check, contentDescription = stringResource(R.string.cd_selected))
                                 }
                             },
-                            modifier = Modifier.clickable {
-                                onSelect(meta.id)
-                                onDismiss()
-                            }
+                            modifier = Modifier
+                                .pressScale(itemInteractionSource)
+                                .clickable(
+                                    interactionSource = itemInteractionSource,
+                                    onClick = {
+                                        onSelect(meta.id)
+                                        onDismiss()
+                                    }
+                                )
                         )
                         HorizontalDivider()
                     }

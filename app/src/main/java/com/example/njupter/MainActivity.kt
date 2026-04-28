@@ -22,6 +22,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -200,105 +209,126 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                    if (showJwxtImport) {
-                        JwxtImportScreen(
-                            onBack = { showJwxtImport = false },
-                            onCookiesObtained = { cookie, xh ->
-                                viewModel.fetchAndProcessImport(cookie, xh)
+                    AnimatedContent(
+                        targetState = showJwxtImport,
+                        transitionSpec = {
+                            if (targetState) {
+                                (slideInVertically { fullHeight -> fullHeight } + fadeIn(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))) togetherWith
+                                (slideOutVertically { fullHeight -> -fullHeight / 3 } + fadeOut(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))) using
+                                SizeTransform(clip = false)
+                            } else {
+                                (slideInVertically { fullHeight -> -fullHeight / 3 } + fadeIn(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))) togetherWith
+                                (slideOutVertically { fullHeight -> fullHeight } + fadeOut(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))) using
+                                SizeTransform(clip = false)
                             }
-                        )
-                    } else {
-                        Scaffold(
-                            bottomBar = {
-                                NavigationBar {
-                                    NavigationBarItem(
-                                        selected = currentTab == 0,
-                                        onClick = {
-                                            currentTab = 0
-                                            settingsSubPage = "main"
-                                        },
-                                        icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.cd_timetable)) },
-                                        label = { Text(stringResource(R.string.timetable)) }
-                                    )
-                                    NavigationBarItem(
-                                        selected = currentTab == 1,
-                                        onClick = { currentTab = 1 },
-                                        icon = { Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.cd_settings)) },
-                                        label = { Text(stringResource(R.string.settings)) }
-                                    )
+                        },
+                        label = "importTransition"
+                    ) { showImport ->
+                        if (showImport) {
+                            JwxtImportScreen(
+                                onBack = { showJwxtImport = false },
+                                onCookiesObtained = { cookie, xh ->
+                                    viewModel.fetchAndProcessImport(cookie, xh)
                                 }
-                            }
-                        ) { innerPadding ->
-                            Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                                if (currentTab == 0) {
-                                    TimetableScreen(
-                                        courseInfos = uiState.courseInfos,
-                                        courseSessions = uiState.sessions,
-                                        timetables = uiState.timetables,
-                                        currentTimetableName = uiState.currentTimetableName,
-                                        currentTimetableId = uiState.currentTimetableId,
-                                        currentStartDate = uiState.currentStartDate,
-                                        currentTotalWeeks = uiState.currentTotalWeeks,
-                                        currentWeek = uiState.currentWeek,
-                                        sessionTimes = uiState.currentSessionTimes,
-                                        showWeekends = uiState.showWeekends,
-                                        isLoading = uiState.isLoading,
-                                        onAddCourse = viewModel::addCourse,
-                                        onAddSession = viewModel::addSession,
-                                        onUpdateCourse = viewModel::updateCourse,
-                                        onUpdateSession = viewModel::updateSession,
-                                        onDeleteSession = viewModel::deleteSession,
-                                        onSwitchTimetable = viewModel::switchTimetable,
-                                        onCurrentWeekChange = viewModel::setCurrentWeek,
-                                        onCreateTimetable = viewModel::createTimetable,
-                                        onImportClick = { showJwxtImport = true }
-                                    )
-                                } else {
-                                    when (settingsSubPage) {
-                                        "language" -> {
-                                            LanguageSelectScreen(
-                                                currentLanguageTag = appLanguageTag,
-                                                onBack = { settingsSubPage = "main" },
-                                                onSelectLanguage = { languageTag ->
-                                                    scope.launch {
-                                                        settingsRepository.setAppLanguageTag(languageTag)
+                            )
+                        } else {
+                            Scaffold(
+                                bottomBar = {
+                                    NavigationBar {
+                                        NavigationBarItem(
+                                            selected = currentTab == 0,
+                                            onClick = {
+                                                currentTab = 0
+                                                settingsSubPage = "main"
+                                            },
+                                            icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.cd_timetable)) },
+                                            label = { Text(stringResource(R.string.timetable)) }
+                                        )
+                                        NavigationBarItem(
+                                            selected = currentTab == 1,
+                                            onClick = {
+                                                currentTab = 1
+                                            },
+                                            icon = { Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.cd_settings)) },
+                                            label = { Text(stringResource(R.string.settings)) }
+                                        )
+                                    }
+                                }
+                            ) { innerPadding ->
+                                Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                                    Crossfade(
+                                        targetState = currentTab to settingsSubPage,
+                                        animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
+                                        label = "contentTransition"
+                                    ) { (tab, subPage) ->
+                                        when {
+                                            tab == 0 -> {
+                                                TimetableScreen(
+                                                    courseInfos = uiState.courseInfos,
+                                                    courseSessions = uiState.sessions,
+                                                    timetables = uiState.timetables,
+                                                    currentTimetableName = uiState.currentTimetableName,
+                                                    currentTimetableId = uiState.currentTimetableId,
+                                                    currentStartDate = uiState.currentStartDate,
+                                                    currentTotalWeeks = uiState.currentTotalWeeks,
+                                                    currentWeek = uiState.currentWeek,
+                                                    sessionTimes = uiState.currentSessionTimes,
+                                                    showWeekends = uiState.showWeekends,
+                                                    isLoading = uiState.isLoading,
+                                                    onAddCourse = viewModel::addCourse,
+                                                    onAddSession = viewModel::addSession,
+                                                    onUpdateCourse = viewModel::updateCourse,
+                                                    onUpdateSession = viewModel::updateSession,
+                                                    onDeleteSession = viewModel::deleteSession,
+                                                    onSwitchTimetable = viewModel::switchTimetable,
+                                                    onCurrentWeekChange = viewModel::setCurrentWeek,
+                                                    onCreateTimetable = viewModel::createTimetable,
+                                                    onImportClick = { showJwxtImport = true }
+                                                )
+                                            }
+                                            subPage == "language" -> {
+                                                LanguageSelectScreen(
+                                                    currentLanguageTag = appLanguageTag,
+                                                    onBack = { settingsSubPage = "main" },
+                                                    onSelectLanguage = { languageTag ->
+                                                        scope.launch {
+                                                            settingsRepository.setAppLanguageTag(languageTag)
+                                                        }
+                                                        settingsSubPage = "main"
                                                     }
-                                                    settingsSubPage = "main"
-                                                }
-                                            )
-                                        }
-
-                                        "timetable" -> {
-                                            TimetableSettingsScreen(
-                                                currentTimetableName = uiState.currentTimetableName,
-                                                currentStartDate = uiState.currentStartDate,
-                                                currentTotalWeeks = uiState.currentTotalWeeks,
-                                                currentShowWeekends = uiState.showWeekends,
-                                                currentSessionTimes = uiState.currentSessionTimes,
-                                                onBack = { settingsSubPage = "main" },
-                                                onSave = { name, startDate, weeks, showWeekends, sessionTimes ->
-                                                    uiState.currentTimetableId?.let { timetableId ->
-                                                        viewModel.updateTimetableMetadata(
-                                                            timetableId,
-                                                            name,
-                                                            startDate,
-                                                            weeks,
-                                                            showWeekends,
-                                                            sessionTimes
-                                                        )
+                                                )
+                                            }
+                                            subPage == "timetable" -> {
+                                                TimetableSettingsScreen(
+                                                    currentTimetableName = uiState.currentTimetableName,
+                                                    currentStartDate = uiState.currentStartDate,
+                                                    currentTotalWeeks = uiState.currentTotalWeeks,
+                                                    currentShowWeekends = uiState.showWeekends,
+                                                    currentSessionTimes = uiState.currentSessionTimes,
+                                                    onBack = { settingsSubPage = "main" },
+                                                    onSave = { name, startDate, weeks, showWeekends, sessionTimes ->
+                                                        uiState.currentTimetableId?.let { timetableId ->
+                                                            viewModel.updateTimetableMetadata(
+                                                                timetableId,
+                                                                name,
+                                                                startDate,
+                                                                weeks,
+                                                                showWeekends,
+                                                                sessionTimes
+                                                            )
+                                                        }
                                                     }
-                                                }
-                                            )
-                                        }
-
-                                        else -> {
-                                            SettingsScreen(
-                                                currentTimetableId = uiState.currentTimetableId,
-                                                currentTimetableName = uiState.currentTimetableName,
-                                                currentLanguageTag = appLanguageTag,
-                                                onLanguageSelectClick = { settingsSubPage = "language" },
-                                                onTimetableSettingsClick = { settingsSubPage = "timetable" }
-                                            )
+                                                )
+                                            }
+                                            else -> {
+                                                SettingsScreen(
+                                                    currentTimetableId = uiState.currentTimetableId,
+                                                    currentTimetableName = uiState.currentTimetableName,
+                                                    currentLanguageTag = appLanguageTag,
+                                                    onLanguageSelectClick = { settingsSubPage = "language" },
+                                                    onTimetableSettingsClick = { settingsSubPage = "timetable" }
+                                                )
+                                            }
                                         }
                                     }
                                 }

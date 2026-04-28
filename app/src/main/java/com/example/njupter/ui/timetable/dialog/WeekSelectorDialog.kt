@@ -2,16 +2,19 @@ package com.example.njupter.ui.timetable.dialog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.example.njupter.ui.animation.pressScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.res.stringResource
 import com.example.njupter.R
@@ -36,6 +39,8 @@ fun WeekSelectorDialog(
                     val week = index + 1
                     val isSelected = week == currentWeek
                     
+                    val gridInteractionSource = remember { MutableInteractionSource() }
+
                     Box(
                         modifier = Modifier
                             .aspectRatio(1f)
@@ -44,10 +49,14 @@ fun WeekSelectorDialog(
                                 if (isSelected) MaterialTheme.colorScheme.primary 
                                 else MaterialTheme.colorScheme.surfaceVariant
                             )
-                            .clickable {
-                                onWeekSelected(week)
-                                onDismiss()
-                            },
+                            .pressScale(gridInteractionSource)
+                            .clickable(
+                                interactionSource = gridInteractionSource,
+                                onClick = {
+                                    onWeekSelected(week)
+                                    onDismiss()
+                                }
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(

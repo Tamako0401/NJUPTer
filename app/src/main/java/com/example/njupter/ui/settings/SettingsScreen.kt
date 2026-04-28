@@ -1,5 +1,7 @@
 package com.example.njupter.ui.settings
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.spring
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
@@ -124,6 +126,7 @@ fun SettingsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .animateContentSize(animationSpec = spring())
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
