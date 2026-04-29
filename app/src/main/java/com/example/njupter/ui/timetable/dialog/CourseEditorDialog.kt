@@ -1,7 +1,7 @@
 package com.example.njupter.ui.timetable.dialog
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -119,7 +119,7 @@ fun CourseEditorDialog(
                 modifier = Modifier
                     .verticalScroll(scrollState)
                     .fillMaxWidth()
-                    .animateContentSize(animationSpec = spring()),
+                    .animateContentSize(animationSpec = tween(200)),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             )
             // Details
@@ -177,7 +177,6 @@ fun CourseEditorDialog(
                                 .size(36.dp)
                                 .clip(CircleShape)
                                 .background(if (isSelected) primaryColor else Color.Transparent)
-                                .animateContentSize(animationSpec = spring())
                                 .pressScale(dayInteractionSource)
                                 .border(
                                     1.dp,
@@ -246,7 +245,6 @@ fun CourseEditorDialog(
                         modifier = Modifier
                             .padding(vertical = 4.dp)
                             .fillMaxWidth()
-                            .animateContentSize(animationSpec = spring())
                     ) {
                         // Auto 选项
                         val isAutoSelected = (selectedColorIndex == -1)
@@ -260,7 +258,6 @@ fun CourseEditorDialog(
                                 .size(35.dp)
                                 .clip(CircleShape)
                                 .background(Color.Transparent)
-                                .animateContentSize(animationSpec = spring())
                                 .pressScale(autoColorInteractionSource)
                                 .border(autoBorderWidth, autoBorderColor, CircleShape)
                                 .clickable(
@@ -278,7 +275,7 @@ fun CourseEditorDialog(
                             )
                         }
 
-                        // 第一行仅显示前 5 个颜色
+                        // 第一行仅显示�?5 个颜�?
                         colorsList.take(5).forEachIndexed { index, color ->
                             val isSelected = (selectedColorIndex == index)
                             val borderWidth = if (isSelected) 2.dp else 1.dp
@@ -291,7 +288,6 @@ fun CourseEditorDialog(
                                     .size(34.dp)
                                     .clip(CircleShape)
                                     .background(color)
-                                    .animateContentSize(animationSpec = spring())
                                     .pressScale(colorInteractionSource)
                                     .border(borderWidth, borderColor, CircleShape)
                                     .clickable(
@@ -311,13 +307,12 @@ fun CourseEditorDialog(
                             }
                         }
                     }
-                    // 第二行仅显示第 6-8 个颜色
+                    // 第二行仅显示�?6-8 个颜�?
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier
                             .padding(vertical = 4.dp)
                             .fillMaxWidth()
-                            .animateContentSize(animationSpec = spring())
                     ){
                         colorsList.drop(5).take(3).forEachIndexed { offset, color ->
                             val actualIndex = offset + 5
@@ -332,7 +327,6 @@ fun CourseEditorDialog(
                                     .size(34.dp)
                                     .clip(CircleShape)
                                     .background(color)
-                                    .animateContentSize(animationSpec = spring())
                                     .pressScale(colorInteractionSource2)
                                     .border(borderWidth, borderColor, CircleShape)
                                     .clickable(
@@ -466,7 +460,6 @@ fun CustomWeekPickerDialog(
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .animateContentSize(animationSpec = spring())
                     ) {
                         Text(   //TODO:M3强调效果
                             text = stringResource(R.string.at_least_one_week),
@@ -557,8 +550,7 @@ fun WeekGrid(
         columns = GridCells.Adaptive(minSize = 48.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(max = 280.dp)
-            .animateContentSize(animationSpec = spring()),
+            .heightIn(max = 280.dp),
         contentPadding = PaddingValues(4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -576,7 +568,6 @@ fun WeekGrid(
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(8.dp))
                     .background(backgroundColor)
-                    .animateContentSize(animationSpec = spring())
                     .pressScale(gridInteractionSource)
                     .clickable(
                         interactionSource = gridInteractionSource,
@@ -598,7 +589,7 @@ fun WeekGrid(
 @Composable
 fun CourseEditorDialogPreview() {
     val sampleCourses = listOf(
-        CourseInfo("1", "高等数学", "张老师", "教 1-101", 0)
+        CourseInfo("1", "高等数学", "张老师", "�?1-101", 0)
     )
     val sampleSessions = listOf(
         CourseSession("1", 1, 1, 2, (1..20).toList())

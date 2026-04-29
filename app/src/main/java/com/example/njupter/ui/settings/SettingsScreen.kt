@@ -3,8 +3,6 @@
  */
 package com.example.njupter.ui.settings
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.spring
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
@@ -37,6 +35,7 @@ import com.example.njupter.ui.settings.model.SettingsItem
 import com.example.njupter.ui.settings.model.SettingsSection
 import android.widget.Toast
 import com.example.njupter.ui.theme.NJUPTerTheme
+import com.example.njupter.ui.settings.model.SettingsIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +87,7 @@ fun SettingsScreen(
     } else {
         listOf(
             SettingsItem.Navigation(
-                icon = Icons.Default.CalendarMonth,
+                icon = SettingsIcon.Vector(Icons.Default.CalendarMonth),
                 title = stringResource(R.string.cur_timetable_settings),
                 value = currentTimetableName,
                 onClick = onTimetableSettingsClick
@@ -98,19 +97,19 @@ fun SettingsScreen(
 
     val appSectionItems = listOf(
         SettingsItem.Navigation(
-            icon = Icons.Default.Language,
+            icon = SettingsIcon.Vector(Icons.Default.Language),
             title = stringResource(R.string.language),
             value = currentLanguageLabel,
             onClick = onLanguageSelectClick
         ),
         SettingsItem.Toggle(
-            icon = Icons.Default.AccessTime,
+            icon = SettingsIcon.Vector(Icons.Default.AccessTime),
             title = stringResource(R.string.current_time_indicator),
             checked = enableCurrentTimeIndicator,
             onToggle = { onToggleCurrentTimeIndicator(!enableCurrentTimeIndicator) }
         ),
         SettingsItem.Toggle(
-            icon = Icons.Default.Notifications,
+            icon = SettingsIcon.Vector(Icons.Default.Notifications),
             title = stringResource(R.string.notification_permission),
             checked = notificationEnabled,
             onToggle = {
@@ -121,7 +120,7 @@ fun SettingsScreen(
             }
         ),
         SettingsItem.Toggle(
-            icon = Icons.Default.BatterySaver,
+            icon = SettingsIcon.Vector(Icons.Default.BatterySaver),
             title = stringResource(R.string.battery_optimization),
             checked = batteryWhitelistEnabled,
             onToggle = {
@@ -154,7 +153,6 @@ fun SettingsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .animateContentSize(animationSpec = spring())
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)

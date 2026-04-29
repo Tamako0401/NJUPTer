@@ -1,7 +1,7 @@
 package com.example.njupter.ui.timetable.component
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -66,7 +66,7 @@ fun CourseCard(
         Column(
             modifier = Modifier
                 .padding(4.dp)
-                .animateContentSize(animationSpec = spring()),
+                .animateContentSize(animationSpec = tween(200)),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
