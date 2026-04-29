@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Build
 import android.view.animation.DecelerateInterpolator
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -23,13 +24,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
@@ -46,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+
 import com.example.njupter.data.FileTimetableRepository
 import com.example.njupter.ui.timetable.TimetableScreen
 import com.example.njupter.viewmodels.TimetableViewModel
@@ -63,6 +66,10 @@ import com.example.njupter.notification.ReminderBootstrapper
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Locale
+
+private const val ANIM_DURATION = 300
+private const val TAB_ANIM_DURATION = 220
+private val animEasing = FastOutSlowInEasing
 
 /**
  * 初始化依赖关系，连接ViewModel与UI，设置应用主题
@@ -213,15 +220,14 @@ class MainActivity : ComponentActivity() {
                     AnimatedContent(
                         targetState = showJwxtImport,
                         transitionSpec = {
-                            if (targetState) {
-                                (slideInVertically { fullHeight -> fullHeight } + fadeIn(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))) togetherWith
-                                (slideOutVertically { fullHeight -> -fullHeight / 3 } + fadeOut(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))) using
-                                SizeTransform(clip = false)
-                            } else {
-                                (slideInVertically { fullHeight -> -fullHeight / 3 } + fadeIn(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))) togetherWith
-                                (slideOutVertically { fullHeight -> fullHeight } + fadeOut(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))) using
-                                SizeTransform(clip = false)
-                            }
+                            slideInHorizontally(
+                                initialOffsetX = { it / 10 },
+                                animationSpec = tween(ANIM_DURATION, easing = animEasing)
+                            ) + fadeIn(animationSpec = tween(ANIM_DURATION)) togetherWith
+                                slideOutHorizontally(
+                                    targetOffsetX = { -it / 10 },
+                                    animationSpec = tween(ANIM_DURATION, easing = animEasing)
+                                ) + fadeOut(animationSpec = tween(ANIM_DURATION))
                         },
                         label = "importTransition"
                     ) { showImport ->
@@ -233,6 +239,10 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         } else {
+                            BackHandler(enabled = settingsSubPage != "main") {
+                                settingsSubPage = "main"
+                            }
+
                             Scaffold(
                                 bottomBar = {
                                     NavigationBar {
@@ -246,7 +256,7 @@ class MainActivity : ComponentActivity() {
                                             label = { Text(stringResource(R.string.timetable)) }
                                         )
                                         NavigationBarItem(
-                                            selected = currentTab == 1,
+                                            selected = currentTab == 1 && settingsSubPage == "main",
                                             onClick = {
                                                 currentTab = 1
                                             },
@@ -257,9 +267,43 @@ class MainActivity : ComponentActivity() {
                                 }
                             ) { innerPadding ->
                                 Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                                    Crossfade(
+                                    AnimatedContent(
                                         targetState = currentTab to settingsSubPage,
-                                        animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
+                                        transitionSpec = {
+                                            val (fromTab, fromSubPage) = initialState
+                                            val (toTab, toSubPage) = targetState
+
+                                            val isEnteringSubPage = fromSubPage == "main" && toSubPage != "main"
+                                            val isLeavingSubPage = fromSubPage != "main" && toSubPage == "main"
+                                            val isTabSwitch = fromTab != toTab
+
+                                            if (isEnteringSubPage || isLeavingSubPage) {
+                                                // Push: enter from right, exit to left
+                                                // Pop:  enter from left, exit to right
+                                                val enterOffset: (Int) -> Int = if (isEnteringSubPage) ({ it }) else ({ -it / 3 })
+                                                val exitOffset: (Int) -> Int = if (isEnteringSubPage) ({ -it / 3 }) else ({ it })
+
+                                                (slideInHorizontally(
+                                                    initialOffsetX = enterOffset,
+                                                    animationSpec = tween(ANIM_DURATION, easing = animEasing)
+                                                ) + fadeIn(animationSpec = tween(ANIM_DURATION)))
+                                                    .togetherWith(
+                                                        slideOutHorizontally(
+                                                            targetOffsetX = exitOffset,
+                                                            animationSpec = tween(ANIM_DURATION, easing = animEasing)
+                                                        ) + fadeOut(animationSpec = tween(200))
+                                                    ).using(SizeTransform(clip = false))
+                                            } else {
+                                                (fadeIn(
+                                                    animationSpec = tween(TAB_ANIM_DURATION, delayMillis = 90)
+                                                ) + scaleIn(
+                                                    initialScale = 0.92f,
+                                                    animationSpec = tween(TAB_ANIM_DURATION, delayMillis = 90)
+                                                )).togetherWith(
+                                                    fadeOut(animationSpec = tween(90))
+                                                )
+                                            }
+                                        },
                                         label = "contentTransition"
                                     ) { (tab, subPage) ->
                                         when {
