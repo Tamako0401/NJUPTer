@@ -143,6 +143,7 @@
     <string name="language">Language</string>
     <string name="language_en">English</string>
     <string name="language_zh">Chinese</string>
+    <string name="language_system">Follow System</string>
     <string name="close">Close</string>
     <string name="status_enabled">Enabled</string>
     <string name="status_disabled">Disabled</string>

@@ -3,6 +3,7 @@
  */
 package com.example.njupter.ui.settings.model
 
+import androidx.annotation.DrawableRes
 import androidx.compose.ui.graphics.vector.ImageVector
 
 data class SettingsSection(
@@ -10,19 +11,25 @@ data class SettingsSection(
     val items: List<SettingsItem>
 )
 
+sealed interface SettingsIcon {
+    data class Vector(val imageVector: ImageVector) : SettingsIcon
+
+    data class Drawable(@param:DrawableRes val resId: Int) : SettingsIcon
+}
+
 sealed interface SettingsItem {
-    val icon: ImageVector
+    val icon: SettingsIcon
     val title: String
 
     data class Toggle(
-        override val icon: ImageVector,
+        override val icon: SettingsIcon,
         override val title: String,
         val checked: Boolean,
         val onToggle: () -> Unit
     ) : SettingsItem
 
     data class Navigation(
-        override val icon: ImageVector,
+        override val icon: SettingsIcon,
         override val title: String,
         val value: String? = null,
         val onClick: () -> Unit

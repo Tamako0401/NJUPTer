@@ -4,7 +4,7 @@
 package com.example.njupter.ui.settings.component
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
@@ -24,14 +25,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.example.njupter.ui.settings.model.SettingsIcon
 import androidx.compose.ui.text.style.TextOverflow
 import com.example.njupter.ui.animation.pressScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.njupter.R
 import com.example.njupter.ui.settings.model.SettingsItem
 import com.example.njupter.ui.settings.model.SettingsSection
 import com.example.njupter.ui.theme.NJUPTerTheme
@@ -50,7 +55,7 @@ fun SettingsSectionCard(
         )
         Surface(
             modifier = Modifier.animateContentSize(
-                animationSpec = spring()
+                animationSpec = tween(200)
             ),
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f)
@@ -58,7 +63,6 @@ fun SettingsSectionCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .animateContentSize(animationSpec = spring())
             ) {
                 section.items.forEachIndexed { index, item ->
                     when (item) {
@@ -84,7 +88,6 @@ private fun NavigableSettingsRow(item: SettingsItem.Navigation) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize(animationSpec = spring())
             .pressScale(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
@@ -93,11 +96,18 @@ private fun NavigableSettingsRow(item: SettingsItem.Navigation) {
             .padding(horizontal = 16.dp, vertical = 18.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = item.icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        when (val icon = item.icon) {
+            is SettingsIcon.Vector -> Icon(
+                imageVector = icon.imageVector,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            is SettingsIcon.Drawable -> Icon(
+                painter = painterResource(id = icon.resId),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Text(
             text = item.title,
             style = MaterialTheme.typography.titleMedium,
@@ -130,7 +140,6 @@ private fun ToggleSettingsRow(item: SettingsItem.Toggle) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize(animationSpec = spring())
             .pressScale(interactionSource)
             .clickable(
                 interactionSource = interactionSource,
@@ -144,11 +153,18 @@ private fun ToggleSettingsRow(item: SettingsItem.Toggle) {
             modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = item.icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            when (val icon = item.icon) {
+                is SettingsIcon.Vector -> Icon(
+                    imageVector = icon.imageVector,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                is SettingsIcon.Drawable -> Icon(
+                    painter = painterResource(id = icon.resId),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Text(
                 text = item.title,
                 style = MaterialTheme.typography.titleMedium,
@@ -171,25 +187,57 @@ fun SettingsSectionCardPreview() {
                 title = "General Settings",
                 items = listOf(
                     SettingsItem.Navigation(
-                        icon = Icons.Default.Settings,
+                        icon = SettingsIcon.Vector(Icons.Default.Settings),
                         title = "Language",
                         value = "English",
                         onClick = {}
                     ),
                     SettingsItem.Toggle(
-                        icon = Icons.Default.Notifications,
+                        icon = SettingsIcon.Vector(Icons.Default.Notifications),
                         title = "Enable Notifications",
                         checked = true,
                         onToggle = {}
                     ),
                     SettingsItem.Navigation(
-                        icon = Icons.Default.Info,
+                        icon = SettingsIcon.Vector(Icons.Default.Info),
                         title = "About",
                         onClick = {}
                     )
                 )
             ),
             modifier = Modifier.padding(16.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun LanguageSelectScreenPreview(){
+    NJUPTerTheme {
+        SettingsSectionCard(
+            section = SettingsSection(
+                title = stringResource(R.string.language),
+                items = listOf(
+                    SettingsItem.Navigation(
+                        icon = SettingsIcon.Vector(Icons.Default.Language),
+                        title = stringResource(R.string.language_system),
+                        value = null,
+                        onClick = {}
+                    ),
+                    SettingsItem.Navigation(
+                        icon = SettingsIcon.Vector(Icons.Default.Language),
+                        title = stringResource(R.string.language_zh),
+                        value = "\u2713",
+                        onClick = {}
+                    ),
+                    SettingsItem.Navigation(
+                        icon = SettingsIcon.Vector(Icons.Default.Language),
+                        title = stringResource(R.string.language_en),
+                        value = null,
+                        onClick = {}
+                    )
+                )
+            )
         )
     }
 }
