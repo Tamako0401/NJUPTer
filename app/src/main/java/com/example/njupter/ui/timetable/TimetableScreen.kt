@@ -79,12 +79,12 @@ fun TimetableScreen(
 ) {
     val sectionHeight = 60.dp
     val sidebarWidth = 50.dp
-    val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
 
     val isDark = isSystemInDarkTheme()
 
     val currentCourseColors = getCourseColors()
+    val courseMap = remember(courseInfos) { courseInfos.associateBy { it.id } }
 
     val gridBorderColor = if (isDark) Color(0xFF444444) else Color.LightGray
     val gridHeaderBg = MaterialTheme.colorScheme.surface
@@ -333,11 +333,22 @@ fun TimetableScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(top = 0.dp)
-                .animateContentSize(animationSpec = tween(200)),
+                .padding(top = 0.dp),
             verticalAlignment = Alignment.Top
         ) { page ->
             val currentWeek = page + 1
+            val pageScrollState = rememberScrollState()
+
+            val sessionsByDay = remember(courseSessions, courseMap, currentWeek, daysCount) {
+                val map = mutableMapOf<Int, List<Pair<CourseSession, CourseInfo>>>()
+                for (day in 1..daysCount) {
+                    map[day] = courseSessions
+                        .filter { it.day == day && it.weeks.contains(currentWeek) }
+                        .mapNotNull { session -> courseMap[session.courseId]?.let { session to it } }
+                }
+                map
+            }
+
             val showCurrentTimeIndicator = enableCurrentTimeIndicator && todayDayOfWeek <= daysCount && currentSectionPosition != null
             val currentSectionIndex = currentSectionPosition?.first
             val currentSectionProgress = currentSectionPosition?.second ?: 0f
@@ -349,7 +360,7 @@ fun TimetableScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(scrollState)
+                    .verticalScroll(pageScrollState)
             ) {
                 Row(
                     modifier = Modifier
@@ -524,25 +535,18 @@ fun TimetableScreen(
                         Row(modifier = Modifier.fillMaxSize()) {
                             (1..daysCount).forEach { day ->
                                 Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                                    // 绘制该天的课程
-                                    val sessionsForDay = courseSessions.filter {
-                                        it.day == day && it.weeks.contains(currentWeek)
-                                    }
-                                    sessionsForDay.forEach { session ->
-                                        val course = courseInfos.find { it.id == session.courseId }
-                                        if (course != null) {
-                                            CourseCard(
-                                                course = course,
-                                                session = session,
-                                                sectionHeight = sectionHeight,
-                                                colorsList = currentCourseColors,
-                                                onClick = {
-                                                    editingSession = session
-                                                    editingCourse = course
-                                                    showDialog = true
-                                                }
-                                            )
-                                        }
+                                    sessionsByDay[day]?.forEach { (session, course) ->
+                                        CourseCard(
+                                            course = course,
+                                            session = session,
+                                            sectionHeight = sectionHeight,
+                                            colorsList = currentCourseColors,
+                                            onClick = {
+                                                editingSession = session
+                                                editingCourse = course
+                                                showDialog = true
+                                            }
+                                        )
                                     }
                                 }
                             }
@@ -554,7 +558,6 @@ fun TimetableScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .offset(y = currentTimeLineOffset)
-                                    .animateContentSize(animationSpec = tween(200))
                             ) {
                                 Box(
                                     modifier = Modifier

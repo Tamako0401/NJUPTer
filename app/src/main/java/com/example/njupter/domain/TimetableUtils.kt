@@ -20,13 +20,15 @@ fun getCourseAt(
     return session?.let { courseMap[it.courseId] }
 }
 
+private val dateFormatLocal = ThreadLocal.withInitial {
+    java.text.SimpleDateFormat("MM/dd", java.util.Locale.getDefault())
+}
+
 fun getDateForWeekDay(startDate: Long, week: Int, day: Int): String {
     val weekInMillis = (week - 1) * 7 * 24 * 60 * 60 * 1000L
     val dayInMillis = (day - 1) * 24 * 60 * 60 * 1000L
     val targetDate = startDate + weekInMillis + dayInMillis
-    val date = java.util.Date(targetDate)
-    val format = java.text.SimpleDateFormat("MM/dd", java.util.Locale.getDefault())
-    return format.format(date)
+    return dateFormatLocal.get()!!.format(java.util.Date(targetDate))
 }
 
 fun getTodayWeekIndex(startDate: Long, totalWeeks: Int): Int? {

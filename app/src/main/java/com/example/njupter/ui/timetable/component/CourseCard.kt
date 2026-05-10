@@ -1,7 +1,5 @@
 package com.example.njupter.ui.timetable.component
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -36,17 +34,22 @@ fun CourseCard(
     colorsList: List<Color>,
     onClick: () -> Unit
 ) {
-    val height = sectionHeight * (session.endSection - session.startSection + 1)
-    val topMargin = sectionHeight * (session.startSection - 1)
+    val height = remember(session, sectionHeight) { sectionHeight * (session.endSection - session.startSection + 1) }
+    val topMargin = remember(session, sectionHeight) { sectionHeight * (session.startSection - 1) }
 
-    val colorIndex = if (course.colorIndex in colorsList.indices) {
-        course.colorIndex
-    } else {
-        if (colorsList.isNotEmpty()) (course.name.hashCode() and Int.MAX_VALUE) % colorsList.size else 0
+    val colorIndex = remember(course, colorsList) {
+        if (course.colorIndex in colorsList.indices) {
+            course.colorIndex
+        } else {
+            if (colorsList.isNotEmpty()) (course.name.hashCode() and Int.MAX_VALUE) % colorsList.size else 0
+        }
     }
-    
-    val backgroundColor = if (colorsList.isNotEmpty()) colorsList[colorIndex] else MaterialTheme.colorScheme.primaryContainer
-    
+
+    val fallbackColor = MaterialTheme.colorScheme.primaryContainer
+    val backgroundColor = remember(colorIndex, colorsList, fallbackColor) {
+        if (colorsList.isNotEmpty()) colorsList[colorIndex] else fallbackColor
+    }
+
     val interactionSource = remember { MutableInteractionSource() }
 
     Card(
@@ -65,8 +68,7 @@ fun CourseCard(
     ) {
         Column(
             modifier = Modifier
-                .padding(4.dp)
-                .animateContentSize(animationSpec = tween(200)),
+                .padding(4.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(

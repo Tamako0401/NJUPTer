@@ -50,18 +50,17 @@ fun NJUPTerTheme(
     )
 }
 
+private val LightCourseColors = listOf(
+    CourseLight1, CourseLight2, CourseLight3, CourseLight4, CourseLight5,
+    CourseLight6, CourseLight7, CourseLight8
+)
+
+private val DarkCourseColors = listOf(
+    CourseDark1, CourseDark2, CourseDark3, CourseDark4, CourseDark5,
+    CourseDark6, CourseDark7, CourseDark8
+)
+
 @Composable
 fun getCourseColors(): List<Color> {
-    val isDark = isSystemInDarkTheme()
-    return if (isDark) {
-        listOf(
-            CourseDark1, CourseDark2, CourseDark3, CourseDark4, CourseDark5,
-            CourseDark6, CourseDark7, CourseDark8,
-        )
-    } else {
-        listOf(
-            CourseLight1, CourseLight2, CourseLight3, CourseLight4, CourseLight5,
-            CourseLight6, CourseLight7, CourseLight8
-        )
-    }
+    return if (isSystemInDarkTheme()) DarkCourseColors else LightCourseColors
 }

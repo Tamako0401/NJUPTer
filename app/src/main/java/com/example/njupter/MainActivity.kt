@@ -45,7 +45,6 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 
@@ -151,12 +150,14 @@ class MainActivity : ComponentActivity() {
                 val enableCurrentTimeIndicator by settingsRepository.getEnableCurrentTimeIndicator().collectAsState(initial = true)
                 val scope = rememberCoroutineScope()
                 val baseContext = LocalContext.current
-                val currentConfig = LocalConfiguration.current
                 var currentTab by remember { mutableStateOf(0) }
                 var showJwxtImport by remember { mutableStateOf(false) }
                 var settingsSubPage by remember { mutableStateOf("main") }
 
-                val localizedContext = remember(baseContext, currentConfig, appLanguageTag) {
+                // Only keyed on languageTag — other config changes (dark mode, font scale)
+                // don't affect string resolution from the context, so we avoid unnecessary
+                // createConfigurationContext calls.
+                val localizedContext = remember(baseContext, appLanguageTag) {
                     val locale = when {
                         appLanguageTag.startsWith("zh") -> Locale.SIMPLIFIED_CHINESE
                         appLanguageTag.startsWith("en") -> Locale.ENGLISH
@@ -165,7 +166,7 @@ class MainActivity : ComponentActivity() {
                     if (locale == null) {
                         baseContext
                     } else {
-                        val config = Configuration(currentConfig)
+                        val config = Configuration(baseContext.resources.configuration)
                         config.setLocale(locale)
                         baseContext.createConfigurationContext(config)
                     }
@@ -199,22 +200,23 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                LaunchedEffect(
-                    uiState.currentTimetableId,
-                    uiState.currentStartDate,
-                    uiState.currentTotalWeeks,
-                    uiState.currentSessionTimes,
-                    uiState.courseInfos,
-                    uiState.sessions
-                ) {
-                    reminderScheduler.scheduleUpcomingReminders(
-                        courseInfos = uiState.courseInfos,
-                        sessions = uiState.sessions,
-                        currentTimetableId = uiState.currentTimetableId,
-                        startDate = uiState.currentStartDate,
-                        totalWeeks = uiState.currentTotalWeeks,
-                        sessionTimes = uiState.currentSessionTimes
-                    )
+                // Reschedule reminders when timetable identity changes.
+                // courseInfos and sessions are NOT keys — the repository emits them
+                // on every mutation, which would reschedule N times per import/add.
+                // ReminderScheduler reads current repo state when it fires, so we only
+                // need to trigger on structural changes.
+                val reminderKey = uiState.isLoading to uiState.currentTimetableId
+                LaunchedEffect(reminderKey) {
+                    if (!uiState.isLoading && uiState.currentTimetableId != null) {
+                        reminderScheduler.scheduleUpcomingReminders(
+                            courseInfos = uiState.courseInfos,
+                            sessions = uiState.sessions,
+                            currentTimetableId = uiState.currentTimetableId,
+                            startDate = uiState.currentStartDate,
+                            totalWeeks = uiState.currentTotalWeeks,
+                            sessionTimes = uiState.currentSessionTimes
+                        )
+                    }
                 }
 
                     AnimatedContent(
@@ -335,12 +337,13 @@ class MainActivity : ComponentActivity() {
                                             subPage == "language" -> {
                                                 LanguageSelectScreen(
                                                     currentLanguageTag = appLanguageTag,
-                                                    onBack = { settingsSubPage = "main" },
+                                                    onBack = { settingsSubPage = "main" },  // {settingsSubPage = "main"}这个东西叫做无参lambda，表示被调用时要执行的语句
                                                     onSelectLanguage = { languageTag ->
                                                         scope.launch {
                                                             settingsRepository.setAppLanguageTag(languageTag)
+                                                            // lambda 的写法是： { 参数列表 -> 函数体 }
+                                                            // -> 左边把参数接住，右边是lambda被调用时要执行的代码
                                                         }
-                                                        settingsSubPage = "main"
                                                     }
                                                 )
                                             }
