@@ -45,6 +45,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 
@@ -56,12 +57,15 @@ import com.example.njupter.data.SharedPreferencesSettingsRepository
 import com.example.njupter.ui.settings.LanguageSelectScreen
 import com.example.njupter.ui.settings.SettingsScreen
 import com.example.njupter.ui.settings.TimetableSettingsScreen
+import com.example.njupter.ui.settings.WidgetSettingsScreen
 import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.ui.settings.JwxtImportScreen
 import com.example.njupter.ui.settings.dialog.ImportPreviewDialog
 import com.example.njupter.data.defaultSessionTimes
 import com.example.njupter.notification.CourseReminderScheduler
 import com.example.njupter.notification.ReminderBootstrapper
+import com.example.njupter.widget.WidgetDataManager
+import com.example.njupter.widget.WidgetUpdateScheduler
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -87,11 +91,6 @@ class MainActivity : ComponentActivity() {
         config.setLocale(locale)
         @Suppress("DEPRECATION")
         resources.updateConfiguration(config, resources.displayMetrics)
-
-        applicationContext.resources.updateConfiguration(
-            Configuration(applicationContext.resources.configuration).apply { setLocale(locale) },
-            applicationContext.resources.displayMetrics
-        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -132,13 +131,18 @@ class MainActivity : ComponentActivity() {
             ReminderBootstrapper.rescheduleCurrentTimetable(applicationContext)
         }
 
+        WidgetUpdateScheduler.scheduleMidnightRefresh(this)
+
         val viewModel by viewModels<TimetableViewModel> {
-            TimetableViewModel.provideFactory(repository, settingsRepository)
+            TimetableViewModel.provideFactory(repository, settingsRepository, this@MainActivity)
         }
 
         lifecycleScope.launch {
             viewModel.uiState.collectLatest { uiState ->
                 keepSplash = uiState.isLoading
+                if (!uiState.isLoading && uiState.currentTimetableId != null) {
+                    WidgetDataManager.refreshWidget(this@MainActivity)
+                }
             }
         }
 
@@ -157,7 +161,8 @@ class MainActivity : ComponentActivity() {
                 // Only keyed on languageTag — other config changes (dark mode, font scale)
                 // don't affect string resolution from the context, so we avoid unnecessary
                 // createConfigurationContext calls.
-                val localizedContext = remember(baseContext, appLanguageTag) {
+                val configuration = LocalConfiguration.current
+                val localizedContext = remember(baseContext, appLanguageTag, configuration) {
                     val locale = when {
                         appLanguageTag.startsWith("zh") -> Locale.SIMPLIFIED_CHINESE
                         appLanguageTag.startsWith("en") -> Locale.ENGLISH
@@ -166,7 +171,7 @@ class MainActivity : ComponentActivity() {
                     if (locale == null) {
                         baseContext
                     } else {
-                        val config = Configuration(baseContext.resources.configuration)
+                        val config = Configuration(configuration)
                         config.setLocale(locale)
                         baseContext.createConfigurationContext(config)
                     }
@@ -272,12 +277,11 @@ class MainActivity : ComponentActivity() {
                                     AnimatedContent(
                                         targetState = currentTab to settingsSubPage,
                                         transitionSpec = {
-                                            val (fromTab, fromSubPage) = initialState
-                                            val (toTab, toSubPage) = targetState
+                                            val (_, fromSubPage) = initialState
+                                            val (_, toSubPage) = targetState
 
                                             val isEnteringSubPage = fromSubPage == "main" && toSubPage != "main"
                                             val isLeavingSubPage = fromSubPage != "main" && toSubPage == "main"
-                                            val isTabSwitch = fromTab != toTab
 
                                             if (isEnteringSubPage || isLeavingSubPage) {
                                                 // Push: enter from right, exit to left
@@ -369,6 +373,11 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                 )
                                             }
+                                            subPage == "widget" -> {
+                                                WidgetSettingsScreen(
+                                                    onBack = { settingsSubPage = "main" }
+                                                )
+                                            }
                                             else -> {
                                                 SettingsScreen(
                                                     currentTimetableId = uiState.currentTimetableId,
@@ -377,6 +386,7 @@ class MainActivity : ComponentActivity() {
                                                     enableCurrentTimeIndicator = enableCurrentTimeIndicator,
                                                     onLanguageSelectClick = { settingsSubPage = "language" },
                                                     onTimetableSettingsClick = { settingsSubPage = "timetable" },
+                                                    onWidgetSettingsClick = { settingsSubPage = "widget" },
                                                     onToggleCurrentTimeIndicator = { enabled ->
                                                         scope.launch {
                                                             settingsRepository.setEnableCurrentTimeIndicator(enabled)

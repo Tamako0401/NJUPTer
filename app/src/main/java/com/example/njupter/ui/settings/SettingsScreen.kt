@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +47,7 @@ fun SettingsScreen(
     enableCurrentTimeIndicator: Boolean,
     onLanguageSelectClick: () -> Unit,
     onTimetableSettingsClick: () -> Unit,
+    onWidgetSettingsClick: () -> Unit,
     onToggleCurrentTimeIndicator: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
@@ -96,6 +98,11 @@ fun SettingsScreen(
     }
 
     val appSectionItems = listOf(
+        SettingsItem.Navigation(
+            icon = SettingsIcon.Vector(Icons.Default.Widgets),
+            title = stringResource(R.string.widget_settings),
+            onClick = onWidgetSettingsClick
+        ),
         SettingsItem.Navigation(
             icon = SettingsIcon.Vector(Icons.Default.Language),
             title = stringResource(R.string.language),
@@ -247,6 +254,7 @@ fun SettingsScreenPreview() {
             enableCurrentTimeIndicator = true,
             onLanguageSelectClick = {},
             onTimetableSettingsClick = {},
+            onWidgetSettingsClick = {},
             onToggleCurrentTimeIndicator = {}
         )
     }

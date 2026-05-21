@@ -1,0 +1,321 @@
+package com.example.njupter.ui.settings
+
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.njupter.R
+import com.example.njupter.widget.WidgetDataManager
+import com.example.njupter.widget.WidgetSettingsManager
+import java.io.File
+import java.io.FileOutputStream
+
+private const val WIDGET_BG_FILE = "widget_background.jpg"
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WidgetSettingsScreen(
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    var backgroundPath by remember { mutableStateOf(WidgetSettingsManager.getBackgroundImagePath(context)) }
+    var transparency by remember { mutableFloatStateOf(WidgetSettingsManager.getBackgroundTransparency(context) / 255f) }
+    var showFullPreview by remember { mutableStateOf(false) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val savedPath = saveBackgroundImage(context, it)
+            backgroundPath = savedPath
+            WidgetSettingsManager.setBackgroundImagePath(context, savedPath)
+            WidgetDataManager.refreshWidget(context)
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.widget_settings)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_back))
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Preview section
+            Text(
+                text = stringResource(R.string.widget_preview),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(if (showFullPreview) 180.dp else 110.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { showFullPreview = !showFullPreview },
+                contentAlignment = Alignment.Center
+            ) {
+                WidgetPreview(
+                    backgroundPath = backgroundPath,
+                    transparency = transparency,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            // Background image section
+            Text(
+                text = stringResource(R.string.widget_background),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(onClick = { imagePickerLauncher.launch("image/*") }) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(stringResource(R.string.widget_pick_image))
+                }
+
+                if (backgroundPath != null) {
+                    Button(
+                        onClick = {
+                            deleteBackgroundImage(context)
+                            backgroundPath = null
+                            WidgetSettingsManager.setBackgroundImagePath(context, null)
+                            WidgetDataManager.refreshWidget(context)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text(stringResource(R.string.widget_remove_background))
+                    }
+                }
+            }
+
+            // Show selected background thumbnail
+            val bgBitmap = remember(backgroundPath) {
+                backgroundPath?.let { path ->
+                    try {
+                        BitmapFactory.decodeFile(path)
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+            }
+            if (bgBitmap != null) {
+                Image(
+                    bitmap = bgBitmap.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Text(
+                    text = stringResource(R.string.widget_background_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Transparency section
+            Text(
+                text = stringResource(R.string.widget_transparency),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = "${(transparency * 100).toInt()}%",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+
+            Slider(
+                value = transparency,
+                onValueChange = { newValue ->
+                    transparency = newValue
+                    val alphaInt = (newValue * 255).toInt().coerceIn(0, 255)
+                    WidgetSettingsManager.setBackgroundTransparency(context, alphaInt)
+                },
+                onValueChangeFinished = {
+                    WidgetDataManager.refreshWidget(context)
+                }
+            )
+
+            Text(
+                text = stringResource(R.string.widget_transparency_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun WidgetPreview(
+    backgroundPath: String?,
+    transparency: Float,
+    modifier: Modifier = Modifier
+) {
+    val previewColor1 = Color(0xFFBBDEFB)
+    val previewColor2 = Color(0xFFDCEDC8)
+    val previewColor3 = Color(0xFFFFE0B2)
+
+    val bgBitmap = remember(backgroundPath) {
+        backgroundPath?.let { path ->
+            try {
+                BitmapFactory.decodeFile(path)
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
+
+    Box(modifier = modifier) {
+        // Background image
+        if (bgBitmap != null) {
+            Image(
+                bitmap = bgBitmap.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        // Transparency overlay
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = transparency))
+        )
+
+        // Preview courses
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = "Today's Courses",
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                fontSize = 10.sp
+            )
+            PreviewCourseRow("Advanced Mathematics", previewColor1)
+            PreviewCourseRow("College Physics", previewColor2)
+            PreviewCourseRow("English Literature", previewColor3)
+        }
+    }
+}
+
+@Composable
+private fun PreviewCourseRow(name: String, color: Color) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(color, RoundedCornerShape(2.dp))
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = name,
+            color = Color.White,
+            fontSize = 9.sp,
+            maxLines = 1
+        )
+    }
+}
+
+private fun saveBackgroundImage(context: android.content.Context, uri: Uri): String? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val file = File(context.filesDir, WIDGET_BG_FILE)
+        FileOutputStream(file).use { output ->
+            inputStream.copyTo(output)
+        }
+        inputStream.close()
+        file.absolutePath
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun deleteBackgroundImage(context: android.content.Context) {
+    try {
+        File(context.filesDir, WIDGET_BG_FILE).delete()
+    } catch (_: Exception) {
+    }
+}

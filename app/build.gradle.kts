@@ -61,6 +61,11 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     implementation(libs.androidx.compose.foundation)
 
+    // Glance 小组件
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
+    implementation(libs.work.runtime.ktx)
+
     // 网络与爬虫解析
     implementation(libs.okhttp)
     implementation(libs.jsoup)

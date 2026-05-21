@@ -1,5 +1,6 @@
 package com.example.njupter.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -47,8 +48,11 @@ data class TimetableUiState(
 
 class TimetableViewModel(
     private val repository: TimetableRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val onWidgetRefresh: (Context) -> Unit = {}
 ) : ViewModel() {
+
+    private var appContext: Context? = null
 
     private val _currentWeek = MutableStateFlow(1)
 
@@ -183,18 +187,21 @@ class TimetableViewModel(
     fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
         viewModelScope.launch {
             repository.createTimetable(name, startDate, totalWeeks, showWeekends, sessionTimes)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
-    
+
     fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
         viewModelScope.launch {
             repository.updateTimetableMetadata(id, name, startDate, totalWeeks, showWeekends, sessionTimes)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
     fun switchTimetable(id: String) {
         viewModelScope.launch {
             repository.switchTimetable(id)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
@@ -217,30 +224,35 @@ class TimetableViewModel(
     fun addCourse(course: CourseInfo) {
         viewModelScope.launch {
             repository.addCourse(course)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
     fun addSession(session: CourseSession) {
         viewModelScope.launch {
             repository.addSession(session)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
     fun updateCourse(course: CourseInfo) {
         viewModelScope.launch {
             repository.updateCourse(course)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
     fun updateSession(oldSession: CourseSession, newSession: CourseSession) {
         viewModelScope.launch {
             repository.updateSession(oldSession, newSession)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
     fun deleteSession(session: CourseSession) {
         viewModelScope.launch {
             repository.deleteSession(session)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
@@ -250,6 +262,7 @@ class TimetableViewModel(
             // The active timetable is automatically switched inside createTimetable,
             // so we can now safely import.
             repository.importTimetableData(newCourses, newSessions)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
@@ -257,11 +270,17 @@ class TimetableViewModel(
     companion object {
         fun provideFactory(
             repository: TimetableRepository,
-            settingsRepository: SettingsRepository
+            settingsRepository: SettingsRepository,
+            appContext: Context? = null
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return TimetableViewModel(repository, settingsRepository) as T
+                return TimetableViewModel(
+                    repository,
+                    settingsRepository,
+                    onWidgetRefresh = { ctx -> com.example.njupter.widget.WidgetDataManager.refreshWidget(ctx) }
+                ).also { it.appContext = appContext }
+                    as T
             }
         }
     }
