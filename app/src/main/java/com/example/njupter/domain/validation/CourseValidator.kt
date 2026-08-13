@@ -14,6 +14,34 @@ sealed class ValidationError {
 
 object CourseValidator {
 
+    /**
+     * Returns the weeks that cannot be used for the proposed day/section range.
+     *
+     * The session currently being edited is excluded exactly once so its own weeks remain
+     * selectable, while an otherwise identical duplicate session still counts as a conflict.
+     */
+    fun unavailableWeeksForSession(
+        day: Int,
+        start: Int,
+        end: Int,
+        editingSession: CourseSession?,
+        allSessions: List<CourseSession>
+    ): Set<Int> {
+        if (start > end) return emptySet()
+
+        val editingIndex = editingSessionIndex(editingSession, allSessions)
+
+        return allSessions
+            .asSequence()
+            .filterIndexed { index, target ->
+                index != editingIndex &&
+                    target.day == day &&
+                    max(target.startSection, start) <= min(target.endSection, end)
+            }
+            .flatMap { it.weeks.asSequence() }
+            .toSet()
+    }
+
     fun validateSessionInput(
         day: Int,
         start: Int,
@@ -30,19 +58,30 @@ object CourseValidator {
             return ValidationError.NoWeekSelected
         }
 
-        val conflict = allSessions.find { target ->
-            if (editingSession != null && target == editingSession) return@find false
-            if (target.day != day) return@find false
+        val editingIndex = editingSessionIndex(editingSession, allSessions)
+        val selectedWeeks = weeks.toSet()
+        val conflict = allSessions.withIndex().find { (index, target) ->
+            if (index == editingIndex || target.day != day) return@find false
             val sectionOverlap = max(target.startSection, start) <= min(target.endSection, end)
-            val weekOverlap = target.weeks.intersect(weeks.toSet()).isNotEmpty()
+            val weekOverlap = target.weeks.any { it in selectedWeeks }
             sectionOverlap && weekOverlap
-        }
+        }?.value
 
         if (conflict != null) {
             return ValidationError.TimeConflict(conflict.day, conflict.startSection, conflict.endSection)
         }
 
         return null
+    }
+
+    private fun editingSessionIndex(
+        editingSession: CourseSession?,
+        allSessions: List<CourseSession>
+    ): Int {
+        if (editingSession == null) return -1
+        return allSessions.indexOfFirst { it === editingSession }
+            .takeIf { it >= 0 }
+            ?: allSessions.indexOf(editingSession)
     }
 
     fun validateCourseDuplication(

@@ -2,10 +2,10 @@ package com.example.njupter.ui.timetable
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,16 +28,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import com.example.njupter.R
 import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
 import com.example.njupter.data.TimetableMetadata
 import com.example.njupter.data.defaultSessionTimes
 import com.example.njupter.ui.theme.getCourseColors
+import com.example.njupter.ui.theme.isAppInDarkTheme
 import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.domain.getDateForWeekDay
 import com.example.njupter.domain.getTodayDayOfWeek
@@ -48,9 +52,22 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.njupter.ui.timetable.component.CourseCard
+import com.example.njupter.ui.timetable.component.CourseDetailsBottomSheet
 import com.example.njupter.ui.timetable.component.EmptyGuidePlaceholder
 import com.example.njupter.ui.timetable.dialog.CourseEditorDialog
 import com.example.njupter.ui.timetable.dialog.TimetableConfigDialog
+import kotlin.math.roundToInt
+
+private data class NewCoursePlacement(
+    val day: Int,
+    val section: Int,
+    val week: Int
+)
+
+private data class CourseDetailsSelection(
+    val session: CourseSession,
+    val course: CourseInfo
+)
 
 @OptIn(ExperimentalMaterial3Api::class) // 使用实验性的 Material3 API
 @Composable
@@ -66,6 +83,7 @@ fun TimetableScreen(
     sessionTimes: List<String> = emptyList(),
     showWeekends: Boolean = true,
     enableCurrentTimeIndicator: Boolean = true,
+    bottomOverlayPadding: Dp = 0.dp,
     isLoading: Boolean = false,
     onAddCourse: (CourseInfo) -> Unit = {},
     onAddSession: (CourseSession) -> Unit = {},
@@ -81,18 +99,19 @@ fun TimetableScreen(
     val sidebarWidth = 50.dp
     val scope = rememberCoroutineScope()
 
-    val isDark = isSystemInDarkTheme()
-
     val currentCourseColors = getCourseColors()
+    val isDark = isAppInDarkTheme()
     val courseMap = remember(courseInfos) { courseInfos.associateBy { it.id } }
 
-    val gridBorderColor = if (isDark) Color(0xFF444444) else Color.LightGray
+    val gridBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     val gridHeaderBg = MaterialTheme.colorScheme.surface
     val gridContentBg = MaterialTheme.colorScheme.background
 
     var showDialog by remember { mutableStateOf(false) }
     var editingSession by remember { mutableStateOf<CourseSession?>(null) }
     var editingCourse by remember { mutableStateOf<CourseInfo?>(null) }
+    var newCoursePlacement by remember { mutableStateOf<NewCoursePlacement?>(null) }
+    var courseDetailsSelection by remember { mutableStateOf<CourseDetailsSelection?>(null) }
 
     val daysCount = if (showWeekends) 7 else 5
     val dayLabels = if (showWeekends) {
@@ -211,6 +230,22 @@ fun TimetableScreen(
         }
     }
 
+    courseDetailsSelection?.let { selection ->
+        CourseDetailsBottomSheet(
+            course = selection.course,
+            session = selection.session,
+            sessionTimes = sessionTimes,
+            onDismiss = { courseDetailsSelection = null },
+            onEdit = {
+                courseDetailsSelection = null
+                newCoursePlacement = null
+                editingSession = selection.session
+                editingCourse = selection.course
+                showDialog = true
+            }
+        )
+    }
+
     // Show empty state if no timetables exist
     if (timetables.isEmpty()) {
         EmptyGuidePlaceholder(
@@ -302,7 +337,9 @@ fun TimetableScreen(
         },
         floatingActionButton = {
             Row(
-                modifier = Modifier.animateContentSize(animationSpec = tween(200)),
+                modifier = Modifier
+                    .padding(bottom = bottomOverlayPadding)
+                    .animateContentSize(animationSpec = tween(200)),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -322,6 +359,7 @@ fun TimetableScreen(
                     showDialog = true
                     editingSession = null
                     editingCourse = null
+                    newCoursePlacement = null
                 }) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_course))
                 }
@@ -447,7 +485,7 @@ fun TimetableScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(sectionHeight)
+                                    .weight(1f)
                                     .padding(horizontal = 2.dp, vertical = 3.dp)
                                     .clip(MaterialTheme.shapes.small)
                                     .background(sectionContainerColor),
@@ -507,48 +545,95 @@ fun TimetableScreen(
                             .weight(1f)
                             .fillMaxHeight()
                     ) {
-                        // 1. Grid lines layer
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            (1..maxSection).forEach { _ ->
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(sectionHeight)
-                                        .border(0.5.dp, gridBorderColor.copy(alpha = 0.5f))
+                        // 1. Grid lines. Draw every line once so adjacent cells do not
+                        // double their opacity, and use the same proportional boundaries
+                        // as course cards to avoid density-dependent rounding drift.
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val strokeWidth = 0.5.dp.toPx()
+                            val halfStroke = strokeWidth / 2f
+
+                            for (section in 0..maxSection) {
+                                val y = (size.height * section / maxSection)
+                                    .coerceIn(halfStroke, size.height - halfStroke)
+                                drawLine(
+                                    color = gridBorderColor,
+                                    start = androidx.compose.ui.geometry.Offset(0f, y),
+                                    end = androidx.compose.ui.geometry.Offset(size.width, y),
+                                    strokeWidth = strokeWidth
+                                )
+                            }
+
+                            for (day in 0..daysCount) {
+                                val x = (size.width * day / daysCount)
+                                    .coerceIn(halfStroke, size.width - halfStroke)
+                                drawLine(
+                                    color = gridBorderColor,
+                                    start = androidx.compose.ui.geometry.Offset(x, 0f),
+                                    end = androidx.compose.ui.geometry.Offset(x, size.height),
+                                    strokeWidth = strokeWidth
                                 )
                             }
                         }
 
-                        // 2. Vertical lines
+                        // 2. Empty-cell interaction layer. Course cards are drawn afterwards and
+                        // therefore keep priority for pointer input in occupied areas.
                         Row(modifier = Modifier.fillMaxSize()) {
-                            (1..daysCount).forEach { _ ->
-                                Box(
+                            (1..daysCount).forEach { day ->
+                                Column(
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
-                                        .border(0.5.dp, gridBorderColor.copy(alpha = 0.5f))
-                                )
+                                ) {
+                                    (1..maxSection).forEach { section ->
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .weight(1f)
+                                                .combinedClickable(
+                                                    interactionSource = null,
+                                                    indication = null,
+                                                    onClick = {},
+                                                    onDoubleClick = {
+                                                        val isOccupied = sessionsByDay[day]
+                                                            .orEmpty()
+                                                            .any { (session, _) ->
+                                                                section in session.startSection..session.endSection
+                                                            }
+                                                        if (!isOccupied) {
+                                                            editingSession = null
+                                                            editingCourse = null
+                                                            newCoursePlacement = NewCoursePlacement(
+                                                                day = day,
+                                                                section = section,
+                                                                week = currentWeek
+                                                            )
+                                                            showDialog = true
+                                                        }
+                                                    }
+                                                )
+                                        )
+                                    }
+                                }
                             }
                         }
 
                         // 3. Course Content
                         Row(modifier = Modifier.fillMaxSize()) {
                             (1..daysCount).forEach { day ->
-                                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                                    sessionsByDay[day]?.forEach { (session, course) ->
-                                        CourseCard(
-                                            course = course,
+                                CourseDayColumn(
+                                    sessions = sessionsByDay[day].orEmpty(),
+                                    maxSection = maxSection,
+                                    colorsList = currentCourseColors,
+                                    onCourseClick = { session, course ->
+                                        courseDetailsSelection = CourseDetailsSelection(
                                             session = session,
-                                            sectionHeight = sectionHeight,
-                                            colorsList = currentCourseColors,
-                                            onClick = {
-                                                editingSession = session
-                                                editingCourse = course
-                                                showDialog = true
-                                            }
+                                            course = course
                                         )
-                                    }
-                                }
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                )
                             }
                         }
 
@@ -578,6 +663,10 @@ fun TimetableScreen(
                         }
                     }
                 }
+
+                if (bottomOverlayPadding > 0.dp) {
+                    Spacer(Modifier.height(bottomOverlayPadding))
+                }
             }
         }
 
@@ -590,7 +679,15 @@ fun TimetableScreen(
                 colorsList = currentCourseColors,
                 isDarkTheme = isDark,
                 totalWeeks = currentTotalWeeks,
-                onDismiss = { showDialog = false },
+                initialDay = newCoursePlacement?.day ?: 1,
+                initialStartSection = newCoursePlacement?.section ?: 1,
+                initialEndSection = newCoursePlacement?.section ?: 2,
+                initialWeeks = newCoursePlacement?.let { setOf(it.week) }
+                    ?: (1..currentTotalWeeks).toSet(),
+                onDismiss = {
+                    showDialog = false
+                    newCoursePlacement = null
+                },
                 onSave = { info, session, createNewCourse ->
                     if (createNewCourse) {
                         onAddCourse(info)
@@ -603,14 +700,60 @@ fun TimetableScreen(
                         )
                     }
                     showDialog = false
+                    newCoursePlacement = null
                 },
                 onDelete = {
                     if (editingSession != null) {
                         onDeleteSession(editingSession!!)
                     }
                     showDialog = false
+                    newCoursePlacement = null
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun CourseDayColumn(
+    sessions: List<Pair<CourseSession, CourseInfo>>,
+    maxSection: Int,
+    colorsList: List<Color>,
+    onCourseClick: (CourseSession, CourseInfo) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Layout(
+        modifier = modifier,
+        content = {
+            sessions.forEach { (session, course) ->
+                CourseCard(
+                    course = course,
+                    colorsList = colorsList,
+                    onClick = { onCourseClick(session, course) }
+                )
+            }
+        }
+    ) { measurables, constraints ->
+        val layoutWidth = constraints.maxWidth
+        val layoutHeight = constraints.maxHeight
+
+        val placements = measurables.mapIndexed { index, measurable ->
+            val session = sessions[index].first
+            val startSection = session.startSection.coerceIn(1, maxSection)
+            val endSection = session.endSection.coerceIn(startSection, maxSection)
+            val top = (layoutHeight.toFloat() * (startSection - 1) / maxSection).roundToInt()
+            val bottom = (layoutHeight.toFloat() * endSection / maxSection).roundToInt()
+            val cardHeight = (bottom - top).coerceAtLeast(1)
+            val placeable = measurable.measure(
+                Constraints.fixed(width = layoutWidth, height = cardHeight)
+            )
+            placeable to top
+        }
+
+        layout(layoutWidth, layoutHeight) {
+            placements.forEach { (placeable, top) ->
+                placeable.placeRelative(x = 0, y = top)
+            }
         }
     }
 }

@@ -4,9 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -19,24 +18,18 @@ import com.example.njupter.ui.animation.pressScale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.njupter.data.CourseInfo
-import com.example.njupter.data.CourseSession
 import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun CourseCard(
     course: CourseInfo,
-    session: CourseSession,
-    sectionHeight: Dp,
     colorsList: List<Color>,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val height = remember(session, sectionHeight) { sectionHeight * (session.endSection - session.startSection + 1) }
-    val topMargin = remember(session, sectionHeight) { sectionHeight * (session.startSection - 1) }
-
     val colorIndex = remember(course, colorsList) {
         if (course.colorIndex in colorsList.indices) {
             course.colorIndex
@@ -53,10 +46,7 @@ fun CourseCard(
     val interactionSource = remember { MutableInteractionSource() }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = topMargin)
-            .height(height)
+        modifier = modifier
             .padding(1.dp)
             .pressScale(interactionSource)
             .clickable(
@@ -115,10 +105,9 @@ fun CourseCardPreview() {
     MaterialTheme {
         CourseCard(
             course = CourseInfo("1", "高等数学", "张老师", "教 1-101", 0),
-            session = CourseSession("1", 1, 1, 2, listOf(1, 2, 3, 4, 5)),
-            sectionHeight = 60.dp,
             colorsList = sampleColors,
-            onClick = {}
+            onClick = {},
+            modifier = Modifier.size(width = 96.dp, height = 120.dp)
         )
     }
 }

@@ -65,6 +65,10 @@ fun CourseEditorDialog(
     colorsList: List<Color>,
     isDarkTheme: Boolean,
     totalWeeks: Int,
+    initialDay: Int = 1,
+    initialStartSection: Int = 1,
+    initialEndSection: Int = 2,
+    initialWeeks: Set<Int> = (1..totalWeeks).toSet(),
     onDismiss: () -> Unit,
     onSave: (CourseInfo, CourseSession, Boolean) -> Unit,
     onDelete: () -> Unit
@@ -79,15 +83,57 @@ fun CourseEditorDialog(
     var selectedColorIndex by remember { mutableStateOf(initialCourse?.colorIndex ?: -1) }
 
     // Session
-    var day by remember { mutableStateOf(initialSession?.day ?: 1) }
-    var startSection by remember { mutableStateOf(initialSession?.startSection?.toString() ?: "1") }
-    var endSection by remember { mutableStateOf(initialSession?.endSection?.toString() ?: "2") }
+    var day by remember(initialSession, initialDay) {
+        mutableStateOf(initialSession?.day ?: initialDay)
+    }
+    var startSection by remember(initialSession, initialStartSection) {
+        mutableStateOf((initialSession?.startSection ?: initialStartSection).toString())
+    }
+    var endSection by remember(initialSession, initialEndSection) {
+        mutableStateOf((initialSession?.endSection ?: initialEndSection).toString())
+    }
+
+    val unavailableWeeks = remember(
+        day,
+        startSection,
+        endSection,
+        initialSession,
+        existingSessions
+    ) {
+        val start = startSection.toIntOrNull()
+        val end = endSection.toIntOrNull()
+        if (start == null || end == null || start > end) {
+            emptySet()
+        } else {
+            CourseValidator.unavailableWeeksForSession(
+                day = day,
+                start = start,
+                end = end,
+                editingSession = initialSession,
+                allSessions = existingSessions
+            ).filterTo(mutableSetOf()) { it in 1..totalWeeks }
+        }
+    }
 
     // Weeks
-    var selectedWeeks by remember {
-        mutableStateOf(initialSession?.weeks?.toSet() ?: (1..totalWeeks).toSet())
+    var selectedWeeks by remember(initialSession, initialWeeks, totalWeeks) {
+        val requestedWeeks = initialSession?.weeks?.toSet() ?: initialWeeks
+        mutableStateOf<Set<Int>>(
+            requestedWeeks.filterTo(mutableSetOf()) { it in 1..totalWeeks }
+        )
+    }
+    var automaticallyRemovedWeeks by remember(initialSession, initialWeeks, totalWeeks) {
+        mutableStateOf<Set<Int>>(emptySet())
     }
     var showCustomWeekDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(unavailableWeeks) {
+        val newlyUnavailable = selectedWeeks intersect unavailableWeeks
+        val newlyAvailable = automaticallyRemovedWeeks - unavailableWeeks
+        selectedWeeks = (selectedWeeks - unavailableWeeks) + newlyAvailable
+        automaticallyRemovedWeeks =
+            (automaticallyRemovedWeeks + newlyUnavailable) intersect unavailableWeeks
+    }
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -103,9 +149,13 @@ fun CourseEditorDialog(
         CustomWeekPickerDialog(
             totalWeeks = totalWeeks,
             initialWeeks = selectedWeeks,
+            disabledWeeks = unavailableWeeks,
             onDismiss = { showCustomWeekDialog = false },
             onConfirm = {
                 selectedWeeks = it
+                // Confirming the picker is an explicit user choice. Do not restore weeks that
+                // were hidden by a previous, temporary time conflict after this point.
+                automaticallyRemovedWeeks = emptySet()
                 showCustomWeekDialog = false
             }
         )
@@ -444,10 +494,16 @@ fun CourseEditorDialog(
 fun CustomWeekPickerDialog(
     totalWeeks: Int,
     initialWeeks: Set<Int>,
+    disabledWeeks: Set<Int> = emptySet(),
     onDismiss: () -> Unit,
     onConfirm: (Set<Int>) -> Unit
 ) {
-    var tempWeeks by remember { mutableStateOf(initialWeeks) }
+    val availableWeeks = remember(totalWeeks, disabledWeeks) {
+        (1..totalWeeks).filterNotTo(mutableSetOf()) { it in disabledWeeks }
+    }
+    var tempWeeks by remember(initialWeeks, disabledWeeks) {
+        mutableStateOf(initialWeeks intersect availableWeeks)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -473,7 +529,9 @@ fun CustomWeekPickerDialog(
                 WeekGrid(
                     totalWeeks = totalWeeks,
                     selectedWeeks = tempWeeks,
+                    disabledWeeks = disabledWeeks,
                     onWeekToggle = { weekNum ->
+                        if (weekNum in disabledWeeks) return@WeekGrid
                         tempWeeks = if (tempWeeks.contains(weekNum)) {
                             tempWeeks - weekNum
                         } else {
@@ -493,21 +551,25 @@ fun CustomWeekPickerDialog(
                         val buttonPadding = PaddingValues(horizontal = 2.dp)
 
                         TextButton(
-                            onClick = { tempWeeks = (1..totalWeeks).toSet() },
+                            onClick = { tempWeeks = availableWeeks },
                             modifier = buttonModifier,
                             contentPadding = buttonPadding
                         ) {
                             Text(stringResource(R.string.select_all), maxLines = 1)
                         }
                         TextButton(
-                            onClick = { tempWeeks = (1..totalWeeks step 2).toSet() },
+                            onClick = {
+                                tempWeeks = availableWeeks.filterTo(mutableSetOf()) { it % 2 == 1 }
+                            },
                             modifier = buttonModifier,
                             contentPadding = buttonPadding
                         ) {
                             Text(stringResource(R.string.odd_week), maxLines = 1)
                         }
                         TextButton(
-                            onClick = { tempWeeks = (2..totalWeeks step 2).toSet() },
+                            onClick = {
+                                tempWeeks = availableWeeks.filterTo(mutableSetOf()) { it % 2 == 0 }
+                            },
                             modifier = buttonModifier,
                             contentPadding = buttonPadding
                         ) {
@@ -544,6 +606,7 @@ fun CustomWeekPickerDialog(
 fun WeekGrid(
     totalWeeks: Int,
     selectedWeeks: Set<Int>,
+    disabledWeeks: Set<Int> = emptySet(),
     onWeekToggle: (Int) -> Unit
 ) {
     LazyVerticalGrid(
@@ -558,9 +621,18 @@ fun WeekGrid(
         items(totalWeeks) { index ->
             val weekNum = index + 1
             val isSelected = selectedWeeks.contains(weekNum)
+            val isEnabled = weekNum !in disabledWeeks
 
-            val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-            val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+            val backgroundColor = when {
+                !isEnabled -> MaterialTheme.colorScheme.surfaceContainerLow
+                isSelected -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.surfaceVariant
+            }
+            val contentColor = when {
+                !isEnabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                isSelected -> MaterialTheme.colorScheme.onPrimary
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
             val gridInteractionSource = remember { MutableInteractionSource() }
 
             Box(
@@ -571,6 +643,7 @@ fun WeekGrid(
                     .pressScale(gridInteractionSource)
                     .clickable(
                         interactionSource = gridInteractionSource,
+                        enabled = isEnabled,
                         onClick = { onWeekToggle(weekNum) }
                     ),
                 contentAlignment = Alignment.Center
