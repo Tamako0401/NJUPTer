@@ -3,8 +3,12 @@ package com.example.njupter.data
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.example.njupter.ui.animation.predictiveback.PredictiveBackAnimation
+import com.example.njupter.ui.animation.predictiveback.PredictiveBackExitDirection
+import com.example.njupter.ui.theme.AppThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 interface SettingsRepository {
@@ -18,13 +22,51 @@ interface SettingsRepository {
     suspend fun setLastWeekForTimetable(id: String, week: Int)
     fun getEnableCurrentTimeIndicator(): Flow<Boolean>
     suspend fun setEnableCurrentTimeIndicator(enabled: Boolean)
+    fun getAppThemeMode(): Flow<AppThemeMode>
+    suspend fun setAppThemeMode(mode: AppThemeMode)
+    fun getDynamicColorEnabled(): Flow<Boolean>
+    suspend fun setDynamicColorEnabled(enabled: Boolean)
+    fun getFloatingBottomBarEnabled(): Flow<Boolean>
+    suspend fun setFloatingBottomBarEnabled(enabled: Boolean)
+    fun getBottomBarBlurEnabled(): Flow<Boolean>
+    suspend fun setBottomBarBlurEnabled(enabled: Boolean)
+    fun getPredictiveBackAnimation(): Flow<PredictiveBackAnimation>
+    suspend fun setPredictiveBackAnimation(animation: PredictiveBackAnimation)
+    fun getPredictiveBackExitDirection(): Flow<PredictiveBackExitDirection>
+    suspend fun setPredictiveBackExitDirection(direction: PredictiveBackExitDirection)
 
     fun peekLastSelectedTimetableId(): String? {
-        return (getLastSelectedTimetableId() as? MutableStateFlow)?.value
+        return (getLastSelectedTimetableId() as? StateFlow)?.value
     }
 
     fun peekAppLanguageTag(): String {
-        return (getAppLanguageTag() as? MutableStateFlow)?.value ?: ""
+        return (getAppLanguageTag() as? StateFlow)?.value ?: ""
+    }
+
+    fun peekAppThemeMode(): AppThemeMode {
+        return (getAppThemeMode() as? StateFlow)?.value ?: AppThemeMode.SYSTEM
+    }
+
+    fun peekDynamicColorEnabled(): Boolean {
+        return (getDynamicColorEnabled() as? StateFlow)?.value ?: true
+    }
+
+    fun peekFloatingBottomBarEnabled(): Boolean {
+        return (getFloatingBottomBarEnabled() as? StateFlow)?.value ?: false
+    }
+
+    fun peekBottomBarBlurEnabled(): Boolean {
+        return (getBottomBarBlurEnabled() as? StateFlow)?.value ?: false
+    }
+
+    fun peekPredictiveBackAnimation(): PredictiveBackAnimation {
+        return (getPredictiveBackAnimation() as? StateFlow)?.value
+            ?: PredictiveBackAnimation.SCALE
+    }
+
+    fun peekPredictiveBackExitDirection(): PredictiveBackExitDirection {
+        return (getPredictiveBackExitDirection() as? StateFlow)?.value
+            ?: PredictiveBackExitDirection.FOLLOW_GESTURE
     }
 }
 
@@ -36,6 +78,12 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         private const val KEY_LAST_SELECTED_TIMETABLE_ID = "last_selected_timetable_id"
         private const val KEY_LAST_WEEK_PREFIX = "last_week_"
         private const val KEY_CURRENT_TIME_INDICATOR = "enable_current_time_indicator"
+        private const val KEY_APP_THEME_MODE = "app_theme_mode"
+        private const val KEY_DYNAMIC_COLOR = "dynamic_color"
+        private const val KEY_FLOATING_BOTTOM_BAR = "floating_bottom_bar"
+        private const val KEY_BOTTOM_BAR_BLUR = "bottom_bar_blur"
+        private const val KEY_PREDICTIVE_BACK_ANIMATION = "predictive_back_animation"
+        private const val KEY_PREDICTIVE_BACK_EXIT_DIRECTION = "predictive_back_exit_direction"
     }
 
     private fun readLastWeekRecords(): Map<String, Int> {
@@ -58,6 +106,25 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
     private val _lastSelectedTimetableId = MutableStateFlow<String?>(prefs.getString(KEY_LAST_SELECTED_TIMETABLE_ID, null))
     private val _lastWeekRecords = MutableStateFlow(readLastWeekRecords())
     private val _enableCurrentTimeIndicator = MutableStateFlow(prefs.getBoolean(KEY_CURRENT_TIME_INDICATOR, true))
+    private val _appThemeMode = MutableStateFlow(
+        prefs.enumValue(KEY_APP_THEME_MODE, AppThemeMode.SYSTEM)
+    )
+    private val _dynamicColorEnabled = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, true))
+    private val _floatingBottomBarEnabled = MutableStateFlow(
+        prefs.getBoolean(KEY_FLOATING_BOTTOM_BAR, false)
+    )
+    private val _bottomBarBlurEnabled = MutableStateFlow(
+        prefs.getBoolean(KEY_BOTTOM_BAR_BLUR, false)
+    )
+    private val _predictiveBackAnimation = MutableStateFlow(
+        prefs.enumValue(KEY_PREDICTIVE_BACK_ANIMATION, PredictiveBackAnimation.SCALE)
+    )
+    private val _predictiveBackExitDirection = MutableStateFlow(
+        prefs.enumValue(
+            KEY_PREDICTIVE_BACK_EXIT_DIRECTION,
+            PredictiveBackExitDirection.FOLLOW_GESTURE
+        )
+    )
 
     override fun getShowWeekends(): Flow<Boolean> = _showWeekends.asStateFlow()
 
@@ -95,4 +162,57 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         prefs.edit { putBoolean(KEY_CURRENT_TIME_INDICATOR, enabled) }
         _enableCurrentTimeIndicator.value = enabled
     }
+
+    override fun getAppThemeMode(): Flow<AppThemeMode> = _appThemeMode.asStateFlow()
+
+    override suspend fun setAppThemeMode(mode: AppThemeMode) {
+        prefs.edit { putString(KEY_APP_THEME_MODE, mode.name) }
+        _appThemeMode.value = mode
+    }
+
+    override fun getDynamicColorEnabled(): Flow<Boolean> = _dynamicColorEnabled.asStateFlow()
+
+    override suspend fun setDynamicColorEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_DYNAMIC_COLOR, enabled) }
+        _dynamicColorEnabled.value = enabled
+    }
+
+    override fun getFloatingBottomBarEnabled(): Flow<Boolean> =
+        _floatingBottomBarEnabled.asStateFlow()
+
+    override suspend fun setFloatingBottomBarEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_FLOATING_BOTTOM_BAR, enabled) }
+        _floatingBottomBarEnabled.value = enabled
+    }
+
+    override fun getBottomBarBlurEnabled(): Flow<Boolean> = _bottomBarBlurEnabled.asStateFlow()
+
+    override suspend fun setBottomBarBlurEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_BOTTOM_BAR_BLUR, enabled) }
+        _bottomBarBlurEnabled.value = enabled
+    }
+
+    override fun getPredictiveBackAnimation(): Flow<PredictiveBackAnimation> =
+        _predictiveBackAnimation.asStateFlow()
+
+    override suspend fun setPredictiveBackAnimation(animation: PredictiveBackAnimation) {
+        prefs.edit { putString(KEY_PREDICTIVE_BACK_ANIMATION, animation.name) }
+        _predictiveBackAnimation.value = animation
+    }
+
+    override fun getPredictiveBackExitDirection(): Flow<PredictiveBackExitDirection> =
+        _predictiveBackExitDirection.asStateFlow()
+
+    override suspend fun setPredictiveBackExitDirection(direction: PredictiveBackExitDirection) {
+        prefs.edit { putString(KEY_PREDICTIVE_BACK_EXIT_DIRECTION, direction.name) }
+        _predictiveBackExitDirection.value = direction
+    }
+}
+
+private inline fun <reified T : Enum<T>> SharedPreferences.enumValue(
+    key: String,
+    default: T
+): T {
+    val stored = getString(key, null) ?: return default
+    return enumValues<T>().firstOrNull { it.name == stored } ?: default
 }

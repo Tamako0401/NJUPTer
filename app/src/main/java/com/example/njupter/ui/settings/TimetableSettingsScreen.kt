@@ -4,6 +4,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding  
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.njupter.R
 import com.example.njupter.ui.settings.component.SettingsSectionCard
@@ -49,7 +51,8 @@ fun TimetableSettingsScreen(
     currentShowWeekends: Boolean,
     currentSessionTimes: List<String>,
     onBack: () -> Unit,
-    onSave: (String, Long, Int, Boolean, List<String>) -> Unit
+    onSave: (String, Long, Int, Boolean, List<String>) -> Unit,
+    bottomContentPadding: Dp = 0.dp
 ) {
     var name by remember(currentTimetableName) { mutableStateOf(currentTimetableName) }
     var startDate by remember(currentStartDate) { mutableStateOf(currentStartDate) }
@@ -120,6 +123,7 @@ fun TimetableSettingsScreen(
                 .fillMaxWidth()
                 .animateContentSize(animationSpec = tween(200))
                 .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(bottom = 24.dp + bottomContentPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {

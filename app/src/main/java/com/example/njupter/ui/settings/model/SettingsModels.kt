@@ -20,10 +20,12 @@ sealed interface SettingsIcon {
 sealed interface SettingsItem {
     val icon: SettingsIcon
     val title: String
+    val description: String?
 
     data class Toggle(
         override val icon: SettingsIcon,
         override val title: String,
+        override val description: String? = null,
         val checked: Boolean,
         val onToggle: () -> Unit
     ) : SettingsItem
@@ -31,6 +33,7 @@ sealed interface SettingsItem {
     data class Navigation(
         override val icon: SettingsIcon,
         override val title: String,
+        override val description: String? = null,
         val value: String? = null,
         val onClick: () -> Unit
     ) : SettingsItem

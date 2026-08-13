@@ -25,6 +25,7 @@ import com.example.njupter.ui.theme.NJUPTerTheme
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun JwxtImportScreen(
+    isActive: Boolean = true,
     onBack: () -> Unit,
     onCookiesObtained: (String, String) -> Unit
     ) {
@@ -99,6 +100,13 @@ fun JwxtImportScreen(
                             // 会重定向到统一身份认证
                             loadUrl("http://jwxt.njupt.edu.cn/login_cas.aspx")
                         }
+                    },
+                    update = { webView ->
+                        if (isActive) webView.onResume() else webView.onPause()
+                    },
+                    onRelease = { webView ->
+                        webView.stopLoading()
+                        webView.destroy()
                     }
                 )
             }
