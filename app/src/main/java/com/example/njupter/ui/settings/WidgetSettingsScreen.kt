@@ -6,7 +6,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,10 +46,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.njupter.R
 import com.example.njupter.widget.WidgetDataManager
 import com.example.njupter.widget.WidgetSettingsManager
@@ -62,12 +62,12 @@ private const val WIDGET_BG_FILE = "widget_background.jpg"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WidgetSettingsScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    bottomContentPadding: Dp = 0.dp
 ) {
     val context = LocalContext.current
     var backgroundPath by remember { mutableStateOf(WidgetSettingsManager.getBackgroundImagePath(context)) }
     var transparency by remember { mutableFloatStateOf(WidgetSettingsManager.getBackgroundTransparency(context) / 255f) }
-    var showFullPreview by remember { mutableStateOf(false) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -110,10 +110,9 @@ fun WidgetSettingsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(if (showFullPreview) 180.dp else 110.dp)
+                    .height(180.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { showFullPreview = !showFullPreview },
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 WidgetPreview(
@@ -216,6 +215,8 @@ fun WidgetSettingsScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Spacer(Modifier.height(24.dp + bottomContentPadding))
         }
     }
 }
@@ -226,10 +227,6 @@ private fun WidgetPreview(
     transparency: Float,
     modifier: Modifier = Modifier
 ) {
-    val previewColor1 = Color(0xFFBBDEFB)
-    val previewColor2 = Color(0xFFDCEDC8)
-    val previewColor3 = Color(0xFFFFE0B2)
-
     val bgBitmap = remember(backgroundPath) {
         backgroundPath?.let { path ->
             try {
@@ -240,8 +237,9 @@ private fun WidgetPreview(
         }
     }
 
-    Box(modifier = modifier) {
-        // Background image
+    Box(
+        modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainer)
+    ) {
         if (bgBitmap != null) {
             Image(
                 bitmap = bgBitmap.asImageBitmap(),
@@ -249,53 +247,119 @@ private fun WidgetPreview(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = transparency))
+            )
         }
 
-        // Transparency overlay
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = transparency))
-        )
-
-        // Preview courses
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(
-                text = "Today's Courses",
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                fontSize = 10.sp
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(22.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = stringResource(
+                        R.string.widget_today_format,
+                        stringResource(R.string.day_thu)
+                    ),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+                Text(
+                    text = stringResource(R.string.week, 13),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            PreviewCourseRow(
+                startTime = "08:00",
+                endTime = "09:35",
+                name = "University Physics",
+                metadata = "${stringResource(R.string.widget_section_range, 1, 2)} | N2-304",
+                color = Color(0xFF7C9CFF)
             )
-            PreviewCourseRow("Advanced Mathematics", previewColor1)
-            PreviewCourseRow("College Physics", previewColor2)
-            PreviewCourseRow("English Literature", previewColor3)
+            PreviewCourseRow(
+                startTime = "09:50",
+                endTime = "11:25",
+                name = "Linear Algebra",
+                metadata = "${stringResource(R.string.widget_section_range, 3, 4)} | N2-212",
+                color = Color(0xFF45B8C8)
+            )
         }
     }
 }
 
 @Composable
-private fun PreviewCourseRow(name: String, color: Color) {
+private fun PreviewCourseRow(
+    startTime: String,
+    endTime: String,
+    name: String,
+    metadata: String,
+    color: Color
+) {
     Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 8.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
     ) {
+        Column(modifier = Modifier.width(44.dp)) {
+            Text(
+                text = startTime,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+            Text(
+                text = endTime,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+        Spacer(modifier = Modifier.width(6.dp))
         Box(
             modifier = Modifier
-                .size(8.dp)
+                .width(4.dp)
+                .height(34.dp)
                 .background(color, RoundedCornerShape(2.dp))
         )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = name,
-            color = Color.White,
-            fontSize = 9.sp,
-            maxLines = 1
-        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+            Text(
+                text = metadata,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
     }
 }
 

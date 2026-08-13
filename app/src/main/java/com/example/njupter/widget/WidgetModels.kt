@@ -2,7 +2,6 @@ package com.example.njupter.widget
 
 import android.content.Context
 import com.example.njupter.data.LocalFileDataSource
-import com.example.njupter.data.TimetableMetadata
 import com.example.njupter.domain.getTodayDayOfWeek
 import com.example.njupter.domain.getTodayWeekIndex
 import kotlinx.coroutines.runBlocking
@@ -18,6 +17,22 @@ data class WidgetCourseEntry(
 )
 
 object WidgetModels {
+    fun computeTodayWeekNumber(context: Context): Int? {
+        val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        val lastId = prefs.getString("last_selected_timetable_id", null) ?: return null
+        val dataSource = LocalFileDataSource(context)
+
+        return try {
+            runBlocking {
+                val metadata = dataSource.getAllTimetables().find { it.id == lastId }
+                    ?: return@runBlocking null
+                getTodayWeekIndex(metadata.startDate, metadata.totalWeeks)?.plus(1)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     fun computeTodaysCourses(context: Context): List<WidgetCourseEntry> {
         val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
         val lastId = prefs.getString("last_selected_timetable_id", null) ?: return emptyList()

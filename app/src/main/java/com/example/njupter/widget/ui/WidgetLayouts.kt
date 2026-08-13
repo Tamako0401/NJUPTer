@@ -4,15 +4,19 @@ import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
-import androidx.glance.background
 import androidx.glance.appwidget.cornerRadius
+import androidx.glance.background
+import androidx.glance.color.ColorProviders
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
@@ -25,6 +29,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
+import com.example.njupter.R
 import com.example.njupter.widget.WidgetCourseEntry
 
 @Composable
@@ -32,170 +37,261 @@ fun CoursesWidgetContent(
     entries: List<WidgetCourseEntry>,
     backgroundImagePath: String?,
     transparency: Int,
-    isDark: Boolean
+    colors: ColorProviders,
+    headerTitle: String,
+    weekLabel: String,
+    emptyText: String,
+    sectionLabel: (Int, Int) -> String
 ) {
     val size = LocalSize.current
-    val colors = if (isDark) WidgetDarkColors else WidgetLightColors
-    val overlayAlpha = (255 - transparency).coerceIn(0, 255)
+    val courseColors = WidgetLightColors
+    val maxCourses = when {
+        size.height < 150.dp -> 1
+        size.height < 210.dp -> 2
+        size.height < 270.dp -> 3
+        else -> 4
+    }
+    val overlayAlpha = transparency.coerceIn(0, 255)
+    val backgroundBitmap = backgroundImagePath?.let { path ->
+        try {
+            BitmapFactory.decodeFile(path)
+        } catch (_: Exception) {
+            null
+        }
+    }
 
-    WidgetTheme(isDark = isDark) {
-        Box(modifier = GlanceModifier.fillMaxSize(), content = {
-            // Background image layer
-            val bgBitmap = backgroundImagePath?.let { path ->
-                try {
-                    BitmapFactory.decodeFile(path)
-                } catch (_: Exception) {
-                    null
-                }
-            }
-            if (bgBitmap != null) {
+    WidgetTheme(colors = colors) {
+        Box(
+            modifier = GlanceModifier
+                .fillMaxSize()
+                .background(GlanceTheme.colors.widgetBackground)
+                .cornerRadius(28.dp)
+        ) {
+            if (backgroundBitmap != null) {
                 Image(
-                    provider = ImageProvider(bgBitmap),
+                    provider = ImageProvider(backgroundBitmap),
                     contentDescription = null,
-                    modifier = GlanceModifier.fillMaxSize()
+                    modifier = GlanceModifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
+                Box(
+                    modifier = GlanceModifier
+                        .fillMaxSize()
+                        .background(
+                            Color(
+                                red = 0,
+                                green = 0,
+                                blue = 0,
+                                alpha = overlayAlpha
+                            )
+                        )
+                ) {}
             }
 
-            // Transparency overlay
-            Box(
+            Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
-                    .background(Color(red = 0, green = 0, blue = 0, alpha = overlayAlpha)),
-                content = {}
-            )
+                    .padding(12.dp)
+            ) {
+                WidgetHeader(headerTitle = headerTitle, weekLabel = weekLabel)
+                Spacer(modifier = GlanceModifier.height(8.dp))
 
-            // Course list
-            when {
-                entries.isEmpty() -> EmptyWidgetContent()
-                size.width < 3.dp -> CompactWidgetLayout(entries, colors)
-                else -> DetailedWidgetLayout(entries, colors)
+                if (entries.isEmpty()) {
+                    EmptyWidgetContent(emptyText)
+                } else {
+                    entries.take(maxCourses).forEachIndexed { index, entry ->
+                        CourseRow(
+                            entry = entry,
+                            courseColor = getColorForIndex(
+                                entry.name,
+                                entry.colorIndex,
+                                courseColors
+                            ),
+                            sectionText = sectionLabel(entry.startSection, entry.endSection)
+                        )
+                        if (index != minOf(entries.lastIndex, maxCourses - 1)) {
+                            Spacer(modifier = GlanceModifier.height(6.dp))
+                        }
+                    }
+                }
             }
-        })
+        }
     }
 }
 
 @Composable
-fun EmptyWidgetContent() {
+private fun WidgetHeader(
+    headerTitle: String,
+    weekLabel: String
+) {
     Box(
-        modifier = GlanceModifier.fillMaxSize().padding(12.dp),
-        contentAlignment = Alignment.Center,
-        content = {
-            Text(
-                text = "No courses today",
-                style = TextStyle(fontWeight = FontWeight.Normal, textAlign = TextAlign.Center)
-            )
-        }
-    )
-}
-
-@Composable
-fun CompactWidgetLayout(entries: List<WidgetCourseEntry>, colors: List<Color>) {
-    Column(
-        modifier = GlanceModifier.fillMaxSize().padding(8.dp),
-        content = {
-            Text(
-                text = "Today's Courses",
-                style = TextStyle(fontWeight = FontWeight.Bold)
-            )
-            Spacer(modifier = GlanceModifier.height(6.dp))
-            entries.take(4).forEach { entry ->
-                CompactCourseRow(entry, colors)
-                Spacer(modifier = GlanceModifier.height(2.dp))
-            }
-            if (entries.size > 4) {
-                Text(
-                    text = "+${entries.size - 4} more",
-                    style = TextStyle(fontWeight = FontWeight.Normal)
-                )
-            }
-        }
-    )
-}
-
-@Composable
-fun DetailedWidgetLayout(entries: List<WidgetCourseEntry>, colors: List<Color>) {
-    Column(
-        modifier = GlanceModifier.fillMaxSize().padding(12.dp),
-        content = {
-            Text(
-                text = "Today's Courses",
-                style = TextStyle(fontWeight = FontWeight.Bold)
-            )
-            Spacer(modifier = GlanceModifier.height(8.dp))
-            entries.take(8).forEach { entry ->
-                DetailedCourseRow(entry, colors)
-                Spacer(modifier = GlanceModifier.height(4.dp))
-            }
-            if (entries.size > 8) {
-                Text(
-                    text = "+${entries.size - 8} more",
-                    style = TextStyle(fontWeight = FontWeight.Normal)
-                )
-            }
-        }
-    )
-}
-
-@Composable
-fun CompactCourseRow(entry: WidgetCourseEntry, colors: List<Color>) {
-    val courseColor = getColorForIndex(entry.name, entry.colorIndex, colors)
-    Row(
-        modifier = GlanceModifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        content = {
-            Box(
-                modifier = GlanceModifier
-                    .size(12.dp)
-                    .background(courseColor)
-                    .cornerRadius(3.dp),
-                content = {}
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(22.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Row(
+            modifier = GlanceModifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                provider = ImageProvider(R.mipmap.ic_launcher),
+                contentDescription = null,
+                modifier = GlanceModifier.size(22.dp)
             )
             Spacer(modifier = GlanceModifier.width(8.dp))
             Text(
-                text = entry.name,
-                style = TextStyle(fontWeight = FontWeight.Medium),
+                text = headerTitle,
+                style = TextStyle(
+                    color = GlanceTheme.colors.onSurface,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                ),
                 maxLines = 1
             )
         }
-    )
+        if (weekLabel.isNotEmpty()) {
+            Box(
+                modifier = GlanceModifier.fillMaxSize(),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Text(
+                    text = weekLabel,
+                    style = TextStyle(
+                        color = GlanceTheme.colors.onSurfaceVariant,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.End
+                    ),
+                    maxLines = 1
+                )
+            }
+        }
+    }
 }
 
 @Composable
-fun DetailedCourseRow(entry: WidgetCourseEntry, colors: List<Color>) {
-    val courseColor = getColorForIndex(entry.name, entry.colorIndex, colors)
-    Row(
-        modifier = GlanceModifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        content = {
-            Box(
-                modifier = GlanceModifier
-                    .size(16.dp)
-                    .background(courseColor)
-                    .cornerRadius(4.dp),
-                content = {}
+private fun EmptyWidgetContent(text: String) {
+    Box(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .background(GlanceTheme.colors.surfaceVariant)
+            .cornerRadius(18.dp)
+            .padding(12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = TextStyle(
+                color = GlanceTheme.colors.onSurfaceVariant,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center
             )
-            Spacer(modifier = GlanceModifier.width(10.dp))
-            Column(modifier = GlanceModifier.fillMaxWidth(), content = {
+        )
+    }
+}
+
+@Composable
+private fun CourseRow(
+    entry: WidgetCourseEntry,
+    courseColor: Color,
+    sectionText: String
+) {
+    val (startTime, endTime) = splitTimes(entry.timeText)
+    val metadata = buildList {
+        add(sectionText)
+        if (entry.classroom.isNotBlank()) add(entry.classroom)
+        if (entry.teacher.isNotBlank()) add(entry.teacher)
+    }.joinToString(" | ")
+
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .background(GlanceTheme.colors.surfaceVariant)
+            .cornerRadius(18.dp)
+            .padding(start = 10.dp, top = 6.dp, end = 10.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = GlanceModifier.width(50.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (startTime.isNotEmpty()) {
                 Text(
-                    text = entry.name,
-                    style = TextStyle(fontWeight = FontWeight.Medium),
+                    text = startTime,
+                    style = TextStyle(
+                        color = GlanceTheme.colors.onSurface,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
                     maxLines = 1
                 )
-                if (entry.timeText.isNotEmpty()) {
-                    Text(
-                        text = entry.timeText,
-                        style = TextStyle(fontWeight = FontWeight.Normal),
-                        maxLines = 1
-                    )
-                }
-                if (entry.classroom.isNotEmpty()) {
-                    Text(
-                        text = "@${entry.classroom}",
-                        style = TextStyle(fontWeight = FontWeight.Normal),
-                        maxLines = 1
-                    )
-                }
-            })
+                Text(
+                    text = endTime,
+                    style = TextStyle(
+                        color = GlanceTheme.colors.onSurfaceVariant,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    maxLines = 1
+                )
+            } else {
+                Text(
+                    text = sectionText,
+                    style = TextStyle(
+                        color = GlanceTheme.colors.onSurfaceVariant,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    maxLines = 1
+                )
+            }
         }
-    )
+
+        Spacer(modifier = GlanceModifier.width(8.dp))
+        Box(
+            modifier = GlanceModifier
+                .width(5.dp)
+                .height(38.dp)
+                .background(courseColor)
+                .cornerRadius(3.dp)
+        ) {}
+        Spacer(modifier = GlanceModifier.width(10.dp))
+
+        Column(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = entry.name,
+                style = TextStyle(
+                    color = GlanceTheme.colors.onSurface,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                maxLines = 1
+            )
+            Text(
+                text = metadata,
+                style = TextStyle(
+                    color = GlanceTheme.colors.onSurfaceVariant,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                ),
+                maxLines = 1
+            )
+        }
+    }
+}
+
+private fun splitTimes(timeText: String): Pair<String, String> {
+    val parts = timeText.split("-", limit = 2)
+    return if (parts.size == 2 && parts.all { ':' in it }) {
+        parts[0] to parts[1]
+    } else {
+        "" to ""
+    }
 }
