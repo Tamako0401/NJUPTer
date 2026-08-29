@@ -155,12 +155,12 @@ class TimetableViewModel(
         val currentWeek: Int
     )
 
-    fun fetchAndProcessImport(cookieString: String, xh: String) {
+    fun fetchAndProcessImport(cookieString: String) {
         viewModelScope.launch {
             _importState.value = ImportState(isImporting = true)
             try {
                 // 1. Fetch HTML
-                val client = JwxtClient(cookieString, xh)
+                val client = JwxtClient(cookieString)
                 val html = client.fetchTimetableHtml()
 
                 // 2. Parse HTML

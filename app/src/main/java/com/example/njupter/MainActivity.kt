@@ -273,8 +273,8 @@ class MainActivity : ComponentActivity() {
                             JwxtImportScreen(
                                 isActive = showJwxtImport,
                                 onBack = { showJwxtImport = false },
-                                onCookiesObtained = { cookie, xh ->
-                                    viewModel.fetchAndProcessImport(cookie, xh)
+                                onCookiesObtained = { cookie ->
+                                    viewModel.fetchAndProcessImport(cookie)
                                 }
                             )
                             },

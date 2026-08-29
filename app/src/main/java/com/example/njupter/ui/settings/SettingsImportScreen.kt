@@ -19,7 +19,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.njupter.R
+import com.example.njupter.data.import.JwxtEndpoints
 import com.example.njupter.ui.theme.NJUPTerTheme
+import java.net.URI
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled")
@@ -27,13 +29,14 @@ import com.example.njupter.ui.theme.NJUPTerTheme
 fun JwxtImportScreen(
     isActive: Boolean = true,
     onBack: () -> Unit,
-    onCookiesObtained: (String, String) -> Unit
-    ) {
+    onCookiesObtained: (String) -> Unit
+) {
     val defaultTitle = stringResource(R.string.jwxt_login_title)
     var title by remember(defaultTitle) { mutableStateOf(defaultTitle) }
 
     // 为了防止多次触发成功回调
     var isSuccess by remember { mutableStateOf(false) }
+    var hasRequestedTimetable by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -75,16 +78,29 @@ fun JwxtImportScreen(
                                     super.onPageFinished(view, url)
                                     view?.title?.let { title = it }
 
-                                    // 检查当前 URL 域名的 Cookie
                                     url?.let { currentUrl ->
-                                        val cookies = cookieManager.getCookie(currentUrl)
-                                        // 获取登录后重定向的主页面链接，提取学号 xh
-                                        val xhMatch = Regex("xh=([A-Za-z0-9]+)").find(currentUrl)
-                                        val xh = xhMatch?.groupValues?.get(1)
+                                        val uri = runCatching { URI(currentUrl) }.getOrNull()
+                                        val isNewJwxt = uri?.host.equals(
+                                            "jwglxt.njupt.edu.cn",
+                                            ignoreCase = true
+                                        )
+                                        val isTimetable = isNewJwxt &&
+                                            uri?.path == JwxtEndpoints.TIMETABLE_PATH
 
-                                        if (currentUrl.contains("jwxt.njupt.edu.cn") && xh != null && !isSuccess) {
+                                        if (isTimetable && !isSuccess) {
+                                            val cookies = cookieManager.getCookie(
+                                                JwxtEndpoints.TIMETABLE_URL
+                                            )
+                                            cookieManager.flush()
                                             isSuccess = true
-                                            onCookiesObtained(cookies ?: "", xh)
+                                            onCookiesObtained(cookies ?: "")
+                                        } else if (
+                                            isNewJwxt &&
+                                            uri?.path != "/sso/ddlogin" &&
+                                            !hasRequestedTimetable
+                                        ) {
+                                            hasRequestedTimetable = true
+                                            view?.loadUrl(JwxtEndpoints.TIMETABLE_URL)
                                         }
                                     }
                                 }
@@ -97,8 +113,7 @@ fun JwxtImportScreen(
                                 }
                             }
 
-                            // 会重定向到统一身份认证
-                            loadUrl("http://jwxt.njupt.edu.cn/login_cas.aspx")
+                            loadUrl(JwxtEndpoints.LOGIN_URL)
                         }
                     },
                     update = { webView ->
@@ -120,7 +135,7 @@ private fun JwxtImportScreenPreview() {
     NJUPTerTheme {
         JwxtImportScreen(
             onBack = {},
-            onCookiesObtained = { _, _ -> }
+            onCookiesObtained = { _ -> }
         )
     }
 }
