@@ -174,11 +174,7 @@ private fun WidgetHeader(
 private fun EmptyWidgetContent(text: String) {
     Box(
         modifier = GlanceModifier
-            .fillMaxWidth()
-            .height(52.dp)
-            .background(GlanceTheme.colors.surfaceVariant)
-            .cornerRadius(18.dp)
-            .padding(12.dp),
+            .fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Text(
