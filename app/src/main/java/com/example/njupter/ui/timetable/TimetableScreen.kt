@@ -69,6 +69,12 @@ private data class CourseDetailsSelection(
     val course: CourseInfo
 )
 
+private data class CourseDisplayItem(
+    val session: CourseSession,
+    val course: CourseInfo,
+    val isActiveInCurrentWeek: Boolean
+)
+
 @OptIn(ExperimentalMaterial3Api::class) // 使用实验性的 Material3 API
 @Composable
 fun TimetableScreen(
@@ -82,6 +88,7 @@ fun TimetableScreen(
     currentWeek: Int = 1,
     sessionTimes: List<String> = emptyList(),
     showWeekends: Boolean = true,
+    showNonCurrentWeekCourses: Boolean = false,
     enableCurrentTimeIndicator: Boolean = true,
     bottomOverlayPadding: Dp = 0.dp,
     isLoading: Boolean = false,
@@ -350,17 +357,31 @@ fun TimetableScreen(
                                 pagerState.animateScrollToPage(todayWeekIndex)
                             }
                         },
+                        elevation = FloatingActionButtonDefaults.elevation(
+                            defaultElevation = 0.dp,
+                            pressedElevation = 0.dp,
+                            focusedElevation = 0.dp,
+                            hoveredElevation = 0.dp
+                        )
                     ) {
                         Text(text = stringResource(R.string.today))
                     }
                 }
 
-                FloatingActionButton(onClick = {
-                    showDialog = true
-                    editingSession = null
-                    editingCourse = null
-                    newCoursePlacement = null
-                }) {
+                FloatingActionButton(
+                    onClick = {
+                        showDialog = true
+                        editingSession = null
+                        editingCourse = null
+                        newCoursePlacement = null
+                    },
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 0.dp,
+                        focusedElevation = 0.dp,
+                        hoveredElevation = 0.dp
+                    )
+                ) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_course))
                 }
             }
@@ -377,12 +398,37 @@ fun TimetableScreen(
             val currentWeek = page + 1
             val pageScrollState = rememberScrollState()
 
-            val sessionsByDay = remember(courseSessions, courseMap, currentWeek, daysCount) {
-                val map = mutableMapOf<Int, List<Pair<CourseSession, CourseInfo>>>()
+            val sessionsByDay = remember(
+                courseSessions,
+                courseMap,
+                currentWeek,
+                daysCount,
+                showNonCurrentWeekCourses
+            ) {
+                val map = mutableMapOf<Int, List<CourseDisplayItem>>()
                 for (day in 1..daysCount) {
                     map[day] = courseSessions
-                        .filter { it.day == day && it.weeks.contains(currentWeek) }
-                        .mapNotNull { session -> courseMap[session.courseId]?.let { session to it } }
+                        .filter { session ->
+                            session.day == day && (
+                                showNonCurrentWeekCourses || session.weeks.contains(currentWeek)
+                            )
+                        }
+                        .mapNotNull { session ->
+                            courseMap[session.courseId]?.let { course ->
+                                CourseDisplayItem(
+                                    session = session,
+                                    course = course,
+                                    isActiveInCurrentWeek = session.weeks.contains(currentWeek)
+                                )
+                            }
+                        }
+                        // Disjoint-week sessions may occupy the same cell. Draw active courses
+                        // last so a grey inactive card can never cover this week's course.
+                        .sortedWith(
+                            compareBy<CourseDisplayItem> { it.isActiveInCurrentWeek }
+                                .thenBy { it.session.startSection }
+                                .thenBy { it.session.endSection }
+                        )
                 }
                 map
             }
@@ -596,8 +642,8 @@ fun TimetableScreen(
                                                     onDoubleClick = {
                                                         val isOccupied = sessionsByDay[day]
                                                             .orEmpty()
-                                                            .any { (session, _) ->
-                                                                section in session.startSection..session.endSection
+                                                            .any { item ->
+                                                                section in item.session.startSection..item.session.endSection
                                                             }
                                                         if (!isOccupied) {
                                                             editingSession = null
@@ -716,7 +762,7 @@ fun TimetableScreen(
 
 @Composable
 private fun CourseDayColumn(
-    sessions: List<Pair<CourseSession, CourseInfo>>,
+    sessions: List<CourseDisplayItem>,
     maxSection: Int,
     colorsList: List<Color>,
     onCourseClick: (CourseSession, CourseInfo) -> Unit,
@@ -725,11 +771,12 @@ private fun CourseDayColumn(
     Layout(
         modifier = modifier,
         content = {
-            sessions.forEach { (session, course) ->
+            sessions.forEach { item ->
                 CourseCard(
-                    course = course,
+                    course = item.course,
                     colorsList = colorsList,
-                    onClick = { onCourseClick(session, course) }
+                    isActiveInCurrentWeek = item.isActiveInCurrentWeek,
+                    onClick = { onCourseClick(item.session, item.course) }
                 )
             }
         }
@@ -738,7 +785,7 @@ private fun CourseDayColumn(
         val layoutHeight = constraints.maxHeight
 
         val placements = measurables.mapIndexed { index, measurable ->
-            val session = sessions[index].first
+            val session = sessions[index].session
             val startSection = session.startSection.coerceIn(1, maxSection)
             val endSection = session.endSection.coerceIn(startSection, maxSection)
             val top = (layoutHeight.toFloat() * (startSection - 1) / maxSection).roundToInt()

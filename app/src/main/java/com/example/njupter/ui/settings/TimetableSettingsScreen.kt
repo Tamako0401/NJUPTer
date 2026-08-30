@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.TableRows
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -49,15 +50,19 @@ fun TimetableSettingsScreen(
     currentStartDate: Long,
     currentTotalWeeks: Int,
     currentShowWeekends: Boolean,
+    currentShowNonCurrentWeekCourses: Boolean,
     currentSessionTimes: List<String>,
     onBack: () -> Unit,
-    onSave: (String, Long, Int, Boolean, List<String>) -> Unit,
+    onSave: (String, Long, Int, Boolean, Boolean, List<String>) -> Unit,
     bottomContentPadding: Dp = 0.dp
 ) {
     var name by remember(currentTimetableName) { mutableStateOf(currentTimetableName) }
     var startDate by remember(currentStartDate) { mutableStateOf(currentStartDate) }
     var totalWeeks by remember(currentTotalWeeks) { mutableFloatStateOf(currentTotalWeeks.toFloat()) }
     var showWeekends by remember(currentShowWeekends) { mutableStateOf(currentShowWeekends) }
+    var showNonCurrentWeekCourses by remember(currentShowNonCurrentWeekCourses) {
+        mutableStateOf(currentShowNonCurrentWeekCourses)
+    }
     var sessionTimes by remember(currentSessionTimes) { mutableStateOf(currentSessionTimes) }
 
     var showDatePicker by remember { mutableStateOf(false) }
@@ -104,6 +109,7 @@ fun TimetableSettingsScreen(
                             startDate,
                             totalWeeks.toInt(),
                             showWeekends,
+                            showNonCurrentWeekCourses,
                             sessionTimes
                         )
                         onBack()
@@ -148,6 +154,15 @@ fun TimetableSettingsScreen(
                                 title = stringResource(R.string.show_weekends),
                                 checked = showWeekends,
                                 onToggle = { showWeekends = !showWeekends }
+                            ),
+                            SettingsItem.Toggle(
+                                icon = SettingsIcon.Vector(Icons.Default.Visibility),
+                                title = stringResource(R.string.show_non_current_week_courses),
+                                description = stringResource(R.string.show_non_current_week_courses_summary),
+                                checked = showNonCurrentWeekCourses,
+                                onToggle = {
+                                    showNonCurrentWeekCourses = !showNonCurrentWeekCourses
+                                }
                             )
                         )
                     )

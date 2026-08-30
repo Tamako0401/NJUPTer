@@ -201,6 +201,8 @@
     <string name="widget_settings_summary">预览并自定义桌面小组件</string>
     <string name="language_settings_summary">更改应用界面使用的语言</string>
     <string name="current_time_indicator_summary">在课表中显示当前时间线</string>
+    <string name="show_non_current_week_courses">显示非本周课程</string>
+    <string name="show_non_current_week_courses_summary">以灰色弱化卡片显示本周未开课的课程</string>
     <string name="notification_permission_summary">允许应用发送课程提醒</string>
     <string name="battery_optimization_summary">提高后台定时提醒的可靠性</string>
 

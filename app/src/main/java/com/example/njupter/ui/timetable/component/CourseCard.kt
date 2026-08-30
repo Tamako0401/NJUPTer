@@ -27,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 fun CourseCard(
     course: CourseInfo,
     colorsList: List<Color>,
+    isActiveInCurrentWeek: Boolean = true,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -39,8 +40,18 @@ fun CourseCard(
     }
 
     val fallbackColor = MaterialTheme.colorScheme.primaryContainer
-    val backgroundColor = remember(colorIndex, colorsList, fallbackColor) {
+    val activeBackgroundColor = remember(colorIndex, colorsList, fallbackColor) {
         if (colorsList.isNotEmpty()) colorsList[colorIndex] else fallbackColor
+    }
+    val backgroundColor = if (isActiveInCurrentWeek) {
+        activeBackgroundColor
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    val contentColor = if (isActiveInCurrentWeek) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.58f)
     }
 
     val interactionSource = remember { MutableInteractionSource() }
@@ -67,6 +78,7 @@ fun CourseCard(
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 ),
+                color = contentColor,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
@@ -75,6 +87,7 @@ fun CourseCard(
                 Text(
                     text = "@${course.classroom}",
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    color = contentColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -84,6 +97,7 @@ fun CourseCard(
                 Text(
                     text = "${course.teacher}",
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    color = contentColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

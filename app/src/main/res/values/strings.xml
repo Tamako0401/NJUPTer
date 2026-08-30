@@ -202,6 +202,8 @@
     <string name="widget_settings_summary">Preview and customize the home screen widget</string>
     <string name="language_settings_summary">Change the language used by the app</string>
     <string name="current_time_indicator_summary">Show the current time line on the timetable</string>
+    <string name="show_non_current_week_courses">Show courses outside this week</string>
+    <string name="show_non_current_week_courses_summary">Display inactive courses as muted cards</string>
     <string name="notification_permission_summary">Allow course reminder notifications</string>
     <string name="battery_optimization_summary">Keep scheduled reminders reliable in the background</string>
 

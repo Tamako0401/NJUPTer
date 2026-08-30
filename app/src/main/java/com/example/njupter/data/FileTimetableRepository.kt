@@ -114,8 +114,8 @@ class FileTimetableRepository(
         switchTimetable(meta.id)
     }
 
-    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
-        dataSource.updateTimetableMetadata(id, name, startDate, totalWeeks, showWeekends, sessionTimes)
+    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, showNonCurrentWeekCourses: Boolean, sessionTimes: List<String>) {
+        dataSource.updateTimetableMetadata(id, name, startDate, totalWeeks, showWeekends, showNonCurrentWeekCourses, sessionTimes)
         
         if (id == _currentTimetableId.value) {
             _currentTimetableName.value = name
