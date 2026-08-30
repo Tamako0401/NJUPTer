@@ -34,10 +34,14 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 import com.example.njupter.data.FileTimetableRepository
@@ -230,6 +234,19 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
+                    importState.error?.let { error ->
+                        AlertDialog(
+                            onDismissRequest = viewModel::clearImportState,
+                            title = { Text(stringResource(R.string.import_failed)) },
+                            text = { Text(error) },
+                            confirmButton = {
+                                TextButton(onClick = viewModel::clearImportState) {
+                                    Text(stringResource(R.string.confirm))
+                                }
+                            }
+                        )
+                    }
+
                 // Reschedule reminders when timetable identity changes.
                 // courseInfos and sessions are NOT keys — the repository emits them
                 // on every mutation, which would reschedule N times per import/add.
@@ -273,8 +290,8 @@ class MainActivity : ComponentActivity() {
                             JwxtImportScreen(
                                 isActive = showJwxtImport,
                                 onBack = { showJwxtImport = false },
-                                onCookiesObtained = { cookie ->
-                                    viewModel.fetchAndProcessImport(cookie)
+                                onTimetableHtmlObtained = { html ->
+                                    viewModel.processTimetableImport(html)
                                 }
                             )
                             },

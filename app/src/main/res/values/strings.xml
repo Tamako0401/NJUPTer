@@ -108,6 +108,7 @@
 
     <!-- Import Preview Dialog -->
     <string name="import_preview">Import Preview</string>
+    <string name="import_failed">Import Failed</string>
     <string name="imported_timetable_name">Imported Timetable</string>
     <string name="new_timetable_name">New Timetable Name</string>
     <string name="import_desc">A new timetable will be created automatically.</string>

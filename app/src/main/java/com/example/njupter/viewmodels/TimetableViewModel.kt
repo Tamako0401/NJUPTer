@@ -9,10 +9,10 @@ import com.example.njupter.data.CourseSession
 import com.example.njupter.data.SettingsRepository
 import com.example.njupter.data.TimetableMetadata
 import com.example.njupter.data.TimetableRepository
-import com.example.njupter.data.import.JwxtClient
 import com.example.njupter.data.import.JwxtParser
 import com.example.njupter.domain.getTodayWeekIndex
 import com.example.njupter.domain.import.TimetableImportMatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -155,19 +155,13 @@ class TimetableViewModel(
         val currentWeek: Int
     )
 
-    fun fetchAndProcessImport(cookieString: String) {
-        viewModelScope.launch {
+    fun processTimetableImport(html: String) {
+        viewModelScope.launch(Dispatchers.Default) {
             _importState.value = ImportState(isImporting = true)
             try {
-                // 1. Fetch HTML
-                val client = JwxtClient(cookieString)
-                val html = client.fetchTimetableHtml()
-
-                // 2. Parse HTML
                 val parser = JwxtParser()
                 val remoteCourses = parser.parseHtml(html)
 
-                // 3. Match and Convert
                 val matcher = TimetableImportMatcher()
                 
                 // For a new timetable, we match against empty lists to treat all courses as new
