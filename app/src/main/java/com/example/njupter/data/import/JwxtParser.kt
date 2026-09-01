@@ -10,6 +10,8 @@ data class RemoteCourse(
     val name: String,
     val teacher: String,
     val classroom: String,
+    val credit: String = "",
+    val courseNature: String = "",
     val dayOfWeek: Int, // 1~7
     val startSection: Int,
     val endSection: Int,
@@ -76,6 +78,8 @@ class JwxtParser {
             name = name,
             teacher = extractLabeledValue(details, "教师").cleanDisplayText(),
             classroom = extractLabeledValue(details, "上课地点").cleanDisplayText(),
+            credit = extractLabeledValue(details, "学分").cleanDisplayText(),
+            courseNature = extractLabeledValue(details, "课程性质").cleanDisplayText(),
             dayOfWeek = dayOfWeek,
             startSection = startSection,
             endSection = endSection,

@@ -55,7 +55,9 @@ internal data class CourseInfoJson(
     val name: String,
     val teacher: String,
     val room: String,
-    val colorIndex: Int = -1
+    val colorIndex: Int = -1,
+    val credit: String? = null,
+    val courseNature: String? = null
 )
 
 internal data class CourseSessionJson(

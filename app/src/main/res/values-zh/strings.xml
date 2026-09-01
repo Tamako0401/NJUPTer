@@ -43,6 +43,8 @@
     <string name="delete">删除</string>
     <string name="unnamed_course">未命名课程</string>
     <string name="not_set">未设置</string>
+    <string name="course_credit">学分</string>
+    <string name="course_nature">课程性质</string>
     <string name="course_section_single">第%1$d节</string>
     <string name="course_section_range">第%1$d–%2$d节</string>
     <string name="course_time_range">%1$s–%2$s</string>

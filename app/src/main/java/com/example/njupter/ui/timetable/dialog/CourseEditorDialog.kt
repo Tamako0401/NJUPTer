@@ -467,7 +467,9 @@ fun CourseEditorDialog(
                     name = courseName,
                     teacher = teacher,
                     classroom = classroom,
-                    colorIndex = selectedColorIndex
+                    colorIndex = selectedColorIndex,
+                    credit = initialCourse?.credit.orEmpty(),
+                    courseNature = initialCourse?.courseNature.orEmpty()
                 )
                 // Re-create session with final values
                 val finalSession = CourseSession(

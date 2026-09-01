@@ -17,6 +17,8 @@ class JwxtParserTest {
                 name = "大学物理（下）",
                 teacher = "闫巍",
                 classroom = "教3－520",
+                credit = "3",
+                courseNature = "必修",
                 dayOfWeek = 1,
                 startSection = 1,
                 endSection = 2,
@@ -25,6 +27,8 @@ class JwxtParserTest {
             courses[0]
         )
         assertEquals("物理实验（下）", courses[1].name)
+        assertEquals("", courses[1].credit)
+        assertEquals("", courses[1].courseNature)
         assertEquals((1..17).filter { it % 2 == 1 }, courses[1].weeks)
         assertEquals(listOf(1, 3, 5, 8, 9, 10), courses[2].weeks)
     }

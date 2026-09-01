@@ -49,7 +49,9 @@ class TimetableImportMatcher {
                     name = cleanDisplayText(remote.name),
                     teacher = cleanDisplayText(remote.teacher),
                     classroom = cleanDisplayText(remote.classroom),
-                    colorIndex = -1
+                    colorIndex = -1,
+                    credit = cleanDisplayText(remote.credit),
+                    courseNature = cleanDisplayText(remote.courseNature)
                 )
                 newInfos.add(newCourse)
                 newCourse

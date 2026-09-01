@@ -21,6 +21,8 @@ class TimetableImportMatcherTest {
 
         assertEquals(1, result.newCourses.size)
         assertEquals("物理实验（下）", result.newCourses.single().name)
+        assertEquals("2.5", result.newCourses.single().credit)
+        assertEquals("限选", result.newCourses.single().courseNature)
         assertEquals(1, result.newSessions.size)
         assertEquals(listOf(1, 3, 5, 7, 9), result.newSessions.single().weeks)
     }
@@ -56,6 +58,8 @@ class TimetableImportMatcherTest {
         name = name,
         teacher = "孙老师",
         classroom = "教3－300",
+        credit = "2.5",
+        courseNature = "限选",
         dayOfWeek = 1,
         startSection = 1,
         endSection = 2,
