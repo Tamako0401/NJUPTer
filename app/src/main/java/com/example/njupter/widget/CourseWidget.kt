@@ -7,17 +7,16 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.provideContent
 import com.example.njupter.R
-import com.example.njupter.domain.getTodayDayOfWeek
 import com.example.njupter.widget.ui.CoursesWidgetContent
 import com.example.njupter.widget.ui.widgetColorProviders
 
 class CourseWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val entries = WidgetDataManager.loadWidgetState(context)
+        val state = WidgetDataManager.loadWidgetState(context)
         val bgPath = WidgetSettingsManager.getBackgroundImagePath(context)
         val transparency = WidgetSettingsManager.getBackgroundTransparency(context)
         val dayName = context.getString(
-            when (getTodayDayOfWeek()) {
+            when (state.dayOfWeek) {
                 1 -> R.string.day_mon
                 2 -> R.string.day_tue
                 3 -> R.string.day_wed
@@ -27,20 +26,24 @@ class CourseWidget : GlanceAppWidget() {
                 else -> R.string.day_sun
             }
         )
-        val weekNumber = WidgetModels.computeTodayWeekNumber(context)
         val isDark = (context.resources.configuration.uiMode and
                 Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val colors = widgetColorProviders(context, isDark)
 
         provideContent {
             CoursesWidgetContent(
-                entries = entries,
+                entries = state.entries,
                 backgroundImagePath = bgPath,
                 transparency = transparency,
                 colors = colors,
-                headerTitle = context.getString(R.string.widget_today_format, dayName),
-                weekLabel = weekNumber?.let { context.getString(R.string.week, it) }.orEmpty(),
-                emptyText = context.getString(R.string.widget_no_courses_today),
+                headerTitle = context.getString(
+                    if (state.isTomorrow) R.string.widget_tomorrow_format else R.string.widget_today_format,
+                    dayName
+                ),
+                weekLabel = state.weekNumber?.let { context.getString(R.string.week, it) }.orEmpty(),
+                emptyText = context.getString(
+                    if (state.isDayComplete) R.string.widget_courses_completed else R.string.widget_no_courses_today
+                ),
                 sectionLabel = { start, end ->
                     context.getString(R.string.widget_section_range, start, end)
                 }

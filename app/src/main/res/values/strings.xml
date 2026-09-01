@@ -167,6 +167,8 @@
     <string name="widget_preview">Preview</string>
     <string name="widget_no_courses_today">No courses today</string>
     <string name="widget_today_format">Today / %1$s</string>
+    <string name="widget_tomorrow_format">Tomorrow / %1$s</string>
+    <string name="widget_courses_completed">Today\'s courses are complete</string>
     <string name="widget_section_range">Sec %1$d-%2$d</string>
 
     <!-- Appearance and motion -->

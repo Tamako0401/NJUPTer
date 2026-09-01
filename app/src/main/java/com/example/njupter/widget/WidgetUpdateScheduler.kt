@@ -29,10 +29,6 @@ object WidgetUpdateScheduler {
     private const val ALARM_REQUEST_CODE = 2001
 
     fun scheduleMidnightRefresh(context: Context) {
-        cancelMidnightRefresh(context)
-
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-
         val calendar = Calendar.getInstance().apply {
             add(Calendar.DAY_OF_YEAR, 1)
             set(Calendar.HOUR_OF_DAY, 0)
@@ -40,6 +36,14 @@ object WidgetUpdateScheduler {
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
+
+        scheduleRefresh(context, calendar.timeInMillis)
+    }
+
+    fun scheduleRefresh(context: Context, triggerAtMillis: Long) {
+        cancelMidnightRefresh(context)
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
@@ -50,7 +54,7 @@ object WidgetUpdateScheduler {
 
         alarmManager.setAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
-            calendar.timeInMillis,
+            triggerAtMillis.coerceAtLeast(System.currentTimeMillis() + 1_000L),
             pendingIntent
         )
     }

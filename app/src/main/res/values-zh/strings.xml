@@ -165,6 +165,8 @@
     <string name="widget_preview">预览</string>
     <string name="widget_no_courses_today">今日无课程</string>
     <string name="widget_today_format">今天 / %1$s</string>
+    <string name="widget_tomorrow_format">明天 / %1$s</string>
+    <string name="widget_courses_completed">当前课程已上完</string>
     <string name="widget_section_range">第%1$d-%2$d节</string>
     <string name="go_to_settings">前往设置</string>
 

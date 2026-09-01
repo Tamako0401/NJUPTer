@@ -65,7 +65,7 @@ fun CoursesWidgetContent(
             modifier = GlanceModifier
                 .fillMaxSize()
                 .background(GlanceTheme.colors.widgetBackground)
-                .cornerRadius(28.dp)
+                .cornerRadius(16.dp)
         ) {
             if (backgroundBitmap != null) {
                 Image(

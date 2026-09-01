@@ -238,7 +238,9 @@ private fun WidgetPreview(
     }
 
     Box(
-        modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainer)
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
         if (bgBitmap != null) {
             Image(
