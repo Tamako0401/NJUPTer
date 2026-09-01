@@ -819,21 +819,33 @@ private fun rememberCurrentTimeMillis(tickMs: Long = 30_000L): Long {
     return now
 }
 
-private fun findCurrentSectionPosition(sessionTimes: List<String>, currentMinuteOfDay: Int): Pair<Int, Float>? {
-    sessionTimes.forEachIndexed { index, timeStr ->
+internal fun findCurrentSectionPosition(sessionTimes: List<String>, currentMinuteOfDay: Int): Pair<Int, Float>? {
+    val validSections = sessionTimes.mapIndexedNotNull { index, timeStr ->
         val parts = timeStr.split("-")
-        if (parts.size != 2) return@forEachIndexed
+        if (parts.size != 2) return@mapIndexedNotNull null
 
-        val startMinute = parseMinuteOfDay(parts[0]) ?: return@forEachIndexed
-        val endMinute = parseMinuteOfDay(parts[1]) ?: return@forEachIndexed
-        if (endMinute <= startMinute) return@forEachIndexed
+        val startMinute = parseMinuteOfDay(parts[0]) ?: return@mapIndexedNotNull null
+        val endMinute = parseMinuteOfDay(parts[1]) ?: return@mapIndexedNotNull null
+        if (endMinute <= startMinute) return@mapIndexedNotNull null
+
+        Triple(index, startMinute, endMinute)
+    }
+
+    validSections.forEach { (index, startMinute, endMinute) ->
 
         if (currentMinuteOfDay in startMinute until endMinute) {
             val progress = (currentMinuteOfDay - startMinute).toFloat() / (endMinute - startMinute).toFloat()
             return index to progress.coerceIn(0f, 1f)
         }
+
+        if (currentMinuteOfDay < startMinute) {
+            return index to 0f
+        }
     }
-    return null
+
+    // There is no later section after the last class period. Keep the enabled
+    // indicator visible on the final end boundary instead of hiding it.
+    return validSections.lastOrNull()?.let { (index, _, _) -> index to 1f }
 }
 
 private fun parseMinuteOfDay(text: String): Int? {
