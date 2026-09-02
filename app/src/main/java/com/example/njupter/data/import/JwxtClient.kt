@@ -5,5 +5,4 @@ object JwxtEndpoints {
     const val TIMETABLE_URL =
         "http://jwglxt.njupt.edu.cn/kbcx/xskbcx_cxXskbcxIndex.html?gnmkdm=N2151&layout=default"
     const val TIMETABLE_PATH = "/kbcx/xskbcx_cxXskbcxIndex.html"
-
 }
