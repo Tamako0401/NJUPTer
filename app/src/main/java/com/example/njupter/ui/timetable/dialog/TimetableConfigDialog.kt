@@ -47,7 +47,7 @@ fun TimetableConfigDialog(
     initialName: String = "",
     initialStartDate: Long = System.currentTimeMillis(),
     initialTotalWeeks: Int = 20,
-    initialShowWeekends: Boolean = true,
+    initialShowWeekends: Boolean = false,
     initialSessionTimes: List<String> = defaultSessionTimes,
     isEditMode: Boolean = false,
     onDismiss: () -> Unit,

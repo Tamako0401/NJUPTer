@@ -198,7 +198,7 @@ class MainActivity : ComponentActivity() {
                                     name = name,
                                     startDate = System.currentTimeMillis(),
                                     totalWeeks = 20,
-                                    showWeekends = true,
+                                    showWeekends = false,
                                     sessionTimes = defaultSessionTimes,
                                     newCourses = result.newCourses,
                                     newSessions = result.newSessions
@@ -232,7 +232,7 @@ class MainActivity : ComponentActivity() {
                 // need to trigger on structural changes.
                 val reminderKey = uiState.isLoading to uiState.currentTimetableId
                 LaunchedEffect(reminderKey) {
-                    if (!uiState.isLoading && uiState.currentTimetableId != null) {
+                    if (!uiState.isLoading) {
                         reminderScheduler.scheduleUpcomingReminders(
                             courseInfos = uiState.courseInfos,
                             sessions = uiState.sessions,
@@ -329,6 +329,7 @@ class MainActivity : ComponentActivity() {
                                                     onUpdateSession = viewModel::updateSession,
                                                     onDeleteSession = viewModel::deleteSession,
                                                     onSwitchTimetable = viewModel::switchTimetable,
+                                                    onDeleteTimetable = viewModel::deleteTimetable,
                                                     onCurrentWeekChange = viewModel::setCurrentWeek,
                                                     onCreateTimetable = viewModel::createTimetable,
                                                     onImportClick = { showJwxtImport = true }
@@ -398,7 +399,9 @@ class MainActivity : ComponentActivity() {
                                                             )
                                                         }
                                                     },
-                                                    bottomContentPadding = bottomOverlayPadding
+                                                    onDelete = {
+                                                        uiState.currentTimetableId?.let(viewModel::deleteTimetable)
+                                                    }
                                                 )
                                             }
                                             subPage == "widget" -> {

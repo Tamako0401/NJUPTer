@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,7 +35,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Dp
 import com.example.njupter.R
 import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
@@ -87,10 +87,9 @@ fun TimetableScreen(
     currentTotalWeeks: Int = 20,
     currentWeek: Int = 1,
     sessionTimes: List<String> = emptyList(),
-    showWeekends: Boolean = true,
+    showWeekends: Boolean = false,
     showNonCurrentWeekCourses: Boolean = false,
     enableCurrentTimeIndicator: Boolean = true,
-    bottomOverlayPadding: Dp = 0.dp,
     isLoading: Boolean = false,
     onAddCourse: (CourseInfo) -> Unit = {},
     onAddSession: (CourseSession) -> Unit = {},
@@ -98,6 +97,7 @@ fun TimetableScreen(
     onUpdateSession: (CourseSession, CourseSession) -> Unit = { _, _ -> },
     onDeleteSession: (CourseSession) -> Unit = {},
     onSwitchTimetable: (String) -> Unit = {},
+    onDeleteTimetable: (String) -> Unit = {},
     onCurrentWeekChange: (Int) -> Unit = {},
     onCreateTimetable: (String, Long, Int, Boolean, List<String>) -> Unit = { _, _, _, _, _ -> },
     onImportClick: (() -> Unit)? = null
@@ -163,6 +163,7 @@ fun TimetableScreen(
 
     var showTimetableSheet by remember { mutableStateOf(false) }
     var showNewTimetableDialog by remember { mutableStateOf(false) }
+    var timetablePendingDeletion by remember { mutableStateOf<TimetableMetadata?>(null) }
 
     if (showNewTimetableDialog) {
         TimetableConfigDialog(
@@ -205,8 +206,25 @@ fun TimetableScreen(
                                 Text(stringResource(R.string.last_modified, format.format(date)))
                             },
                             trailingContent = {
-                                if (isCurrent) {
-                                    Icon(Icons.Default.Check, contentDescription = stringResource(R.string.cd_selected))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (isCurrent) {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = stringResource(R.string.cd_selected)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { timetablePendingDeletion = meta }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = stringResource(
+                                                R.string.delete_timetable_named,
+                                                meta.name
+                                            ),
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
                                 }
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -235,6 +253,42 @@ fun TimetableScreen(
                 }
             }
         }
+    }
+
+    timetablePendingDeletion?.let { timetable ->
+        AlertDialog(
+            onDismissRequest = { timetablePendingDeletion = null },
+            icon = {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text(stringResource(R.string.delete_timetable_title, timetable.name))
+            },
+            text = { Text(stringResource(R.string.delete_timetable_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteTimetable(timetable.id)
+                        timetablePendingDeletion = null
+                        showTimetableSheet = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { timetablePendingDeletion = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 
     courseDetailsSelection?.let { selection ->
@@ -344,9 +398,7 @@ fun TimetableScreen(
         },
         floatingActionButton = {
             Row(
-                modifier = Modifier
-                    .padding(bottom = bottomOverlayPadding)
-                    .animateContentSize(animationSpec = tween(200)),
+                modifier = Modifier.animateContentSize(animationSpec = tween(200)),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -710,9 +762,6 @@ fun TimetableScreen(
                     }
                 }
 
-                if (bottomOverlayPadding > 0.dp) {
-                    Spacer(Modifier.height(bottomOverlayPadding))
-                }
             }
         }
 

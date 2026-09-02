@@ -69,6 +69,9 @@
     <string name="create">Create</string>
     <string name="select_timetable">Select Timetable</string>
     <string name="last_modified">Last modified</string>
+    <string name="delete_timetable_named">Delete %1$s</string>
+    <string name="delete_timetable_title">Delete “%1$s”?</string>
+    <string name="delete_timetable_message">Courses in this timetable will be permanently deleted. This action cannot be undone.</string>
 
     <!-- Week Selection Dialog -->
     <string name="jump_to_week">Jump to Week</string>

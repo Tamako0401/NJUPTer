@@ -114,7 +114,7 @@ class TimetableViewModel(
         // User complained about 1970-01-01. Providing a default if 0 seems appropriate.
         val safeStartDate = if (bundle.currentMeta?.startDate != null && bundle.currentMeta.startDate > 0) bundle.currentMeta.startDate else System.currentTimeMillis()
         val safeSessionTimes = bundle.currentMeta?.nonNullSessionTimes ?: TimetableMetadata("", "", 0).nonNullSessionTimes
-        val safeShowWeekends = bundle.currentMeta?.showWeekends ?: true
+        val safeShowWeekends = bundle.currentMeta?.showWeekends ?: false
         val safeShowNonCurrentWeekCourses = bundle.currentMeta?.showNonCurrentWeekCourses ?: false
 
         TimetableUiState(
@@ -184,6 +184,7 @@ class TimetableViewModel(
     fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
         viewModelScope.launch {
             repository.createTimetable(name, startDate, totalWeeks, showWeekends, sessionTimes)
+            settingsRepository.setEnableCurrentTimeIndicator(true)
             appContext?.let { onWidgetRefresh(it) }
         }
     }
@@ -198,6 +199,13 @@ class TimetableViewModel(
     fun switchTimetable(id: String) {
         viewModelScope.launch {
             repository.switchTimetable(id)
+            appContext?.let { onWidgetRefresh(it) }
+        }
+    }
+
+    fun deleteTimetable(id: String) {
+        viewModelScope.launch {
+            repository.deleteTimetable(id)
             appContext?.let { onWidgetRefresh(it) }
         }
     }
@@ -256,6 +264,7 @@ class TimetableViewModel(
     fun createAndImportTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>, newCourses: List<CourseInfo>, newSessions: List<CourseSession>) {
         viewModelScope.launch {
             repository.createTimetable(name, startDate, totalWeeks, showWeekends, sessionTimes)
+            settingsRepository.setEnableCurrentTimeIndicator(true)
             // The active timetable is automatically switched inside createTimetable,
             // so we can now safely import.
             repository.importTimetableData(newCourses, newSessions)
