@@ -14,11 +14,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Animation
-import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.ViewDay
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -39,7 +37,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.njupter.R
 import com.example.njupter.ui.animation.predictiveback.PredictiveBackAnimation
@@ -61,18 +58,13 @@ private enum class ThemeChoiceDialog {
 fun ThemeSettingsScreen(
     themeMode: AppThemeMode,
     dynamicColorEnabled: Boolean,
-    floatingBottomBarEnabled: Boolean,
-    bottomBarBlurEnabled: Boolean,
     predictiveBackAnimation: PredictiveBackAnimation,
     predictiveBackExitDirection: PredictiveBackExitDirection,
     onThemeModeChange: (AppThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
-    onFloatingBottomBarChange: (Boolean) -> Unit,
-    onBottomBarBlurChange: (Boolean) -> Unit,
     onPredictiveBackAnimationChange: (PredictiveBackAnimation) -> Unit,
     onPredictiveBackExitDirectionChange: (PredictiveBackExitDirection) -> Unit,
-    onBack: () -> Unit,
-    bottomContentPadding: Dp = 0.dp
+    onBack: () -> Unit
 ) {
     var choiceDialog by remember { mutableStateOf<ThemeChoiceDialog?>(null) }
 
@@ -98,20 +90,6 @@ fun ThemeSettingsScreen(
                     onDynamicColorChange(!dynamicColorEnabled)
                 }
             }
-        ),
-        SettingsItem.Toggle(
-            icon = SettingsIcon.Vector(Icons.Default.ViewDay),
-            title = stringResource(R.string.floating_bottom_bar),
-            description = stringResource(R.string.floating_bottom_bar_summary),
-            checked = floatingBottomBarEnabled,
-            onToggle = { onFloatingBottomBarChange(!floatingBottomBarEnabled) }
-        ),
-        SettingsItem.Toggle(
-            icon = SettingsIcon.Vector(Icons.Default.BlurOn),
-            title = stringResource(R.string.bottom_bar_blur),
-            description = stringResource(R.string.bottom_bar_blur_summary),
-            checked = bottomBarBlurEnabled,
-            onToggle = { onBottomBarBlurChange(!bottomBarBlurEnabled) }
         )
     )
 
@@ -159,7 +137,7 @@ fun ThemeSettingsScreen(
                 start = 16.dp,
                 top = innerPadding.calculateTopPadding(),
                 end = 16.dp,
-                bottom = innerPadding.calculateBottomPadding() + 24.dp + bottomContentPadding
+                bottom = innerPadding.calculateBottomPadding() + 24.dp
             ),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {

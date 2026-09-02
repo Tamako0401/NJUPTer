@@ -49,7 +49,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.njupter.R
 import com.example.njupter.widget.WidgetDataManager
@@ -61,10 +60,7 @@ private const val WIDGET_BG_FILE = "widget_background.jpg"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WidgetSettingsScreen(
-    onBack: () -> Unit,
-    bottomContentPadding: Dp = 0.dp
-) {
+fun WidgetSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var backgroundPath by remember { mutableStateOf(WidgetSettingsManager.getBackgroundImagePath(context)) }
     var transparency by remember { mutableFloatStateOf(WidgetSettingsManager.getBackgroundTransparency(context) / 255f) }
@@ -216,7 +212,7 @@ fun WidgetSettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(Modifier.height(24.dp + bottomContentPadding))
+            Spacer(Modifier.height(24.dp))
         }
     }
 }

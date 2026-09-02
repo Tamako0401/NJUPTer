@@ -8,7 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.njupter.R
 import com.example.njupter.ui.settings.component.SettingsSectionCard
@@ -23,8 +22,7 @@ import com.example.njupter.ui.theme.NJUPTerTheme
 fun LanguageSelectScreen(
     currentLanguageTag: String,
     onBack: () -> Unit,
-    onSelectLanguage: (String) -> Unit,
-    bottomContentPadding: Dp = 0.dp
+    onSelectLanguage: (String) -> Unit
 ) {
     val normalizedLanguageTag = if (currentLanguageTag.startsWith("zh")) "zh" else "en"
     val isSystemSelected = currentLanguageTag.isEmpty() || currentLanguageTag == "system"
@@ -45,7 +43,7 @@ fun LanguageSelectScreen(
                 .weight(1f)
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 24.dp + bottomContentPadding),
+            contentPadding = PaddingValues(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
