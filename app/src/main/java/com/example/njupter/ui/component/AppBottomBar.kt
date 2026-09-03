@@ -17,7 +17,6 @@ import com.example.njupter.R
 @Composable
 fun AppBottomBar(
     currentTab: Int,
-    settingsMainSelected: Boolean,
     onTimetableClick: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -38,7 +37,7 @@ fun AppBottomBar(
             label = { Text(stringResource(R.string.timetable)) }
         )
         NavigationBarItem(
-            selected = currentTab == 1 && settingsMainSelected,
+            selected = currentTab == 1,
             onClick = onSettingsClick,
             icon = {
                 Icon(
