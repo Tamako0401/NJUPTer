@@ -34,18 +34,55 @@ class WidgetModelsTest {
     }
 
     @Test
-    fun `widget keeps all courses for layout to display as space allows`() {
+    fun `widget shows at most two upcoming courses`() {
         val state = stateAt(
-            hour = 10,
+            hour = 8,
             minute = 0,
             sessions = listOf(
                 CourseSession("m1", day = 1, startSection = 1, endSection = 2, weeks = listOf(1)),
-                CourseSession("m2", day = 1, startSection = 3, endSection = 4, weeks = listOf(1))
+                CourseSession("m2", day = 1, startSection = 3, endSection = 4, weeks = listOf(1)),
+                CourseSession("late", day = 1, startSection = 9, endSection = 9, weeks = listOf(1))
             )
         )
 
         assertEquals(listOf("Morning one", "Morning two"), state.entries.map { it.name })
         assertFalse(state.isTomorrow)
+    }
+
+    @Test
+    fun `ending course is removed at boundary and next course fills its place`() {
+        val sessions = listOf(
+            CourseSession("m1", 1, 1, 2, listOf(1)),
+            CourseSession("m2", 1, 3, 4, listOf(1)),
+            CourseSession("late", 1, 9, 9, listOf(1))
+        )
+        val before = stateAt(8, 0, sessions)
+        assertEquals(millis(2026, Calendar.AUGUST, 31, 9, 35), before.nextRefreshAtMillis)
+        val boundary = Calendar.getInstance().apply { timeInMillis = before.nextRefreshAtMillis!! }
+        val after = stateAt(boundary.get(Calendar.HOUR_OF_DAY), boundary.get(Calendar.MINUTE), sessions)
+
+        assertEquals(listOf("Morning one", "Morning two"), before.entries.map { it.name })
+        assertEquals(listOf("Morning two", "Late course"), after.entries.map { it.name })
+        assertEquals(millis(2026, Calendar.AUGUST, 31, 11, 25), after.nextRefreshAtMillis)
+    }
+
+    @Test
+    fun `tomorrow preview also caps courses at two`() {
+        val state = stateAt(17, 0, listOf(
+            CourseSession("m1", 2, 1, 2, listOf(1)),
+            CourseSession("m2", 2, 3, 4, listOf(1)),
+            CourseSession("late", 2, 9, 9, listOf(1))
+        ))
+        assertTrue(state.isTomorrow)
+        assertEquals(listOf("Morning one", "Morning two"), state.entries.map { it.name })
+    }
+
+    @Test
+    fun `finished morning shows completed until evening forecast`() {
+        val state = stateAt(16, 0, listOf(CourseSession("m1", 1, 1, 2, listOf(1))))
+        assertTrue(state.entries.isEmpty())
+        assertTrue(state.isDayComplete)
+        assertEquals(millis(2026, Calendar.AUGUST, 31, 17, 0), state.nextRefreshAtMillis)
     }
 
     @Test

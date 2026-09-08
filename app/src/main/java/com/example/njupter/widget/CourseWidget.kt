@@ -6,13 +6,18 @@ import androidx.glance.GlanceId
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.SizeMode
 import com.example.njupter.R
 import com.example.njupter.widget.ui.CoursesWidgetContent
 import com.example.njupter.widget.ui.widgetColorProviders
 
 class CourseWidget : GlanceAppWidget() {
+    override val sizeMode = SizeMode.Exact
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val state = WidgetDataManager.loadWidgetState(context)
+        val state = WidgetModels.computeWidgetDisplayState(context)
+        WidgetDataManager.saveWidgetState(context, state)
+        state.nextRefreshAtMillis?.let { WidgetUpdateScheduler.scheduleRefresh(context, it) }
         val bgPath = WidgetSettingsManager.getBackgroundImagePath(context)
         val transparency = WidgetSettingsManager.getBackgroundTransparency(context)
         val dayName = context.getString(

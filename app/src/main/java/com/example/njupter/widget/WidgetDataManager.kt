@@ -7,6 +7,7 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 
 object WidgetDataManager {
     private const val PREFS_NAME = "widget_courses"
@@ -43,16 +44,23 @@ object WidgetDataManager {
     }
 
     fun refreshWidget(context: Context) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                refreshWidgetAndWait(context)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // The scheduled alarm and host updates can retry the refresh.
+            }
+        }
+    }
+
+    suspend fun refreshWidgetAndWait(context: Context) {
         val state = WidgetModels.computeWidgetDisplayState(context)
         saveWidgetState(context, state)
         state.nextRefreshAtMillis?.let { triggerAtMillis ->
             WidgetUpdateScheduler.scheduleRefresh(context, triggerAtMillis)
         }
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                CourseWidget().updateAll(context)
-            } catch (_: Exception) {
-            }
-        }
+        CourseWidget().updateAll(context)
     }
 }

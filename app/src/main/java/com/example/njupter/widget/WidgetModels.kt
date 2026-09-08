@@ -102,7 +102,7 @@ internal fun buildWidgetDisplayState(
         )
 
         return WidgetDisplayState(
-            entries = tomorrowEntries,
+            entries = tomorrowEntries.take(2),
             dayOfWeek = tomorrowDay,
             weekNumber = tomorrowWeek,
             isTomorrow = tomorrowEntries.isNotEmpty(),
@@ -111,11 +111,20 @@ internal fun buildWidgetDisplayState(
         )
     }
 
+    val remainingSessions = todaySessions.filter { session ->
+        val endMinute = sectionEndMinute(metadata.nonNullSessionTimes, session.endSection)
+        endMinute == null || endMinute > currentMinute
+    }
+    val nextEndMinute = remainingSessions.mapNotNull { session ->
+        sectionEndMinute(metadata.nonNullSessionTimes, session.endSection)
+    }.minOrNull()
+
     return WidgetDisplayState(
-        entries = courseEntries(metadata, data, todaySessions),
+        entries = courseEntries(metadata, data, remainingSessions).take(2),
         dayOfWeek = todayDay,
         weekNumber = todayWeek,
-        nextRefreshAtMillis = atMinuteOfLocalDay(nowMillis, forecastMinute)
+        isDayComplete = todaySessions.isNotEmpty() && remainingSessions.isEmpty(),
+        nextRefreshAtMillis = atMinuteOfLocalDay(nowMillis, nextEndMinute ?: forecastMinute)
     )
 }
 

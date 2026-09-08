@@ -45,12 +45,8 @@ fun CoursesWidgetContent(
 ) {
     val size = LocalSize.current
     val courseColors = WidgetLightColors
-    val maxCourses = when {
-        size.height < 150.dp -> 1
-        size.height < 210.dp -> 2
-        size.height < 270.dp -> 3
-        else -> 4
-    }
+    val compact = size.height < 166.dp
+    val maxCourses = 2
     val overlayAlpha = transparency.coerceIn(0, 255)
     val backgroundBitmap = backgroundImagePath?.let { path ->
         try {
@@ -91,10 +87,10 @@ fun CoursesWidgetContent(
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
-                    .padding(12.dp)
+                    .padding(if (compact) 6.dp else 12.dp)
             ) {
                 WidgetHeader(headerTitle = headerTitle, weekLabel = weekLabel)
-                Spacer(modifier = GlanceModifier.height(8.dp))
+                Spacer(modifier = GlanceModifier.height(if (compact) 4.dp else 8.dp))
 
                 if (entries.isEmpty()) {
                     EmptyWidgetContent(emptyText)
@@ -107,10 +103,11 @@ fun CoursesWidgetContent(
                                 entry.colorIndex,
                                 courseColors
                             ),
-                            sectionText = sectionLabel(entry.startSection, entry.endSection)
+                            sectionText = sectionLabel(entry.startSection, entry.endSection),
+                            compact = compact
                         )
                         if (index != minOf(entries.lastIndex, maxCourses - 1)) {
-                            Spacer(modifier = GlanceModifier.height(6.dp))
+                            Spacer(modifier = GlanceModifier.height(if (compact) 4.dp else 6.dp))
                         }
                     }
                 }
@@ -193,7 +190,8 @@ private fun EmptyWidgetContent(text: String) {
 private fun CourseRow(
     entry: WidgetCourseEntry,
     courseColor: Color,
-    sectionText: String
+    sectionText: String,
+    compact: Boolean
 ) {
     val (startTime, endTime) = splitTimes(entry.timeText)
     val metadata = buildList {
@@ -201,6 +199,25 @@ private fun CourseRow(
         if (entry.classroom.isNotBlank()) add(entry.classroom)
         if (entry.teacher.isNotBlank()) add(entry.teacher)
     }.joinToString(" | ")
+
+    if (compact) {
+        Row(
+            modifier = GlanceModifier.fillMaxWidth().height(28.dp)
+                .background(GlanceTheme.colors.surfaceVariant).cornerRadius(10.dp)
+                .padding(horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(GlanceModifier.width(4.dp).height(18.dp).background(courseColor)) {}
+            Spacer(GlanceModifier.width(6.dp))
+            Text(
+                text = listOf(entry.timeText, entry.name, entry.classroom)
+                    .filter { it.isNotBlank() }.joinToString("  "),
+                style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 12.sp),
+                maxLines = 1
+            )
+        }
+        return
+    }
 
     Row(
         modifier = GlanceModifier

@@ -21,7 +21,6 @@ class MidnightAlarmReceiver : BroadcastReceiver() {
             ExistingWorkPolicy.REPLACE,
             workRequest
         )
-        WidgetUpdateScheduler.scheduleMidnightRefresh(context)
     }
 }
 

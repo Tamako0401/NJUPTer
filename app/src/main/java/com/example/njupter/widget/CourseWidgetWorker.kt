@@ -1,8 +1,7 @@
 package com.example.njupter.widget
 
 import android.content.Context
-import androidx.glance.GlanceId
-import androidx.glance.appwidget.GlanceAppWidgetManager
+import kotlinx.coroutines.CancellationException
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 
@@ -13,8 +12,10 @@ class CourseWidgetWorker(
 
     override suspend fun doWork(): Result {
         return try {
-            WidgetDataManager.refreshWidget(context)
+            WidgetDataManager.refreshWidgetAndWait(context)
             Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.retry()
         }
