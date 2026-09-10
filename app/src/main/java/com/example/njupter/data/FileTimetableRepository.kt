@@ -114,8 +114,8 @@ class FileTimetableRepository(
         switchTimetable(meta.id)
     }
 
-    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
-        dataSource.updateTimetableMetadata(id, name, startDate, totalWeeks, showWeekends, sessionTimes)
+    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, showNonCurrentWeekCourses: Boolean, sessionTimes: List<String>) {
+        dataSource.updateTimetableMetadata(id, name, startDate, totalWeeks, showWeekends, showNonCurrentWeekCourses, sessionTimes)
         
         if (id == _currentTimetableId.value) {
             _currentTimetableName.value = name
@@ -124,14 +124,22 @@ class FileTimetableRepository(
     }
 
     override suspend fun deleteTimetable(id: String) {
-        if (id == _currentTimetableId.value) {
-             val first = _availableTimetables.value.firstOrNull()
-             if (first != null) {
-                 switchTimetable(first.id)
-             }
-        }
+        val deletingCurrent = id == _currentTimetableId.value
+        val replacementId = _availableTimetables.value.firstOrNull { it.id != id }?.id
         dataSource.deleteTimetable(id)
         refreshTimetableList()
+
+        if (!deletingCurrent) return
+
+        if (replacementId != null) {
+            switchTimetable(replacementId)
+        } else {
+            _currentTimetableId.value = null
+            _currentTimetableName.value = ""
+            _courseInfos.value = emptyList()
+            _courseSessions.value = emptyList()
+            settingsRepository.setLastSelectedTimetableId(null)
+        }
     }
 
     override suspend fun addCourse(course: CourseInfo) {

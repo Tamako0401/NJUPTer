@@ -18,34 +18,38 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.semantics.clearAndSetSemantics
+
 import com.example.njupter.data.FileTimetableRepository
 import com.example.njupter.ui.timetable.TimetableScreen
 import com.example.njupter.viewmodels.TimetableViewModel
@@ -54,12 +58,21 @@ import com.example.njupter.data.SharedPreferencesSettingsRepository
 import com.example.njupter.ui.settings.LanguageSelectScreen
 import com.example.njupter.ui.settings.SettingsScreen
 import com.example.njupter.ui.settings.TimetableSettingsScreen
+import com.example.njupter.ui.settings.ThemeSettingsScreen
+import com.example.njupter.ui.settings.WidgetSettingsScreen
 import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.ui.settings.JwxtImportScreen
 import com.example.njupter.ui.settings.dialog.ImportPreviewDialog
+import com.example.njupter.ui.animation.AppNavigationTransition
+import com.example.njupter.ui.animation.AppPageTransition
+import com.example.njupter.ui.animation.PredictiveBackSurface
+import com.example.njupter.ui.animation.PredictiveBackOwner
+import com.example.njupter.ui.component.AppBottomBar
 import com.example.njupter.data.defaultSessionTimes
 import com.example.njupter.notification.CourseReminderScheduler
 import com.example.njupter.notification.ReminderBootstrapper
+import com.example.njupter.widget.WidgetDataManager
+import com.example.njupter.widget.WidgetUpdateScheduler
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -69,6 +82,7 @@ import java.util.Locale
  */
 
 class MainActivity : ComponentActivity() {
+    private val updateViewModel by viewModels<com.example.njupter.update.AppUpdateViewModel>()
     private fun applyLocaleToActivityResources(languageTag: String) {
         val locale = when {
             languageTag.startsWith("zh") -> Locale.SIMPLIFIED_CHINESE
@@ -81,11 +95,6 @@ class MainActivity : ComponentActivity() {
         config.setLocale(locale)
         @Suppress("DEPRECATION")
         resources.updateConfiguration(config, resources.displayMetrics)
-
-        applicationContext.resources.updateConfiguration(
-            Configuration(applicationContext.resources.configuration).apply { setLocale(locale) },
-            applicationContext.resources.displayMetrics
-        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -126,30 +135,53 @@ class MainActivity : ComponentActivity() {
             ReminderBootstrapper.rescheduleCurrentTimetable(applicationContext)
         }
 
+        WidgetUpdateScheduler.scheduleMidnightRefresh(this)
+
         val viewModel by viewModels<TimetableViewModel> {
-            TimetableViewModel.provideFactory(repository, settingsRepository)
+            TimetableViewModel.provideFactory(repository, settingsRepository, this@MainActivity)
         }
 
         lifecycleScope.launch {
             viewModel.uiState.collectLatest { uiState ->
                 keepSplash = uiState.isLoading
+                if (!uiState.isLoading && uiState.currentTimetableId != null) {
+                    WidgetDataManager.refreshWidget(this@MainActivity)
+                }
             }
         }
 
         setContent {
-            NJUPTerTheme {  // 主题包装
+            val appThemeMode by settingsRepository.getAppThemeMode().collectAsState(
+                initial = settingsRepository.peekAppThemeMode()
+            )
+            val dynamicColorEnabled by settingsRepository.getDynamicColorEnabled().collectAsState(
+                initial = settingsRepository.peekDynamicColorEnabled()
+            )
+            val predictiveBackAnimation by settingsRepository.getPredictiveBackAnimation()
+                .collectAsState(initial = settingsRepository.peekPredictiveBackAnimation())
+            val predictiveBackExitDirection by settingsRepository.getPredictiveBackExitDirection()
+                .collectAsState(initial = settingsRepository.peekPredictiveBackExitDirection())
+
+            NJUPTerTheme(
+                themeMode = appThemeMode,
+                dynamicColor = dynamicColorEnabled
+            ) {
                 val uiState by viewModel.uiState.collectAsState()   // 观察状态，将StateFlow转换成Compose的State
                 val importState by viewModel.importState.collectAsState()   // 同上
                 val appLanguageTag by settingsRepository.getAppLanguageTag().collectAsState(initial = settingsRepository.peekAppLanguageTag())
                 val enableCurrentTimeIndicator by settingsRepository.getEnableCurrentTimeIndicator().collectAsState(initial = true)
                 val scope = rememberCoroutineScope()
                 val baseContext = LocalContext.current
-                val currentConfig = LocalConfiguration.current
+                val layoutDirection = LocalLayoutDirection.current
                 var currentTab by remember { mutableStateOf(0) }
                 var showJwxtImport by remember { mutableStateOf(false) }
                 var settingsSubPage by remember { mutableStateOf("main") }
 
-                val localizedContext = remember(baseContext, currentConfig, appLanguageTag) {
+                // Only keyed on languageTag — other config changes (dark mode, font scale)
+                // don't affect string resolution from the context, so we avoid unnecessary
+                // createConfigurationContext calls.
+                val configuration = LocalConfiguration.current
+                val localizedContext = remember(baseContext, appLanguageTag, configuration) {
                     val locale = when {
                         appLanguageTag.startsWith("zh") -> Locale.SIMPLIFIED_CHINESE
                         appLanguageTag.startsWith("en") -> Locale.ENGLISH
@@ -158,7 +190,7 @@ class MainActivity : ComponentActivity() {
                     if (locale == null) {
                         baseContext
                     } else {
-                        val config = Configuration(currentConfig)
+                        val config = Configuration(configuration)
                         config.setLocale(locale)
                         baseContext.createConfigurationContext(config)
                     }
@@ -169,6 +201,9 @@ class MainActivity : ComponentActivity() {
                 }
 
                 CompositionLocalProvider(LocalContext provides localizedContext) {
+                    if (!uiState.isLoading && importState.result == null && importState.error == null) {
+                        com.example.njupter.update.StartupUpdatePrompt(updateViewModel)
+                    }
                     // 导入预览对话框
                     importState.result?.let { result ->
                         ImportPreviewDialog(
@@ -178,7 +213,7 @@ class MainActivity : ComponentActivity() {
                                     name = name,
                                     startDate = System.currentTimeMillis(),
                                     totalWeeks = 20,
-                                    showWeekends = true,
+                                    showWeekends = false,
                                     sessionTimes = defaultSessionTimes,
                                     newCourses = result.newCourses,
                                     newSessions = result.newSessions
@@ -192,76 +227,110 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                LaunchedEffect(
-                    uiState.currentTimetableId,
-                    uiState.currentStartDate,
-                    uiState.currentTotalWeeks,
-                    uiState.currentSessionTimes,
-                    uiState.courseInfos,
-                    uiState.sessions
-                ) {
-                    reminderScheduler.scheduleUpcomingReminders(
-                        courseInfos = uiState.courseInfos,
-                        sessions = uiState.sessions,
-                        currentTimetableId = uiState.currentTimetableId,
-                        startDate = uiState.currentStartDate,
-                        totalWeeks = uiState.currentTotalWeeks,
-                        sessionTimes = uiState.currentSessionTimes
-                    )
+                    importState.error?.let { error ->
+                        AlertDialog(
+                            onDismissRequest = viewModel::clearImportState,
+                            title = { Text(stringResource(R.string.import_failed)) },
+                            text = { Text(error) },
+                            confirmButton = {
+                                TextButton(onClick = viewModel::clearImportState) {
+                                    Text(stringResource(R.string.confirm))
+                                }
+                            }
+                        )
+                    }
+
+                // Reschedule reminders when timetable identity changes.
+                // courseInfos and sessions are NOT keys — the repository emits them
+                // on every mutation, which would reschedule N times per import/add.
+                // ReminderScheduler reads current repo state when it fires, so we only
+                // need to trigger on structural changes.
+                val reminderKey = uiState.isLoading to uiState.currentTimetableId
+                LaunchedEffect(reminderKey) {
+                    if (!uiState.isLoading) {
+                        reminderScheduler.scheduleUpcomingReminders(
+                            courseInfos = uiState.courseInfos,
+                            sessions = uiState.sessions,
+                            currentTimetableId = uiState.currentTimetableId,
+                            startDate = uiState.currentStartDate,
+                            totalWeeks = uiState.currentTotalWeeks,
+                            sessionTimes = uiState.currentSessionTimes
+                        )
+                    }
                 }
 
-                    AnimatedContent(
-                        targetState = showJwxtImport,
-                        transitionSpec = {
-                            if (targetState) {
-                                (slideInVertically { fullHeight -> fullHeight } + fadeIn(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))) togetherWith
-                                (slideOutVertically { fullHeight -> -fullHeight / 3 } + fadeOut(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))) using
-                                SizeTransform(clip = false)
-                            } else {
-                                (slideInVertically { fullHeight -> -fullHeight / 3 } + fadeIn(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))) togetherWith
-                                (slideOutVertically { fullHeight -> fullHeight } + fadeOut(animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f))) using
-                                SizeTransform(clip = false)
+                    PredictiveBackSurface(
+                        enabled = showJwxtImport || settingsSubPage != "main",
+                        owner = when {
+                            showJwxtImport -> PredictiveBackOwner.IMPORT_PAGE
+                            settingsSubPage != "main" -> PredictiveBackOwner.SETTINGS_PAGE
+                            else -> null
+                        },
+                        animation = predictiveBackAnimation,
+                        exitDirection = predictiveBackExitDirection,
+                        onBack = {
+                            when {
+                                showJwxtImport -> showJwxtImport = false
+                                settingsSubPage != "main" -> settingsSubPage = "main"
                             }
                         },
-                        label = "importTransition"
-                    ) { showImport ->
-                        if (showImport) {
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        AppPageTransition(
+                            showImport = showJwxtImport,
+                            modifier = Modifier.fillMaxSize(),
+                            importContent = {
                             JwxtImportScreen(
+                                isActive = showJwxtImport,
                                 onBack = { showJwxtImport = false },
-                                onCookiesObtained = { cookie, xh ->
-                                    viewModel.fetchAndProcessImport(cookie, xh)
+                                onTimetableHtmlObtained = { html ->
+                                    viewModel.processTimetableImport(html)
                                 }
                             )
-                        } else {
+                            },
+                            mainContent = {
+                            var bottomBarHeightPx by remember { mutableIntStateOf(0) }
+                            val bottomBarHeight = with(LocalDensity.current) {
+                                bottomBarHeightPx.toDp()
+                            }
+                            val bottomBarCoverInteractionSource = remember {
+                                MutableInteractionSource()
+                            }
+
+                            Box(modifier = Modifier.fillMaxSize()) {
                             Scaffold(
                                 bottomBar = {
-                                    NavigationBar {
-                                        NavigationBarItem(
-                                            selected = currentTab == 0,
-                                            onClick = {
-                                                currentTab = 0
-                                                settingsSubPage = "main"
-                                            },
-                                            icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.cd_timetable)) },
-                                            label = { Text(stringResource(R.string.timetable)) }
-                                        )
-                                        NavigationBarItem(
-                                            selected = currentTab == 1,
-                                            onClick = {
-                                                currentTab = 1
-                                            },
-                                            icon = { Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.cd_settings)) },
-                                            label = { Text(stringResource(R.string.settings)) }
-                                        )
-                                    }
+                                    AppBottomBar(
+                                        currentTab = currentTab,
+                                        onTimetableClick = {
+                                            currentTab = 0
+                                            settingsSubPage = "main"
+                                        },
+                                        onSettingsClick = { currentTab = 1 },
+                                        modifier = Modifier.onSizeChanged {
+                                            bottomBarHeightPx = it.height
+                                        }
+                                    )
                                 }
                             ) { innerPadding ->
-                                Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                                    Crossfade(
-                                        targetState = currentTab to settingsSubPage,
-                                        animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
-                                        label = "contentTransition"
-                                    ) { (tab, subPage) ->
+                                val scenePadding = PaddingValues(
+                                    start = innerPadding.calculateStartPadding(layoutDirection),
+                                    top = innerPadding.calculateTopPadding(),
+                                    end = innerPadding.calculateEndPadding(layoutDirection),
+                                    bottom = innerPadding.calculateBottomPadding()
+                                )
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(scenePadding)
+                                            .consumeWindowInsets(innerPadding)
+                                    ) {
+                                    AppNavigationTransition(
+                                        currentTab = currentTab,
+                                        settingsSubPage = settingsSubPage,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) { tab, subPage ->
                                         when {
                                             tab == 0 -> {
                                                 TimetableScreen(
@@ -274,29 +343,60 @@ class MainActivity : ComponentActivity() {
                                                     currentTotalWeeks = uiState.currentTotalWeeks,
                                                     currentWeek = uiState.currentWeek,
                                                     sessionTimes = uiState.currentSessionTimes,
-                                        showWeekends = uiState.showWeekends,
-                                        enableCurrentTimeIndicator = enableCurrentTimeIndicator,
-                                        isLoading = uiState.isLoading,
+                                                    showWeekends = uiState.showWeekends,
+                                                    showNonCurrentWeekCourses = uiState.showNonCurrentWeekCourses,
+                                                    enableCurrentTimeIndicator = enableCurrentTimeIndicator,
                                                     onAddCourse = viewModel::addCourse,
                                                     onAddSession = viewModel::addSession,
                                                     onUpdateCourse = viewModel::updateCourse,
                                                     onUpdateSession = viewModel::updateSession,
                                                     onDeleteSession = viewModel::deleteSession,
                                                     onSwitchTimetable = viewModel::switchTimetable,
+                                                    onDeleteTimetable = viewModel::deleteTimetable,
                                                     onCurrentWeekChange = viewModel::setCurrentWeek,
                                                     onCreateTimetable = viewModel::createTimetable,
                                                     onImportClick = { showJwxtImport = true }
                                                 )
                                             }
+                                            subPage == "theme" -> {
+                                                ThemeSettingsScreen(
+                                                    themeMode = appThemeMode,
+                                                    dynamicColorEnabled = dynamicColorEnabled,
+                                                    predictiveBackAnimation = predictiveBackAnimation,
+                                                    predictiveBackExitDirection = predictiveBackExitDirection,
+                                                    onThemeModeChange = { mode ->
+                                                        scope.launch {
+                                                            settingsRepository.setAppThemeMode(mode)
+                                                        }
+                                                    },
+                                                    onDynamicColorChange = { enabled ->
+                                                        scope.launch {
+                                                            settingsRepository.setDynamicColorEnabled(enabled)
+                                                        }
+                                                    },
+                                                    onPredictiveBackAnimationChange = { animation ->
+                                                        scope.launch {
+                                                            settingsRepository.setPredictiveBackAnimation(animation)
+                                                        }
+                                                    },
+                                                    onPredictiveBackExitDirectionChange = { direction ->
+                                                        scope.launch {
+                                                            settingsRepository.setPredictiveBackExitDirection(direction)
+                                                        }
+                                                    },
+                                                    onBack = { settingsSubPage = "main" }
+                                                )
+                                            }
                                             subPage == "language" -> {
                                                 LanguageSelectScreen(
                                                     currentLanguageTag = appLanguageTag,
-                                                    onBack = { settingsSubPage = "main" },
+                                                    onBack = { settingsSubPage = "main" },  // {settingsSubPage = "main"}这个东西叫做无参lambda，表示被调用时要执行的语句
                                                     onSelectLanguage = { languageTag ->
                                                         scope.launch {
                                                             settingsRepository.setAppLanguageTag(languageTag)
+                                                            // lambda 的写法是： { 参数列表 -> 函数体 }
+                                                            // -> 左边把参数接住，右边是lambda被调用时要执行的代码
                                                         }
-                                                        settingsSubPage = "main"
                                                     }
                                                 )
                                             }
@@ -306,9 +406,10 @@ class MainActivity : ComponentActivity() {
                                                     currentStartDate = uiState.currentStartDate,
                                                     currentTotalWeeks = uiState.currentTotalWeeks,
                                                     currentShowWeekends = uiState.showWeekends,
+                                                    currentShowNonCurrentWeekCourses = uiState.showNonCurrentWeekCourses,
                                                     currentSessionTimes = uiState.currentSessionTimes,
                                                     onBack = { settingsSubPage = "main" },
-                                                    onSave = { name, startDate, weeks, showWeekends, sessionTimes ->
+                                                    onSave = { name, startDate, weeks, showWeekends, showNonCurrentWeekCourses, sessionTimes ->
                                                         uiState.currentTimetableId?.let { timetableId ->
                                                             viewModel.updateTimetableMetadata(
                                                                 timetableId,
@@ -316,10 +417,19 @@ class MainActivity : ComponentActivity() {
                                                                 startDate,
                                                                 weeks,
                                                                 showWeekends,
+                                                                showNonCurrentWeekCourses,
                                                                 sessionTimes
                                                             )
                                                         }
+                                                    },
+                                                    onDelete = {
+                                                        uiState.currentTimetableId?.let(viewModel::deleteTimetable)
                                                     }
+                                                )
+                                            }
+                                            subPage == "widget" -> {
+                                                WidgetSettingsScreen(
+                                                    onBack = { settingsSubPage = "main" }
                                                 )
                                             }
                                             else -> {
@@ -327,9 +437,12 @@ class MainActivity : ComponentActivity() {
                                                     currentTimetableId = uiState.currentTimetableId,
                                                     currentTimetableName = uiState.currentTimetableName,
                                                     currentLanguageTag = appLanguageTag,
+                                                    currentThemeMode = appThemeMode,
                                                     enableCurrentTimeIndicator = enableCurrentTimeIndicator,
+                                                    onThemeSettingsClick = { settingsSubPage = "theme" },
                                                     onLanguageSelectClick = { settingsSubPage = "language" },
                                                     onTimetableSettingsClick = { settingsSubPage = "timetable" },
+                                                    onWidgetSettingsClick = { settingsSubPage = "widget" },
                                                     onToggleCurrentTimeIndicator = { enabled ->
                                                         scope.launch {
                                                             settingsRepository.setEnableCurrentTimeIndicator(enabled)
@@ -340,8 +453,32 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 }
+
+                            }
+
+                            if (
+                                currentTab == 1 &&
+                                settingsSubPage != "main" &&
+                                bottomBarHeightPx > 0
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .fillMaxWidth()
+                                        .height(bottomBarHeight)
+                                        .background(MaterialTheme.colorScheme.background)
+                                        .clickable(
+                                            interactionSource = bottomBarCoverInteractionSource,
+                                            indication = null,
+                                            onClick = {}
+                                        )
+                                        .clearAndSetSemantics {}
+                                )
+                            }
+                            }
                             }
                         }
+                        )
                     }
                 }
             }

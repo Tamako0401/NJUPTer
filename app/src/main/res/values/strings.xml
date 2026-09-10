@@ -41,6 +41,13 @@
     <string name="auto">A</string>
     <string name="save">Save</string>
     <string name="delete">Delete</string>
+    <string name="unnamed_course">Unnamed course</string>
+    <string name="not_set">Not set</string>
+    <string name="course_credit">Credits</string>
+    <string name="course_nature">Course type</string>
+    <string name="course_section_single">Section %1$d</string>
+    <string name="course_section_range">Sections %1$d–%2$d</string>
+    <string name="course_time_range">%1$s–%2$s</string>
 
     <!-- Week Picker Dialog -->
     <string name="select_weeks">Select Weeks</string>
@@ -62,6 +69,9 @@
     <string name="create">Create</string>
     <string name="select_timetable">Select Timetable</string>
     <string name="last_modified">Last modified</string>
+    <string name="delete_timetable_named">Delete %1$s</string>
+    <string name="delete_timetable_title">Delete “%1$s”?</string>
+    <string name="delete_timetable_message">Courses in this timetable will be permanently deleted. This action cannot be undone.</string>
 
     <!-- Week Selection Dialog -->
     <string name="jump_to_week">Jump to Week</string>
@@ -103,6 +113,7 @@
 
     <!-- Import Preview Dialog -->
     <string name="import_preview">Import Preview</string>
+    <string name="import_failed">Import Failed</string>
     <string name="imported_timetable_name">Imported Timetable</string>
     <string name="new_timetable_name">New Timetable Name</string>
     <string name="import_desc">A new timetable will be created automatically.</string>
@@ -143,9 +154,67 @@
     <string name="language">Language</string>
     <string name="language_en">English</string>
     <string name="language_zh">Chinese</string>
+    <string name="language_system">Follow System</string>
     <string name="close">Close</string>
     <string name="status_enabled">Enabled</string>
     <string name="status_disabled">Disabled</string>
     <string name="go_to_settings">Go to settings</string>
 
+    <!-- Widget -->
+    <string name="widget_description">Shows today\'s courses on your home screen</string>
+    <string name="widget_settings">Home Screen Widget</string>
+    <string name="widget_background">Background Image</string>
+    <string name="widget_background_desc">Select an image to use as the widget background</string>
+    <string name="widget_transparency">Background Transparency</string>
+    <string name="widget_transparency_desc">Adjust how much the background image shows through</string>
+    <string name="widget_remove_background">Remove</string>
+    <string name="widget_pick_image">Pick Image</string>
+    <string name="widget_preview">Preview</string>
+    <string name="widget_no_courses_today">No courses today</string>
+    <string name="widget_today_format">Today / %1$s</string>
+    <string name="widget_tomorrow_format">Tomorrow / %1$s</string>
+    <string name="widget_courses_completed">Today\'s courses are complete</string>
+    <string name="widget_section_range">Sec %1$d-%2$d</string>
+
+    <!-- Appearance and motion -->
+    <string name="back">Back</string>
+    <string name="theme_settings">Theme and motion</string>
+    <string name="theme_settings_summary">Colors, dark mode, and navigation motion</string>
+    <string name="appearance_settings">Appearance</string>
+    <string name="motion_settings">Motion</string>
+    <string name="theme_mode">Theme mode</string>
+    <string name="theme_mode_summary">Choose how the app follows light and dark mode</string>
+    <string name="theme_mode_system">Follow system</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="dynamic_color">Dynamic color</string>
+    <string name="dynamic_color_summary">Use colors from your wallpaper</string>
+    <string name="dynamic_color_unavailable">Dynamic color requires Android 12 or newer</string>
+    <string name="predictive_back_animation">Predictive back animation</string>
+    <string name="predictive_back_animation_summary">Preview the destination while swiping back</string>
+    <string name="predictive_back_animation_none">None</string>
+    <string name="predictive_back_animation_aosp">AOSP cross-activity</string>
+    <string name="predictive_back_animation_miuix">MIUIX</string>
+    <string name="predictive_back_animation_scale">Scale</string>
+    <string name="predictive_back_animation_ksu_classic">KernelSU classic</string>
+    <string name="predictive_back_exit_direction">Exit direction</string>
+    <string name="predictive_back_exit_direction_summary">Choose where the current page moves</string>
+    <string name="predictive_back_exit_direction_follow_gesture">Follow gesture</string>
+    <string name="predictive_back_exit_direction_always_right">Always right</string>
+    <string name="predictive_back_exit_direction_always_left">Always left</string>
+    <string name="widget_settings_summary">Preview and customize the home screen widget</string>
+    <string name="language_settings_summary">Change the language used by the app</string>
+    <string name="current_time_indicator_summary">Show the current time line on the timetable</string>
+    <string name="show_non_current_week_courses">Show courses outside this week</string>
+    <string name="show_non_current_week_courses_summary">Display inactive courses as muted cards</string>
+    <string name="notification_permission_summary">Allow course reminder notifications</string>
+    <string name="battery_optimization_summary">Keep scheduled reminders reliable in the background</string>
+
+    <string name="widget_countdown">Time until class ends</string>
+    <string name="update_available">Update available: %1$s</string>
+    <string name="update_description">A new build is ready. Download the APK to install the update. Ignoring it hides this version only.</string>
+    <string name="update_download">Download</string>
+    <string name="update_ignore">Ignore update</string>
+    <string name="update_download_started">Download started. Open the completed download notification to install.</string>
+    <string name="update_download_failed">Could not start the download. Enable the system Download Manager and try again.</string>
 </resources>

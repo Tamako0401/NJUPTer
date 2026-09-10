@@ -1,5 +1,6 @@
 package com.example.njupter.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -8,15 +9,16 @@ import com.example.njupter.data.CourseSession
 import com.example.njupter.data.SettingsRepository
 import com.example.njupter.data.TimetableMetadata
 import com.example.njupter.data.TimetableRepository
-import com.example.njupter.data.import.JwxtClient
 import com.example.njupter.data.import.JwxtParser
 import com.example.njupter.domain.getTodayWeekIndex
 import com.example.njupter.domain.import.TimetableImportMatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -36,6 +38,7 @@ data class TimetableUiState(
     val currentTotalWeeks: Int = 20,
     val currentWeek: Int = 1,
     val showWeekends: Boolean = false,
+    val showNonCurrentWeekCourses: Boolean = false,
     val currentSessionTimes: List<String> = emptyList(),
     
     // Import state
@@ -46,8 +49,11 @@ data class TimetableUiState(
 
 class TimetableViewModel(
     private val repository: TimetableRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val onWidgetRefresh: (Context) -> Unit = {}
 ) : ViewModel() {
+
+    private var appContext: Context? = null
 
     private val _currentWeek = MutableStateFlow(1)
 
@@ -108,7 +114,8 @@ class TimetableViewModel(
         // User complained about 1970-01-01. Providing a default if 0 seems appropriate.
         val safeStartDate = if (bundle.currentMeta?.startDate != null && bundle.currentMeta.startDate > 0) bundle.currentMeta.startDate else System.currentTimeMillis()
         val safeSessionTimes = bundle.currentMeta?.nonNullSessionTimes ?: TimetableMetadata("", "", 0).nonNullSessionTimes
-        val safeShowWeekends = bundle.currentMeta?.showWeekends ?: true
+        val safeShowWeekends = bundle.currentMeta?.showWeekends ?: false
+        val safeShowNonCurrentWeekCourses = bundle.currentMeta?.showNonCurrentWeekCourses ?: false
 
         TimetableUiState(
             courseInfos = bundle.courses,
@@ -121,9 +128,10 @@ class TimetableViewModel(
             currentTotalWeeks = safeTotalWeeks,
             currentWeek = bundle.currentWeek.coerceIn(1, safeTotalWeeks),
             showWeekends = safeShowWeekends,
+            showNonCurrentWeekCourses = safeShowNonCurrentWeekCourses,
             currentSessionTimes = safeSessionTimes
         )
-    }.stateIn(
+    }.distinctUntilChanged().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = TimetableUiState(isLoading = true)
@@ -150,19 +158,13 @@ class TimetableViewModel(
         val currentWeek: Int
     )
 
-    fun fetchAndProcessImport(cookieString: String, xh: String) {
-        viewModelScope.launch {
+    fun processTimetableImport(html: String) {
+        viewModelScope.launch(Dispatchers.Default) {
             _importState.value = ImportState(isImporting = true)
             try {
-                // 1. Fetch HTML
-                val client = JwxtClient(cookieString, xh)
-                val html = client.fetchTimetableHtml()
-
-                // 2. Parse HTML
                 val parser = JwxtParser()
                 val remoteCourses = parser.parseHtml(html)
 
-                // 3. Match and Convert
                 val matcher = TimetableImportMatcher()
                 
                 // For a new timetable, we match against empty lists to treat all courses as new
@@ -182,18 +184,29 @@ class TimetableViewModel(
     fun createTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
         viewModelScope.launch {
             repository.createTimetable(name, startDate, totalWeeks, showWeekends, sessionTimes)
+            settingsRepository.setEnableCurrentTimeIndicator(true)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
-    
-    fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) {
+
+    fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, showNonCurrentWeekCourses: Boolean, sessionTimes: List<String>) {
         viewModelScope.launch {
-            repository.updateTimetableMetadata(id, name, startDate, totalWeeks, showWeekends, sessionTimes)
+            repository.updateTimetableMetadata(id, name, startDate, totalWeeks, showWeekends, showNonCurrentWeekCourses, sessionTimes)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
     fun switchTimetable(id: String) {
         viewModelScope.launch {
             repository.switchTimetable(id)
+            appContext?.let { onWidgetRefresh(it) }
+        }
+    }
+
+    fun deleteTimetable(id: String) {
+        viewModelScope.launch {
+            repository.deleteTimetable(id)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
@@ -216,39 +229,46 @@ class TimetableViewModel(
     fun addCourse(course: CourseInfo) {
         viewModelScope.launch {
             repository.addCourse(course)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
     fun addSession(session: CourseSession) {
         viewModelScope.launch {
             repository.addSession(session)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
     fun updateCourse(course: CourseInfo) {
         viewModelScope.launch {
             repository.updateCourse(course)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
     fun updateSession(oldSession: CourseSession, newSession: CourseSession) {
         viewModelScope.launch {
             repository.updateSession(oldSession, newSession)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
     fun deleteSession(session: CourseSession) {
         viewModelScope.launch {
             repository.deleteSession(session)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
     fun createAndImportTimetable(name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>, newCourses: List<CourseInfo>, newSessions: List<CourseSession>) {
         viewModelScope.launch {
             repository.createTimetable(name, startDate, totalWeeks, showWeekends, sessionTimes)
+            settingsRepository.setEnableCurrentTimeIndicator(true)
             // The active timetable is automatically switched inside createTimetable,
             // so we can now safely import.
             repository.importTimetableData(newCourses, newSessions)
+            appContext?.let { onWidgetRefresh(it) }
         }
     }
 
@@ -256,11 +276,17 @@ class TimetableViewModel(
     companion object {
         fun provideFactory(
             repository: TimetableRepository,
-            settingsRepository: SettingsRepository
+            settingsRepository: SettingsRepository,
+            appContext: Context? = null
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return TimetableViewModel(repository, settingsRepository) as T
+                return TimetableViewModel(
+                    repository,
+                    settingsRepository,
+                    onWidgetRefresh = { ctx -> com.example.njupter.widget.WidgetDataManager.refreshWidget(ctx) }
+                ).also { it.appContext = appContext }
+                    as T
             }
         }
     }

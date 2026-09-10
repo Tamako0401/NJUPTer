@@ -1,21 +1,28 @@
 package com.example.njupter.ui.settings
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.padding  
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.TableRows
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -33,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.example.njupter.R
 import com.example.njupter.ui.settings.component.SettingsSectionCard
 import com.example.njupter.ui.settings.model.SettingsItem
+import com.example.njupter.ui.settings.model.SettingsIcon
 import com.example.njupter.ui.settings.model.SettingsSection
 import com.example.njupter.ui.timetable.dialog.SessionTimeEditorDialog
 import com.example.njupter.ui.timetable.dialog.StartDateDialog
@@ -47,18 +55,24 @@ fun TimetableSettingsScreen(
     currentStartDate: Long,
     currentTotalWeeks: Int,
     currentShowWeekends: Boolean,
+    currentShowNonCurrentWeekCourses: Boolean,
     currentSessionTimes: List<String>,
     onBack: () -> Unit,
-    onSave: (String, Long, Int, Boolean, List<String>) -> Unit
+    onSave: (String, Long, Int, Boolean, Boolean, List<String>) -> Unit,
+    onDelete: () -> Unit
 ) {
     var name by remember(currentTimetableName) { mutableStateOf(currentTimetableName) }
     var startDate by remember(currentStartDate) { mutableStateOf(currentStartDate) }
     var totalWeeks by remember(currentTotalWeeks) { mutableFloatStateOf(currentTotalWeeks.toFloat()) }
     var showWeekends by remember(currentShowWeekends) { mutableStateOf(currentShowWeekends) }
+    var showNonCurrentWeekCourses by remember(currentShowNonCurrentWeekCourses) {
+        mutableStateOf(currentShowNonCurrentWeekCourses)
+    }
     var sessionTimes by remember(currentSessionTimes) { mutableStateOf(currentSessionTimes) }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showSessionTimeEditor by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     if (showDatePicker) {
         StartDateDialog(
@@ -82,47 +96,82 @@ fun TimetableSettingsScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.cur_timetable_settings)) },
-                navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.cd_back)
-                        )
-                    }
-                },
-                actions = {
-                    TextButton(
-                        onClick = {
-                            onSave(
-                                name.trim(),
-                                startDate,
-                                totalWeeks.toInt(),
-                                showWeekends,
-                                sessionTimes
-                            )
-                            onBack()
-                        },
-                        enabled = name.isNotBlank()
-                    ) {
-                        Text(stringResource(R.string.save_btn))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = TopAppBarDefaults.topAppBarColors().containerColor
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            icon = {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
                 )
+            },
+            title = {
+                Text(stringResource(R.string.delete_timetable_title, currentTimetableName))
+            },
+            text = { Text(stringResource(R.string.delete_timetable_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmation = false
+                        onDelete()
+                        onBack()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        TopAppBar(
+            title = { Text(stringResource(R.string.cur_timetable_settings)) },
+            navigationIcon = {
+                TextButton(onClick = onBack) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.cd_back)
+                    )
+                }
+            },
+            actions = {
+                TextButton(
+                    onClick = {
+                        onSave(
+                            name.trim(),
+                            startDate,
+                            totalWeeks.toInt(),
+                            showWeekends,
+                            showNonCurrentWeekCourses,
+                            sessionTimes
+                        )
+                        onBack()
+                    },
+                    enabled = name.isNotBlank()
+                ) {
+                    Text(stringResource(R.string.save_btn))
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = TopAppBarDefaults.topAppBarColors().containerColor
             )
-        }
-    ) { innerPadding ->
+        )
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .animateContentSize(animationSpec = spring())
-                .padding(innerPadding)
+                .weight(1f)
+                .fillMaxWidth()
+                .animateContentSize(animationSpec = tween(200))
                 .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
@@ -131,22 +180,31 @@ fun TimetableSettingsScreen(
                         title = stringResource(R.string.current_timetable_settings),
                         items = listOf(
                             SettingsItem.Navigation(
-                                icon = Icons.Default.CalendarMonth,
+                                icon = SettingsIcon.Vector(Icons.Default.CalendarMonth),
                                 title = stringResource(R.string.start_date),
                                 value = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(startDate)),
                                 onClick = { showDatePicker = true }
                             ),
                             SettingsItem.Navigation(
-                                icon = Icons.Default.Schedule,
+                                icon = SettingsIcon.Vector(Icons.Default.Schedule),
                                 title = stringResource(R.string.session_times_label),
                                 value = stringResource(R.string.edit),
                                 onClick = { showSessionTimeEditor = true }
                             ),
                             SettingsItem.Toggle(
-                                icon = Icons.Default.TableRows,
+                                icon = SettingsIcon.Vector(Icons.Default.TableRows),
                                 title = stringResource(R.string.show_weekends),
                                 checked = showWeekends,
                                 onToggle = { showWeekends = !showWeekends }
+                            ),
+                            SettingsItem.Toggle(
+                                icon = SettingsIcon.Vector(Icons.Default.Visibility),
+                                title = stringResource(R.string.show_non_current_week_courses),
+                                description = stringResource(R.string.show_non_current_week_courses_summary),
+                                checked = showNonCurrentWeekCourses,
+                                onToggle = {
+                                    showNonCurrentWeekCourses = !showNonCurrentWeekCourses
+                                }
                             )
                         )
                     )
@@ -165,7 +223,7 @@ fun TimetableSettingsScreen(
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .animateContentSize(animationSpec = spring())
+                            .animateContentSize(animationSpec = tween(200))
                     )
                 }
             }
@@ -184,7 +242,26 @@ fun TimetableSettingsScreen(
                         text = totalWeeks.toInt().toString(),
                         modifier = Modifier
                             .padding(top = 4.dp)
-                            .animateContentSize(animationSpec = spring())
+                            .animateContentSize(animationSpec = tween(200))
+                    )
+                }
+            }
+
+            item {
+                FilledTonalButton(
+                    onClick = { showDeleteConfirmation = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null)
+                    Text(
+                        text = stringResource(R.string.delete),
+                        modifier = Modifier.padding(start = 8.dp)
                     )
                 }
             }

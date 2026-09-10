@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.njupter"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = providers.environmentVariable("APP_VERSION_CODE").orNull?.toInt() ?: 1
+        versionName = providers.environmentVariable("APP_VERSION_NAME").orNull ?: "1.1.0-dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -22,7 +22,7 @@ android {
                 isEnable = true
                 reset()
                 include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
-                isUniversalApk = false
+                isUniversalApk = true
             }
         }
     }
@@ -42,6 +42,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -60,6 +61,13 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.7.5")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation(libs.androidx.compose.foundation)
+
+    // Glance 小组件
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
+    implementation(libs.glance.preview)
+    debugImplementation(libs.glance.appwidget.preview)
+    implementation(libs.work.runtime.ktx)
 
     // 网络与爬虫解析
     implementation(libs.okhttp)

@@ -1,11 +1,11 @@
 package com.example.njupter.ui.timetable
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,16 +29,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Constraints
 import com.example.njupter.R
 import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
 import com.example.njupter.data.TimetableMetadata
 import com.example.njupter.data.defaultSessionTimes
 import com.example.njupter.ui.theme.getCourseColors
+import com.example.njupter.ui.theme.isAppInDarkTheme
 import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.domain.getDateForWeekDay
 import com.example.njupter.domain.getTodayDayOfWeek
@@ -48,9 +52,28 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.njupter.ui.timetable.component.CourseCard
+import com.example.njupter.ui.timetable.component.CourseDetailsBottomSheet
 import com.example.njupter.ui.timetable.component.EmptyGuidePlaceholder
 import com.example.njupter.ui.timetable.dialog.CourseEditorDialog
 import com.example.njupter.ui.timetable.dialog.TimetableConfigDialog
+import kotlin.math.roundToInt
+
+private data class NewCoursePlacement(
+    val day: Int,
+    val section: Int,
+    val week: Int
+)
+
+private data class CourseDetailsSelection(
+    val session: CourseSession,
+    val course: CourseInfo
+)
+
+private data class CourseDisplayItem(
+    val session: CourseSession,
+    val course: CourseInfo,
+    val isActiveInCurrentWeek: Boolean
+)
 
 @OptIn(ExperimentalMaterial3Api::class) // 使用实验性的 Material3 API
 @Composable
@@ -64,35 +87,37 @@ fun TimetableScreen(
     currentTotalWeeks: Int = 20,
     currentWeek: Int = 1,
     sessionTimes: List<String> = emptyList(),
-    showWeekends: Boolean = true,
+    showWeekends: Boolean = false,
+    showNonCurrentWeekCourses: Boolean = false,
     enableCurrentTimeIndicator: Boolean = true,
-    isLoading: Boolean = false,
     onAddCourse: (CourseInfo) -> Unit = {},
     onAddSession: (CourseSession) -> Unit = {},
     onUpdateCourse: (CourseInfo) -> Unit = {},
     onUpdateSession: (CourseSession, CourseSession) -> Unit = { _, _ -> },
     onDeleteSession: (CourseSession) -> Unit = {},
     onSwitchTimetable: (String) -> Unit = {},
+    onDeleteTimetable: (String) -> Unit = {},
     onCurrentWeekChange: (Int) -> Unit = {},
     onCreateTimetable: (String, Long, Int, Boolean, List<String>) -> Unit = { _, _, _, _, _ -> },
     onImportClick: (() -> Unit)? = null
 ) {
     val sectionHeight = 60.dp
     val sidebarWidth = 50.dp
-    val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
 
-    val isDark = isSystemInDarkTheme()
-
     val currentCourseColors = getCourseColors()
+    val isDark = isAppInDarkTheme()
+    val courseMap = remember(courseInfos) { courseInfos.associateBy { it.id } }
 
-    val gridBorderColor = if (isDark) Color(0xFF444444) else Color.LightGray
+    val gridBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     val gridHeaderBg = MaterialTheme.colorScheme.surface
     val gridContentBg = MaterialTheme.colorScheme.background
 
     var showDialog by remember { mutableStateOf(false) }
     var editingSession by remember { mutableStateOf<CourseSession?>(null) }
     var editingCourse by remember { mutableStateOf<CourseInfo?>(null) }
+    var newCoursePlacement by remember { mutableStateOf<NewCoursePlacement?>(null) }
+    var courseDetailsSelection by remember { mutableStateOf<CourseDetailsSelection?>(null) }
 
     val daysCount = if (showWeekends) 7 else 5
     val dayLabels = if (showWeekends) {
@@ -137,6 +162,7 @@ fun TimetableScreen(
 
     var showTimetableSheet by remember { mutableStateOf(false) }
     var showNewTimetableDialog by remember { mutableStateOf(false) }
+    var timetablePendingDeletion by remember { mutableStateOf<TimetableMetadata?>(null) }
 
     if (showNewTimetableDialog) {
         TimetableConfigDialog(
@@ -179,8 +205,25 @@ fun TimetableScreen(
                                 Text(stringResource(R.string.last_modified, format.format(date)))
                             },
                             trailingContent = {
-                                if (isCurrent) {
-                                    Icon(Icons.Default.Check, contentDescription = stringResource(R.string.cd_selected))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (isCurrent) {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = stringResource(R.string.cd_selected)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { timetablePendingDeletion = meta }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = stringResource(
+                                                R.string.delete_timetable_named,
+                                                meta.name
+                                            ),
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
                                 }
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -209,6 +252,58 @@ fun TimetableScreen(
                 }
             }
         }
+    }
+
+    timetablePendingDeletion?.let { timetable ->
+        AlertDialog(
+            onDismissRequest = { timetablePendingDeletion = null },
+            icon = {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text(stringResource(R.string.delete_timetable_title, timetable.name))
+            },
+            text = { Text(stringResource(R.string.delete_timetable_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteTimetable(timetable.id)
+                        timetablePendingDeletion = null
+                        showTimetableSheet = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(stringResource(R.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { timetablePendingDeletion = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    courseDetailsSelection?.let { selection ->
+        CourseDetailsBottomSheet(
+            course = selection.course,
+            session = selection.session,
+            sessionTimes = sessionTimes,
+            onDismiss = { courseDetailsSelection = null },
+            onEdit = {
+                courseDetailsSelection = null
+                newCoursePlacement = null
+                editingSession = selection.session
+                editingCourse = selection.course
+                showDialog = true
+            }
+        )
     }
 
     // Show empty state if no timetables exist
@@ -302,7 +397,7 @@ fun TimetableScreen(
         },
         floatingActionButton = {
             Row(
-                modifier = Modifier.animateContentSize(animationSpec = spring()),
+                modifier = Modifier.animateContentSize(animationSpec = tween(200)),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -313,16 +408,31 @@ fun TimetableScreen(
                                 pagerState.animateScrollToPage(todayWeekIndex)
                             }
                         },
+                        elevation = FloatingActionButtonDefaults.elevation(
+                            defaultElevation = 0.dp,
+                            pressedElevation = 0.dp,
+                            focusedElevation = 0.dp,
+                            hoveredElevation = 0.dp
+                        )
                     ) {
                         Text(text = stringResource(R.string.today))
                     }
                 }
 
-                FloatingActionButton(onClick = {
-                    showDialog = true
-                    editingSession = null
-                    editingCourse = null
-                }) {
+                FloatingActionButton(
+                    onClick = {
+                        showDialog = true
+                        editingSession = null
+                        editingCourse = null
+                        newCoursePlacement = null
+                    },
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 0.dp,
+                        focusedElevation = 0.dp,
+                        hoveredElevation = 0.dp
+                    )
+                ) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_course))
                 }
             }
@@ -333,11 +443,47 @@ fun TimetableScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(top = 0.dp)
-                .animateContentSize(animationSpec = spring()),
+                .padding(top = 0.dp),
             verticalAlignment = Alignment.Top
         ) { page ->
             val currentWeek = page + 1
+            val pageScrollState = rememberScrollState()
+
+            val sessionsByDay = remember(
+                courseSessions,
+                courseMap,
+                currentWeek,
+                daysCount,
+                showNonCurrentWeekCourses
+            ) {
+                val map = mutableMapOf<Int, List<CourseDisplayItem>>()
+                for (day in 1..daysCount) {
+                    map[day] = courseSessions
+                        .filter { session ->
+                            session.day == day && (
+                                showNonCurrentWeekCourses || session.weeks.contains(currentWeek)
+                            )
+                        }
+                        .mapNotNull { session ->
+                            courseMap[session.courseId]?.let { course ->
+                                CourseDisplayItem(
+                                    session = session,
+                                    course = course,
+                                    isActiveInCurrentWeek = session.weeks.contains(currentWeek)
+                                )
+                            }
+                        }
+                        // Disjoint-week sessions may occupy the same cell. Draw active courses
+                        // last so a grey inactive card can never cover this week's course.
+                        .sortedWith(
+                            compareBy<CourseDisplayItem> { it.isActiveInCurrentWeek }
+                                .thenBy { it.session.startSection }
+                                .thenBy { it.session.endSection }
+                        )
+                }
+                map
+            }
+
             val showCurrentTimeIndicator = enableCurrentTimeIndicator && todayDayOfWeek <= daysCount && currentSectionPosition != null
             val currentSectionIndex = currentSectionPosition?.first
             val currentSectionProgress = currentSectionPosition?.second ?: 0f
@@ -349,14 +495,12 @@ fun TimetableScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .animateContentSize(animationSpec = spring())
+                    .verticalScroll(pageScrollState)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(gridHeaderBg)
-                        .animateContentSize(animationSpec = spring())
                 ) {
                     Box(
                         modifier = Modifier
@@ -394,8 +538,7 @@ fun TimetableScreen(
                                 .height(45.dp)
                                 .padding(horizontal = 2.dp, vertical = 3.dp)
                                 .clip(MaterialTheme.shapes.small)
-                                .background(cellContainerColor)
-                                .animateContentSize(animationSpec = spring()),
+                                .background(cellContainerColor),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(
@@ -439,11 +582,10 @@ fun TimetableScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(sectionHeight)
+                                    .weight(1f)
                                     .padding(horizontal = 2.dp, vertical = 3.dp)
                                     .clip(MaterialTheme.shapes.small)
-                                    .background(sectionContainerColor)
-                                    .animateContentSize(animationSpec = spring()),
+                                    .background(sectionContainerColor),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(
@@ -499,57 +641,96 @@ fun TimetableScreen(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .animateContentSize(animationSpec = spring())
                     ) {
-                        // 1. Grid lines layer
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            (1..maxSection).forEach { _ ->
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(sectionHeight)
-                                        .border(0.5.dp, gridBorderColor.copy(alpha = 0.5f))
+                        // 1. Grid lines. Draw every line once so adjacent cells do not
+                        // double their opacity, and use the same proportional boundaries
+                        // as course cards to avoid density-dependent rounding drift.
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val strokeWidth = 0.5.dp.toPx()
+                            val halfStroke = strokeWidth / 2f
+
+                            for (section in 0..maxSection) {
+                                val y = (size.height * section / maxSection)
+                                    .coerceIn(halfStroke, size.height - halfStroke)
+                                drawLine(
+                                    color = gridBorderColor,
+                                    start = androidx.compose.ui.geometry.Offset(0f, y),
+                                    end = androidx.compose.ui.geometry.Offset(size.width, y),
+                                    strokeWidth = strokeWidth
+                                )
+                            }
+
+                            for (day in 0..daysCount) {
+                                val x = (size.width * day / daysCount)
+                                    .coerceIn(halfStroke, size.width - halfStroke)
+                                drawLine(
+                                    color = gridBorderColor,
+                                    start = androidx.compose.ui.geometry.Offset(x, 0f),
+                                    end = androidx.compose.ui.geometry.Offset(x, size.height),
+                                    strokeWidth = strokeWidth
                                 )
                             }
                         }
 
-                        // 2. Vertical lines
+                        // 2. Empty-cell interaction layer. Course cards are drawn afterwards and
+                        // therefore keep priority for pointer input in occupied areas.
                         Row(modifier = Modifier.fillMaxSize()) {
-                            (1..daysCount).forEach { _ ->
-                                Box(
+                            (1..daysCount).forEach { day ->
+                                Column(
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight()
-                                        .border(0.5.dp, gridBorderColor.copy(alpha = 0.5f))
-                                )
+                                ) {
+                                    (1..maxSection).forEach { section ->
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .weight(1f)
+                                                .combinedClickable(
+                                                    interactionSource = null,
+                                                    indication = null,
+                                                    onClick = {},
+                                                    onDoubleClick = {
+                                                        val isOccupied = sessionsByDay[day]
+                                                            .orEmpty()
+                                                            .any { item ->
+                                                                section in item.session.startSection..item.session.endSection
+                                                            }
+                                                        if (!isOccupied) {
+                                                            editingSession = null
+                                                            editingCourse = null
+                                                            newCoursePlacement = NewCoursePlacement(
+                                                                day = day,
+                                                                section = section,
+                                                                week = currentWeek
+                                                            )
+                                                            showDialog = true
+                                                        }
+                                                    }
+                                                )
+                                        )
+                                    }
+                                }
                             }
                         }
 
                         // 3. Course Content
                         Row(modifier = Modifier.fillMaxSize()) {
                             (1..daysCount).forEach { day ->
-                                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                                    // 绘制该天的课程
-                                    val sessionsForDay = courseSessions.filter {
-                                        it.day == day && it.weeks.contains(currentWeek)
-                                    }
-                                    sessionsForDay.forEach { session ->
-                                        val course = courseInfos.find { it.id == session.courseId }
-                                        if (course != null) {
-                                            CourseCard(
-                                                course = course,
-                                                session = session,
-                                                sectionHeight = sectionHeight,
-                                                colorsList = currentCourseColors,
-                                                onClick = {
-                                                    editingSession = session
-                                                    editingCourse = course
-                                                    showDialog = true
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
+                                CourseDayColumn(
+                                    sessions = sessionsByDay[day].orEmpty(),
+                                    maxSection = maxSection,
+                                    colorsList = currentCourseColors,
+                                    onCourseClick = { session, course ->
+                                        courseDetailsSelection = CourseDetailsSelection(
+                                            session = session,
+                                            course = course
+                                        )
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                )
                             }
                         }
 
@@ -559,7 +740,6 @@ fun TimetableScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .offset(y = currentTimeLineOffset)
-                                    .animateContentSize(animationSpec = spring())
                             ) {
                                 Box(
                                     modifier = Modifier
@@ -580,6 +760,7 @@ fun TimetableScreen(
                         }
                     }
                 }
+
             }
         }
 
@@ -592,7 +773,15 @@ fun TimetableScreen(
                 colorsList = currentCourseColors,
                 isDarkTheme = isDark,
                 totalWeeks = currentTotalWeeks,
-                onDismiss = { showDialog = false },
+                initialDay = newCoursePlacement?.day ?: 1,
+                initialStartSection = newCoursePlacement?.section ?: 1,
+                initialEndSection = newCoursePlacement?.section ?: 2,
+                initialWeeks = newCoursePlacement?.let { setOf(it.week) }
+                    ?: (1..currentTotalWeeks).toSet(),
+                onDismiss = {
+                    showDialog = false
+                    newCoursePlacement = null
+                },
                 onSave = { info, session, createNewCourse ->
                     if (createNewCourse) {
                         onAddCourse(info)
@@ -605,14 +794,61 @@ fun TimetableScreen(
                         )
                     }
                     showDialog = false
+                    newCoursePlacement = null
                 },
                 onDelete = {
                     if (editingSession != null) {
                         onDeleteSession(editingSession!!)
                     }
                     showDialog = false
+                    newCoursePlacement = null
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun CourseDayColumn(
+    sessions: List<CourseDisplayItem>,
+    maxSection: Int,
+    colorsList: List<Color>,
+    onCourseClick: (CourseSession, CourseInfo) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Layout(
+        modifier = modifier,
+        content = {
+            sessions.forEach { item ->
+                CourseCard(
+                    course = item.course,
+                    colorsList = colorsList,
+                    isActiveInCurrentWeek = item.isActiveInCurrentWeek,
+                    onClick = { onCourseClick(item.session, item.course) }
+                )
+            }
+        }
+    ) { measurables, constraints ->
+        val layoutWidth = constraints.maxWidth
+        val layoutHeight = constraints.maxHeight
+
+        val placements = measurables.mapIndexed { index, measurable ->
+            val session = sessions[index].session
+            val startSection = session.startSection.coerceIn(1, maxSection)
+            val endSection = session.endSection.coerceIn(startSection, maxSection)
+            val top = (layoutHeight.toFloat() * (startSection - 1) / maxSection).roundToInt()
+            val bottom = (layoutHeight.toFloat() * endSection / maxSection).roundToInt()
+            val cardHeight = (bottom - top).coerceAtLeast(1)
+            val placeable = measurable.measure(
+                Constraints.fixed(width = layoutWidth, height = cardHeight)
+            )
+            placeable to top
+        }
+
+        layout(layoutWidth, layoutHeight) {
+            placements.forEach { (placeable, top) ->
+                placeable.placeRelative(x = 0, y = top)
+            }
         }
     }
 }
@@ -631,21 +867,33 @@ private fun rememberCurrentTimeMillis(tickMs: Long = 30_000L): Long {
     return now
 }
 
-private fun findCurrentSectionPosition(sessionTimes: List<String>, currentMinuteOfDay: Int): Pair<Int, Float>? {
-    sessionTimes.forEachIndexed { index, timeStr ->
+internal fun findCurrentSectionPosition(sessionTimes: List<String>, currentMinuteOfDay: Int): Pair<Int, Float>? {
+    val validSections = sessionTimes.mapIndexedNotNull { index, timeStr ->
         val parts = timeStr.split("-")
-        if (parts.size != 2) return@forEachIndexed
+        if (parts.size != 2) return@mapIndexedNotNull null
 
-        val startMinute = parseMinuteOfDay(parts[0]) ?: return@forEachIndexed
-        val endMinute = parseMinuteOfDay(parts[1]) ?: return@forEachIndexed
-        if (endMinute <= startMinute) return@forEachIndexed
+        val startMinute = parseMinuteOfDay(parts[0]) ?: return@mapIndexedNotNull null
+        val endMinute = parseMinuteOfDay(parts[1]) ?: return@mapIndexedNotNull null
+        if (endMinute <= startMinute) return@mapIndexedNotNull null
+
+        Triple(index, startMinute, endMinute)
+    }
+
+    validSections.forEach { (index, startMinute, endMinute) ->
 
         if (currentMinuteOfDay in startMinute until endMinute) {
             val progress = (currentMinuteOfDay - startMinute).toFloat() / (endMinute - startMinute).toFloat()
             return index to progress.coerceIn(0f, 1f)
         }
+
+        if (currentMinuteOfDay < startMinute) {
+            return index to 0f
+        }
     }
-    return null
+
+    // There is no later section after the last class period. Keep the enabled
+    // indicator visible on the final end boundary instead of hiding it.
+    return validSections.lastOrNull()?.let { (index, _, _) -> index to 1f }
 }
 
 private fun parseMinuteOfDay(text: String): Int? {
@@ -716,7 +964,6 @@ fun TimetableScreenPreview() {
             currentWeek = 2,
             sessionTimes = defaultSessionTimes,
             showWeekends = true,
-            isLoading = false
         )
     }
 }

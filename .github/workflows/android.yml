@@ -2,64 +2,105 @@ name: Android CI
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [dev, main]
   pull_request:
-    branches: [ "dev" ]
+    branches: [dev, main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  build-debug:
-    name: Build Debug APK
+  build:
+    name: Build, test and lint
     runs-on: ubuntu-latest
-
+    outputs:
+      version_code: ${{ steps.version.outputs.code }}
+      version_name: ${{ steps.version.outputs.name }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Set build version
+        id: version
+        run: |
+          code=$((1000 + GITHUB_RUN_NUMBER))
+          name="1.1.0.${GITHUB_RUN_NUMBER}"
+          echo "APP_VERSION_CODE=$code" >> "$GITHUB_ENV"
+          echo "APP_VERSION_NAME=$name" >> "$GITHUB_ENV"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+      - name: Restore stable APK signing key
+        if: github.event_name != 'pull_request'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.NJUPTER_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+              echo "Missing NJUPTER_KEYSTORE_BASE64; refusing to publish an update with a temporary key."
+              exit 1
+            fi
+            echo "Development build uses a temporary debug key."
+            exit 0
+          fi
+          mkdir -p "$HOME/.android"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+          chmod 600 "$HOME/.android/debug.keystore"
+      - name: Build and verify
+        run: |
+          chmod +x gradlew
+          ./gradlew build --no-daemon --console=plain
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apks
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload verification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-reports
+          path: app/build/reports/
 
-    - name: Setup JDK
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: gradle
-
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-      
-    - name: Build debug APK
-      run: ./gradlew :app:assembleDebug
-      
-    - name: Upload arm64-v8a APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-debug-arm64-v8a-${{ github.sha }}
-        path: app/build/outputs/apk/debug/*arm64-v8a*-debug.apk
-        if-no-files-found: error
-        retention-days: 14
-  
-    - name: Upload armeabi-v7a APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-debug-armeabi-v7a-${{ github.sha }}
-        path: app/build/outputs/apk/debug/*armeabi-v7a*-debug.apk
-        if-no-files-found: error
-        retention-days: 14
-    
-    - name: Upload x86 APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-debug-x86-${{ github.sha }}
-        path: app/build/outputs/apk/debug/*x86-debug.apk
-        if-no-files-found: error
-        retention-days: 14
-    
-    - name: Upload x86_64 APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-debug-x86_64-${{ github.sha }}
-        path: app/build/outputs/apk/debug/*x86_64*-debug.apk
-        if-no-files-found: error
-        retention-days: 14
+  publish:
+    name: Publish main update
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-apks
+          path: dist
+      - name: Publish APK and update metadata atomically
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_VERSION_CODE: ${{ needs.build.outputs.version_code }}
+          APP_VERSION_NAME: ${{ needs.build.outputs.version_name }}
+        run: |
+          tag="main-${APP_VERSION_CODE}"
+          cp dist/app-universal-debug.apk dist/NJUPTer.apk
+          python3 .github/scripts/update_manifest.py
+          if gh release view "$tag" --json isDraft --jq '.isDraft' > draft.txt 2>/dev/null; then
+            if [ "$(cat draft.txt)" = "false" ]; then
+              echo "This build was already published."
+              exit 0
+            fi
+          else
+            gh release create "$tag" --target "$GITHUB_SHA" --draft \
+              --title "NJUPTer ${APP_VERSION_NAME}" --notes-file docs/release-notes.md
+          fi
+          gh release upload "$tag" dist/*.apk dist/update.json --clobber
+          gh release edit "$tag" --draft=false --latest

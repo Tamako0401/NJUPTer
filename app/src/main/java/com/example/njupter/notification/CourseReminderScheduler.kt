@@ -11,7 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
-import java.util.Calendar
+import com.example.njupter.domain.getMillisForWeekDay
 
 class CourseReminderScheduler(private val context: Context) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -42,7 +42,6 @@ class CourseReminderScheduler(private val context: Context) {
         val courseMap = courseInfos.associateBy { it.id }
         val now = System.currentTimeMillis()
         val horizon = now + SCHEDULE_WINDOW_MILLIS
-        val termStartDay = startOfDay(startDate)
         val requestCodes = mutableSetOf<Int>()
 
         for (week in 1..totalWeeks) {
@@ -50,7 +49,12 @@ class CourseReminderScheduler(private val context: Context) {
                 if (!session.weeks.contains(week)) return@forEach
 
                 val startMinute = getSectionStartMinute(sessionTimes, session.startSection) ?: return@forEach
-                val classStartMillis = termStartDay + (((week - 1) * 7L + (session.day - 1)) * DAY_MILLIS) + (startMinute * 60_000L)
+                val classStartMillis = getMillisForWeekDay(
+                    startDate = startDate,
+                    week = week,
+                    day = session.day,
+                    minuteOfDay = startMinute
+                )
                 val reminderMillis = classStartMillis - REMINDER_LEAD_MILLIS
 
                 if (reminderMillis <= now || reminderMillis > horizon) return@forEach
@@ -135,17 +139,6 @@ class CourseReminderScheduler(private val context: Context) {
         val hour = parts[0].toIntOrNull() ?: return null
         val minute = parts[1].toIntOrNull() ?: return null
         return hour * 60 + minute
-    }
-
-    private fun startOfDay(timeMillis: Long): Long {
-        val calendar = Calendar.getInstance().apply {
-            timeInMillis = timeMillis
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        return calendar.timeInMillis
     }
 
     private fun buildRequestCode(

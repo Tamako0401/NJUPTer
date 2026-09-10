@@ -19,20 +19,25 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.njupter.R
+import com.example.njupter.data.import.JwxtEndpoints
 import com.example.njupter.ui.theme.NJUPTerTheme
+import java.net.URI
+import org.json.JSONTokener
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun JwxtImportScreen(
+    isActive: Boolean = true,
     onBack: () -> Unit,
-    onCookiesObtained: (String, String) -> Unit
-    ) {
+    onTimetableHtmlObtained: (String) -> Unit
+) {
     val defaultTitle = stringResource(R.string.jwxt_login_title)
     var title by remember(defaultTitle) { mutableStateOf(defaultTitle) }
 
     // 为了防止多次触发成功回调
     var isSuccess by remember { mutableStateOf(false) }
+    var hasRequestedTimetable by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -70,20 +75,58 @@ fun JwxtImportScreen(
                             cookieManager.setAcceptThirdPartyCookies(this, true)
 
                             webViewClient = object : WebViewClient() {
+                                private var extractionAttempts = 0
+
+                                private fun tryExtractTimetableHtml(view: WebView) {
+                                    if (isSuccess) return
+
+                                    view.evaluateJavascript(EXTRACT_TIMETABLE_HTML_SCRIPT) { result ->
+                                        val html = decodeJavascriptString(result)
+                                        if (!html.isNullOrBlank() && !isSuccess) {
+                                            isSuccess = true
+                                            onTimetableHtmlObtained(html)
+                                        } else if (
+                                            !isSuccess &&
+                                            extractionAttempts < MAX_EXTRACTION_ATTEMPTS
+                                        ) {
+                                            extractionAttempts++
+                                            view.postDelayed(
+                                                { tryExtractTimetableHtml(view) },
+                                                EXTRACTION_RETRY_DELAY_MS
+                                            )
+                                        } else if (!isSuccess) {
+                                            // 让 ViewModel 进入明确的解析错误状态，避免页面无反馈。
+                                            isSuccess = true
+                                            onTimetableHtmlObtained("")
+                                        }
+                                    }
+                                }
+
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     super.onPageFinished(view, url)
                                     view?.title?.let { title = it }
 
-                                    // 检查当前 URL 域名的 Cookie
                                     url?.let { currentUrl ->
-                                        val cookies = cookieManager.getCookie(currentUrl)
-                                        // 获取登录后重定向的主页面链接，提取学号 xh
-                                        val xhMatch = Regex("xh=([A-Za-z0-9]+)").find(currentUrl)
-                                        val xh = xhMatch?.groupValues?.get(1)
+                                        val uri = runCatching { URI(currentUrl) }.getOrNull()
+                                        val isNewJwxt = uri?.host.equals(
+                                            "jwglxt.njupt.edu.cn",
+                                            ignoreCase = true
+                                        )
+                                        val isTimetable = isNewJwxt &&
+                                            uri?.path?.startsWith(
+                                                JwxtEndpoints.TIMETABLE_PATH
+                                            ) == true
 
-                                        if (currentUrl.contains("jwxt.njupt.edu.cn") && xh != null && !isSuccess) {
-                                            isSuccess = true
-                                            onCookiesObtained(cookies ?: "", xh)
+                                        if (isTimetable && view != null && !isSuccess) {
+                                            extractionAttempts = 0
+                                            tryExtractTimetableHtml(view)
+                                        } else if (
+                                            isNewJwxt &&
+                                            uri?.path != "/sso/ddlogin" &&
+                                            !hasRequestedTimetable
+                                        ) {
+                                            hasRequestedTimetable = true
+                                            view?.loadUrl(JwxtEndpoints.TIMETABLE_URL)
                                         }
                                     }
                                 }
@@ -96,9 +139,15 @@ fun JwxtImportScreen(
                                 }
                             }
 
-                            // 会重定向到统一身份认证
-                            loadUrl("http://jwxt.njupt.edu.cn/login_cas.aspx")
+                            loadUrl(JwxtEndpoints.LOGIN_URL)
                         }
+                    },
+                    update = { webView ->
+                        if (isActive) webView.onResume() else webView.onPause()
+                    },
+                    onRelease = { webView ->
+                        webView.stopLoading()
+                        webView.destroy()
                     }
                 )
             }
@@ -112,7 +161,30 @@ private fun JwxtImportScreenPreview() {
     NJUPTerTheme {
         JwxtImportScreen(
             onBack = {},
-            onCookiesObtained = { _, _ -> }
+            onTimetableHtmlObtained = { _ -> }
         )
     }
 }
+
+private fun decodeJavascriptString(result: String?): String? {
+    if (result.isNullOrBlank() || result == "null") return null
+    return runCatching { JSONTokener(result).nextValue() as? String }.getOrNull()
+}
+
+private const val MAX_EXTRACTION_ATTEMPTS = 20
+private const val EXTRACTION_RETRY_DELAY_MS = 250L
+
+private val EXTRACT_TIMETABLE_HTML_SCRIPT = """
+    (() => {
+      const documents = [document];
+      for (const frame of document.querySelectorAll('iframe')) {
+        try {
+          if (frame.contentDocument) documents.push(frame.contentDocument);
+        } catch (_) {}
+      }
+      const timetableDocument = documents.find(
+        candidate => candidate && candidate.querySelector('#kblist_table')
+      );
+      return timetableDocument ? timetableDocument.documentElement.outerHTML : null;
+    })()
+""".trimIndent()

@@ -74,7 +74,7 @@ class LocalFileDataSource(private val context: Context) : TimetableDataSource {
         return@withContext meta
     }
 
-    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, sessionTimes: List<String>) = withContext(Dispatchers.IO) {
+    override suspend fun updateTimetableMetadata(id: String, name: String, startDate: Long, totalWeeks: Int, showWeekends: Boolean, showNonCurrentWeekCourses: Boolean, sessionTimes: List<String>) = withContext(Dispatchers.IO) {
         val currentList = getAllTimetables().toMutableList()
         val index = currentList.indexOfFirst { it.id == id }
         if (index != -1) {
@@ -85,6 +85,7 @@ class LocalFileDataSource(private val context: Context) : TimetableDataSource {
                 totalWeeks = totalWeeks,
                 sessionTimes = sessionTimes,
                 showWeekends = showWeekends,
+                showNonCurrentWeekCourses = showNonCurrentWeekCourses,
                 lastModified = System.currentTimeMillis()
             )
             saveIndex(currentList)
@@ -100,7 +101,15 @@ class LocalFileDataSource(private val context: Context) : TimetableDataSource {
                 reader.close()
 
                 val domainCourses = root.courses.map {
-                    CourseInfo(id = it.id, name = it.name, teacher = it.teacher, classroom = it.room, colorIndex = it.colorIndex)
+                    CourseInfo(
+                        id = it.id,
+                        name = it.name,
+                        teacher = it.teacher,
+                        classroom = it.room,
+                        colorIndex = it.colorIndex,
+                        credit = it.credit.orEmpty(),
+                        courseNature = it.courseNature.orEmpty()
+                    )
                 }
                 val domainSessions = root.sessions.map {
                     CourseSession(
@@ -123,7 +132,15 @@ class LocalFileDataSource(private val context: Context) : TimetableDataSource {
         val file = getDataFile(id)
         val root = TimetableJsonRoot(
             courses = data.courses.map {
-                CourseInfoJson(id = it.id, name = it.name, teacher = it.teacher, room = it.classroom, colorIndex = it.colorIndex)
+                CourseInfoJson(
+                    id = it.id,
+                    name = it.name,
+                    teacher = it.teacher,
+                    room = it.classroom,
+                    colorIndex = it.colorIndex,
+                    credit = it.credit,
+                    courseNature = it.courseNature
+                )
             },
             sessions = data.sessions.map {
                 CourseSessionJson(

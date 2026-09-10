@@ -1,7 +1,7 @@
 package com.example.njupter.ui.animation
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.getValue
@@ -16,7 +16,7 @@ fun Modifier.pressScale(
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (isPressed) scaleIn else 1f,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+        animationSpec = tween(120),
         label = "pressScale"
     )
     this.graphicsLayer {

@@ -3,8 +3,6 @@
  */
 package com.example.njupter.ui.settings
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.spring
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
@@ -19,11 +17,12 @@ import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -37,6 +36,8 @@ import com.example.njupter.ui.settings.model.SettingsItem
 import com.example.njupter.ui.settings.model.SettingsSection
 import android.widget.Toast
 import com.example.njupter.ui.theme.NJUPTerTheme
+import com.example.njupter.ui.theme.AppThemeMode
+import com.example.njupter.ui.settings.model.SettingsIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,14 +45,16 @@ fun SettingsScreen(
     currentTimetableId: String?,
     currentTimetableName: String,
     currentLanguageTag: String,
+    currentThemeMode: AppThemeMode,
     enableCurrentTimeIndicator: Boolean,
+    onThemeSettingsClick: () -> Unit,
     onLanguageSelectClick: () -> Unit,
     onTimetableSettingsClick: () -> Unit,
+    onWidgetSettingsClick: () -> Unit,
     onToggleCurrentTimeIndicator: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val isInspectionMode = LocalInspectionMode.current
 
     var notificationEnabled by remember { 
         mutableStateOf(
@@ -88,9 +91,10 @@ fun SettingsScreen(
     } else {
         listOf(
             SettingsItem.Navigation(
-                icon = Icons.Default.CalendarMonth,
+                icon = SettingsIcon.Vector(Icons.Default.CalendarMonth),
                 title = stringResource(R.string.cur_timetable_settings),
                 value = currentTimetableName,
+                emphasized = true,
                 onClick = onTimetableSettingsClick
             )
         )
@@ -98,20 +102,40 @@ fun SettingsScreen(
 
     val appSectionItems = listOf(
         SettingsItem.Navigation(
-            icon = Icons.Default.Language,
+            icon = SettingsIcon.Vector(Icons.Default.Palette),
+            title = stringResource(R.string.theme_settings),
+            description = stringResource(R.string.theme_settings_summary),
+            value = when (currentThemeMode) {
+                AppThemeMode.SYSTEM -> stringResource(R.string.theme_mode_system)
+                AppThemeMode.LIGHT -> stringResource(R.string.theme_mode_light)
+                AppThemeMode.DARK -> stringResource(R.string.theme_mode_dark)
+            },
+            onClick = onThemeSettingsClick
+        ),
+        SettingsItem.Navigation(
+            icon = SettingsIcon.Vector(Icons.Default.Widgets),
+            title = stringResource(R.string.widget_settings),
+            description = stringResource(R.string.widget_settings_summary),
+            onClick = onWidgetSettingsClick
+        ),
+        SettingsItem.Navigation(
+            icon = SettingsIcon.Vector(Icons.Default.Language),
             title = stringResource(R.string.language),
+            description = stringResource(R.string.language_settings_summary),
             value = currentLanguageLabel,
             onClick = onLanguageSelectClick
         ),
         SettingsItem.Toggle(
-            icon = Icons.Default.AccessTime,
+            icon = SettingsIcon.Vector(Icons.Default.AccessTime),
             title = stringResource(R.string.current_time_indicator),
+            description = stringResource(R.string.current_time_indicator_summary),
             checked = enableCurrentTimeIndicator,
             onToggle = { onToggleCurrentTimeIndicator(!enableCurrentTimeIndicator) }
         ),
         SettingsItem.Toggle(
-            icon = Icons.Default.Notifications,
+            icon = SettingsIcon.Vector(Icons.Default.Notifications),
             title = stringResource(R.string.notification_permission),
+            description = stringResource(R.string.notification_permission_summary),
             checked = notificationEnabled,
             onToggle = {
                 val ok = openNotificationSettings(context)
@@ -121,8 +145,9 @@ fun SettingsScreen(
             }
         ),
         SettingsItem.Toggle(
-            icon = Icons.Default.BatterySaver,
+            icon = SettingsIcon.Vector(Icons.Default.BatterySaver),
             title = stringResource(R.string.battery_optimization),
+            description = stringResource(R.string.battery_optimization_summary),
             checked = batteryWhitelistEnabled,
             onToggle = {
                 val ok = openBatteryOptimizationSettings(context)
@@ -154,10 +179,10 @@ fun SettingsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .animateContentSize(animationSpec = spring())
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             if (currentTimetableId == null) {
                  item {
@@ -246,9 +271,12 @@ fun SettingsScreenPreview() {
             currentTimetableId = "1",
             currentTimetableName = "2026 春季学期",
             currentLanguageTag = "zh",
+            currentThemeMode = AppThemeMode.SYSTEM,
             enableCurrentTimeIndicator = true,
+            onThemeSettingsClick = {},
             onLanguageSelectClick = {},
             onTimetableSettingsClick = {},
+            onWidgetSettingsClick = {},
             onToggleCurrentTimeIndicator = {}
         )
     }

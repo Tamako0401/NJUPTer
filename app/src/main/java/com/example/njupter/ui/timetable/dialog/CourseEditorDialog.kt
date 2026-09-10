@@ -1,7 +1,7 @@
 package com.example.njupter.ui.timetable.dialog
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,6 +65,10 @@ fun CourseEditorDialog(
     colorsList: List<Color>,
     isDarkTheme: Boolean,
     totalWeeks: Int,
+    initialDay: Int = 1,
+    initialStartSection: Int = 1,
+    initialEndSection: Int = 2,
+    initialWeeks: Set<Int> = (1..totalWeeks).toSet(),
     onDismiss: () -> Unit,
     onSave: (CourseInfo, CourseSession, Boolean) -> Unit,
     onDelete: () -> Unit
@@ -79,15 +83,57 @@ fun CourseEditorDialog(
     var selectedColorIndex by remember { mutableStateOf(initialCourse?.colorIndex ?: -1) }
 
     // Session
-    var day by remember { mutableStateOf(initialSession?.day ?: 1) }
-    var startSection by remember { mutableStateOf(initialSession?.startSection?.toString() ?: "1") }
-    var endSection by remember { mutableStateOf(initialSession?.endSection?.toString() ?: "2") }
+    var day by remember(initialSession, initialDay) {
+        mutableStateOf(initialSession?.day ?: initialDay)
+    }
+    var startSection by remember(initialSession, initialStartSection) {
+        mutableStateOf((initialSession?.startSection ?: initialStartSection).toString())
+    }
+    var endSection by remember(initialSession, initialEndSection) {
+        mutableStateOf((initialSession?.endSection ?: initialEndSection).toString())
+    }
+
+    val unavailableWeeks = remember(
+        day,
+        startSection,
+        endSection,
+        initialSession,
+        existingSessions
+    ) {
+        val start = startSection.toIntOrNull()
+        val end = endSection.toIntOrNull()
+        if (start == null || end == null || start > end) {
+            emptySet()
+        } else {
+            CourseValidator.unavailableWeeksForSession(
+                day = day,
+                start = start,
+                end = end,
+                editingSession = initialSession,
+                allSessions = existingSessions
+            ).filterTo(mutableSetOf()) { it in 1..totalWeeks }
+        }
+    }
 
     // Weeks
-    var selectedWeeks by remember {
-        mutableStateOf(initialSession?.weeks?.toSet() ?: (1..totalWeeks).toSet())
+    var selectedWeeks by remember(initialSession, initialWeeks, totalWeeks) {
+        val requestedWeeks = initialSession?.weeks?.toSet() ?: initialWeeks
+        mutableStateOf<Set<Int>>(
+            requestedWeeks.filterTo(mutableSetOf()) { it in 1..totalWeeks }
+        )
+    }
+    var automaticallyRemovedWeeks by remember(initialSession, initialWeeks, totalWeeks) {
+        mutableStateOf<Set<Int>>(emptySet())
     }
     var showCustomWeekDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(unavailableWeeks) {
+        val newlyUnavailable = selectedWeeks intersect unavailableWeeks
+        val newlyAvailable = automaticallyRemovedWeeks - unavailableWeeks
+        selectedWeeks = (selectedWeeks - unavailableWeeks) + newlyAvailable
+        automaticallyRemovedWeeks =
+            (automaticallyRemovedWeeks + newlyUnavailable) intersect unavailableWeeks
+    }
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -103,9 +149,13 @@ fun CourseEditorDialog(
         CustomWeekPickerDialog(
             totalWeeks = totalWeeks,
             initialWeeks = selectedWeeks,
+            disabledWeeks = unavailableWeeks,
             onDismiss = { showCustomWeekDialog = false },
             onConfirm = {
                 selectedWeeks = it
+                // Confirming the picker is an explicit user choice. Do not restore weeks that
+                // were hidden by a previous, temporary time conflict after this point.
+                automaticallyRemovedWeeks = emptySet()
                 showCustomWeekDialog = false
             }
         )
@@ -119,7 +169,7 @@ fun CourseEditorDialog(
                 modifier = Modifier
                     .verticalScroll(scrollState)
                     .fillMaxWidth()
-                    .animateContentSize(animationSpec = spring()),
+                    .animateContentSize(animationSpec = tween(200)),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             )
             // Details
@@ -177,7 +227,6 @@ fun CourseEditorDialog(
                                 .size(36.dp)
                                 .clip(CircleShape)
                                 .background(if (isSelected) primaryColor else Color.Transparent)
-                                .animateContentSize(animationSpec = spring())
                                 .pressScale(dayInteractionSource)
                                 .border(
                                     1.dp,
@@ -246,7 +295,6 @@ fun CourseEditorDialog(
                         modifier = Modifier
                             .padding(vertical = 4.dp)
                             .fillMaxWidth()
-                            .animateContentSize(animationSpec = spring())
                     ) {
                         // Auto 选项
                         val isAutoSelected = (selectedColorIndex == -1)
@@ -260,7 +308,6 @@ fun CourseEditorDialog(
                                 .size(35.dp)
                                 .clip(CircleShape)
                                 .background(Color.Transparent)
-                                .animateContentSize(animationSpec = spring())
                                 .pressScale(autoColorInteractionSource)
                                 .border(autoBorderWidth, autoBorderColor, CircleShape)
                                 .clickable(
@@ -278,7 +325,7 @@ fun CourseEditorDialog(
                             )
                         }
 
-                        // 第一行仅显示前 5 个颜色
+                        // 第一行仅显示�?5 个颜�?
                         colorsList.take(5).forEachIndexed { index, color ->
                             val isSelected = (selectedColorIndex == index)
                             val borderWidth = if (isSelected) 2.dp else 1.dp
@@ -291,7 +338,6 @@ fun CourseEditorDialog(
                                     .size(34.dp)
                                     .clip(CircleShape)
                                     .background(color)
-                                    .animateContentSize(animationSpec = spring())
                                     .pressScale(colorInteractionSource)
                                     .border(borderWidth, borderColor, CircleShape)
                                     .clickable(
@@ -311,13 +357,12 @@ fun CourseEditorDialog(
                             }
                         }
                     }
-                    // 第二行仅显示第 6-8 个颜色
+                    // 第二行仅显示�?6-8 个颜�?
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier
                             .padding(vertical = 4.dp)
                             .fillMaxWidth()
-                            .animateContentSize(animationSpec = spring())
                     ){
                         colorsList.drop(5).take(3).forEachIndexed { offset, color ->
                             val actualIndex = offset + 5
@@ -332,7 +377,6 @@ fun CourseEditorDialog(
                                     .size(34.dp)
                                     .clip(CircleShape)
                                     .background(color)
-                                    .animateContentSize(animationSpec = spring())
                                     .pressScale(colorInteractionSource2)
                                     .border(borderWidth, borderColor, CircleShape)
                                     .clickable(
@@ -423,7 +467,9 @@ fun CourseEditorDialog(
                     name = courseName,
                     teacher = teacher,
                     classroom = classroom,
-                    colorIndex = selectedColorIndex
+                    colorIndex = selectedColorIndex,
+                    credit = initialCourse?.credit.orEmpty(),
+                    courseNature = initialCourse?.courseNature.orEmpty()
                 )
                 // Re-create session with final values
                 val finalSession = CourseSession(
@@ -450,10 +496,16 @@ fun CourseEditorDialog(
 fun CustomWeekPickerDialog(
     totalWeeks: Int,
     initialWeeks: Set<Int>,
+    disabledWeeks: Set<Int> = emptySet(),
     onDismiss: () -> Unit,
     onConfirm: (Set<Int>) -> Unit
 ) {
-    var tempWeeks by remember { mutableStateOf(initialWeeks) }
+    val availableWeeks = remember(totalWeeks, disabledWeeks) {
+        (1..totalWeeks).filterNotTo(mutableSetOf()) { it in disabledWeeks }
+    }
+    var tempWeeks by remember(initialWeeks, disabledWeeks) {
+        mutableStateOf(initialWeeks intersect availableWeeks)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -466,7 +518,6 @@ fun CustomWeekPickerDialog(
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .animateContentSize(animationSpec = spring())
                     ) {
                         Text(   //TODO:M3强调效果
                             text = stringResource(R.string.at_least_one_week),
@@ -480,7 +531,9 @@ fun CustomWeekPickerDialog(
                 WeekGrid(
                     totalWeeks = totalWeeks,
                     selectedWeeks = tempWeeks,
+                    disabledWeeks = disabledWeeks,
                     onWeekToggle = { weekNum ->
+                        if (weekNum in disabledWeeks) return@WeekGrid
                         tempWeeks = if (tempWeeks.contains(weekNum)) {
                             tempWeeks - weekNum
                         } else {
@@ -500,21 +553,25 @@ fun CustomWeekPickerDialog(
                         val buttonPadding = PaddingValues(horizontal = 2.dp)
 
                         TextButton(
-                            onClick = { tempWeeks = (1..totalWeeks).toSet() },
+                            onClick = { tempWeeks = availableWeeks },
                             modifier = buttonModifier,
                             contentPadding = buttonPadding
                         ) {
                             Text(stringResource(R.string.select_all), maxLines = 1)
                         }
                         TextButton(
-                            onClick = { tempWeeks = (1..totalWeeks step 2).toSet() },
+                            onClick = {
+                                tempWeeks = availableWeeks.filterTo(mutableSetOf()) { it % 2 == 1 }
+                            },
                             modifier = buttonModifier,
                             contentPadding = buttonPadding
                         ) {
                             Text(stringResource(R.string.odd_week), maxLines = 1)
                         }
                         TextButton(
-                            onClick = { tempWeeks = (2..totalWeeks step 2).toSet() },
+                            onClick = {
+                                tempWeeks = availableWeeks.filterTo(mutableSetOf()) { it % 2 == 0 }
+                            },
                             modifier = buttonModifier,
                             contentPadding = buttonPadding
                         ) {
@@ -551,14 +608,14 @@ fun CustomWeekPickerDialog(
 fun WeekGrid(
     totalWeeks: Int,
     selectedWeeks: Set<Int>,
+    disabledWeeks: Set<Int> = emptySet(),
     onWeekToggle: (Int) -> Unit
 ) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 48.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(max = 280.dp)
-            .animateContentSize(animationSpec = spring()),
+            .heightIn(max = 280.dp),
         contentPadding = PaddingValues(4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -566,9 +623,18 @@ fun WeekGrid(
         items(totalWeeks) { index ->
             val weekNum = index + 1
             val isSelected = selectedWeeks.contains(weekNum)
+            val isEnabled = weekNum !in disabledWeeks
 
-            val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-            val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+            val backgroundColor = when {
+                !isEnabled -> MaterialTheme.colorScheme.surfaceContainerLow
+                isSelected -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.surfaceVariant
+            }
+            val contentColor = when {
+                !isEnabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                isSelected -> MaterialTheme.colorScheme.onPrimary
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
             val gridInteractionSource = remember { MutableInteractionSource() }
 
             Box(
@@ -576,10 +642,10 @@ fun WeekGrid(
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(8.dp))
                     .background(backgroundColor)
-                    .animateContentSize(animationSpec = spring())
                     .pressScale(gridInteractionSource)
                     .clickable(
                         interactionSource = gridInteractionSource,
+                        enabled = isEnabled,
                         onClick = { onWeekToggle(weekNum) }
                     ),
                 contentAlignment = Alignment.Center
@@ -598,7 +664,7 @@ fun WeekGrid(
 @Composable
 fun CourseEditorDialogPreview() {
     val sampleCourses = listOf(
-        CourseInfo("1", "高等数学", "张老师", "教 1-101", 0)
+        CourseInfo("1", "高等数学", "张老师", "�?1-101", 0)
     )
     val sampleSessions = listOf(
         CourseSession("1", 1, 1, 2, (1..20).toList())
