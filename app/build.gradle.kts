@@ -64,6 +64,8 @@ dependencies {
     // Glance 小组件
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
+    implementation(libs.glance.preview)
+    debugImplementation(libs.glance.appwidget.preview)
     implementation(libs.work.runtime.ktx)
 
     // 网络与爬虫解析

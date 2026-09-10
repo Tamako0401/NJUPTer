@@ -90,7 +90,6 @@ fun TimetableScreen(
     showWeekends: Boolean = false,
     showNonCurrentWeekCourses: Boolean = false,
     enableCurrentTimeIndicator: Boolean = true,
-    isLoading: Boolean = false,
     onAddCourse: (CourseInfo) -> Unit = {},
     onAddSession: (CourseSession) -> Unit = {},
     onUpdateCourse: (CourseInfo) -> Unit = {},
@@ -965,7 +964,6 @@ fun TimetableScreenPreview() {
             currentWeek = 2,
             sessionTimes = defaultSessionTimes,
             showWeekends = true,
-            isLoading = false
         )
     }
 }

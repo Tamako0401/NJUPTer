@@ -46,15 +46,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.njupter.R
+import com.example.njupter.ui.theme.AppThemeMode
+import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.widget.WidgetDataManager
 import com.example.njupter.widget.WidgetSettingsManager
 import java.io.File
 import java.io.FileOutputStream
+import android.R.style
 
 private const val WIDGET_BG_FILE = "widget_background.jpg"
 
@@ -62,8 +67,13 @@ private const val WIDGET_BG_FILE = "widget_background.jpg"
 @Composable
 fun WidgetSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    var backgroundPath by remember { mutableStateOf(WidgetSettingsManager.getBackgroundImagePath(context)) }
-    var transparency by remember { mutableFloatStateOf(WidgetSettingsManager.getBackgroundTransparency(context) / 255f) }
+    val isPreview = LocalInspectionMode.current
+    var backgroundPath by remember {
+        mutableStateOf(if (isPreview) null else WidgetSettingsManager.getBackgroundImagePath(context))
+    }
+    var transparency by remember {
+        mutableFloatStateOf(if (isPreview) 128 / 255f else WidgetSettingsManager.getBackgroundTransparency(context) / 255f)
+    }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -276,6 +286,7 @@ private fun WidgetPreview(
                         stringResource(R.string.day_thu)
                     ),
                     modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
@@ -325,6 +336,7 @@ private fun PreviewCourseRow(
         Column(modifier = Modifier.width(44.dp)) {
             Text(
                 text = startTime,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1
@@ -347,6 +359,7 @@ private fun PreviewCourseRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = name,
+                color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1
@@ -358,6 +371,38 @@ private fun PreviewCourseRow(
                 maxLines = 1
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun WidgetSettingsScreenPreview() {
+    NJUPTerTheme {
+        WidgetSettingsScreen(onBack = {})
+    }
+}
+
+@Preview(showBackground = true, widthDp = 320, heightDp = 180)
+@Composable
+fun WidgetContentPreview() {
+    NJUPTerTheme {
+        WidgetPreview(
+            backgroundPath = null,
+            transparency = 128 / 255f,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 320, heightDp = 180)
+@Composable
+fun WidgetContentDarkPreview() {
+    NJUPTerTheme(themeMode = AppThemeMode.DARK) {
+        WidgetPreview(
+            backgroundPath = null,
+            transparency = 128 / 255f,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 
