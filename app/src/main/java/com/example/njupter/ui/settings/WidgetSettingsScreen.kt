@@ -8,6 +8,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,7 +60,6 @@ import com.example.njupter.widget.WidgetDataManager
 import com.example.njupter.widget.WidgetSettingsManager
 import java.io.File
 import java.io.FileOutputStream
-import android.R.style
 
 private const val WIDGET_BG_FILE = "widget_background.jpg"
 
@@ -243,11 +243,12 @@ private fun WidgetPreview(
         }
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
+        val compact = maxHeight < 166.dp
         if (bgBitmap != null) {
             Image(
                 bitmap = bgBitmap.asImageBitmap(),
@@ -265,7 +266,7 @@ private fun WidgetPreview(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp),
+                .padding(if (compact) 6.dp else 12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
@@ -303,14 +304,17 @@ private fun WidgetPreview(
                 endTime = "09:35",
                 name = "University Physics",
                 metadata = "${stringResource(R.string.widget_section_range, 1, 2)} | N2-304",
-                color = Color(0xFF7C9CFF)
+                color = Color(0xFF7C9CFF),
+                countdown = "25:00",
+                compact = compact
             )
             PreviewCourseRow(
                 startTime = "09:50",
                 endTime = "11:25",
                 name = "Linear Algebra",
                 metadata = "${stringResource(R.string.widget_section_range, 3, 4)} | N2-212",
-                color = Color(0xFF45B8C8)
+                color = Color(0xFF45B8C8),
+                compact = compact
             )
         }
     }
@@ -322,17 +326,27 @@ private fun PreviewCourseRow(
     endTime: String,
     name: String,
     metadata: String,
-    color: Color
+    color: Color,
+    countdown: String? = null,
+    compact: Boolean = false
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp)
+            .height(if (compact) 28.dp else 52.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 8.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (compact) {
+            Box(Modifier.width(4.dp).height(18.dp).background(color))
+            Spacer(Modifier.width(6.dp))
+            Text("$startTime-$endTime  $name  $metadata", Modifier.weight(1f),
+                style = MaterialTheme.typography.labelSmall, maxLines = 1)
+            PreviewCountdown(countdown)
+            return@Row
+        }
         Column(modifier = Modifier.width(44.dp)) {
             Text(
                 text = startTime,
@@ -371,6 +385,26 @@ private fun PreviewCourseRow(
                 maxLines = 1
             )
         }
+        PreviewCountdown(countdown)
+    }
+}
+
+@Composable
+private fun PreviewCountdown(countdown: String?) {
+    if (countdown == null) return
+    Spacer(Modifier.width(6.dp))
+    Text(countdown, modifier = Modifier.width(66.dp),
+        color = MaterialTheme.colorScheme.primary,
+        style = MaterialTheme.typography.labelMedium,
+        textAlign = androidx.compose.ui.text.style.TextAlign.End,
+        fontWeight = FontWeight.Bold, maxLines = 1)
+}
+
+@Preview(showBackground = true, widthDp = 320, heightDp = 120)
+@Composable
+fun WidgetContentCompactPreview() {
+    NJUPTerTheme {
+        WidgetPreview(null, 128 / 255f, Modifier.fillMaxSize())
     }
 }
 

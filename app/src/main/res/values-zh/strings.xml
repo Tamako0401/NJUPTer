@@ -209,4 +209,5 @@
     <string name="notification_permission_summary">允许应用发送课程提醒</string>
     <string name="battery_optimization_summary">提高后台定时提醒的可靠性</string>
 
+    <string name="widget_countdown">距离下课</string>
 </resources>

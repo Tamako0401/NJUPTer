@@ -18,7 +18,8 @@ data class WidgetCourseEntry(
     val colorIndex: Int,
     val startSection: Int,
     val endSection: Int,
-    val timeText: String
+    val timeText: String,
+    val countdownEndMillis: Long? = null
 )
 
 data class WidgetDisplayState(
@@ -115,16 +116,20 @@ internal fun buildWidgetDisplayState(
         val endMinute = sectionEndMinute(metadata.nonNullSessionTimes, session.endSection)
         endMinute == null || endMinute > currentMinute
     }
-    val nextEndMinute = remainingSessions.mapNotNull { session ->
-        sectionEndMinute(metadata.nonNullSessionTimes, session.endSection)
-    }.minOrNull()
+    // Refresh at both boundaries so the native countdown starts when class begins.
+    val nextBoundaryMinute = remainingSessions.flatMap { session ->
+        listOfNotNull(
+            sectionStartMinute(metadata.nonNullSessionTimes, session.startSection),
+            sectionEndMinute(metadata.nonNullSessionTimes, session.endSection)
+        )
+    }.filter { it > currentMinute }.minOrNull()
 
     return WidgetDisplayState(
-        entries = courseEntries(metadata, data, remainingSessions).take(2),
+        entries = courseEntries(metadata, data, remainingSessions, nowMillis).take(2),
         dayOfWeek = todayDay,
         weekNumber = todayWeek,
         isDayComplete = todaySessions.isNotEmpty() && remainingSessions.isEmpty(),
-        nextRefreshAtMillis = atMinuteOfLocalDay(nowMillis, nextEndMinute ?: forecastMinute)
+        nextRefreshAtMillis = atMinuteOfLocalDay(nowMillis, nextBoundaryMinute ?: forecastMinute)
     )
 }
 
@@ -142,7 +147,8 @@ private fun activeSessions(
 private fun courseEntries(
     metadata: TimetableMetadata,
     data: TimetableData,
-    sessions: List<CourseSession>
+    sessions: List<CourseSession>,
+    nowMillis: Long? = null
 ): List<WidgetCourseEntry> {
     val courseMap = data.courses.associateBy { it.id }
     val sessionTimes = metadata.nonNullSessionTimes
@@ -159,6 +165,13 @@ private fun courseEntries(
                 colorIndex = course.colorIndex,
                 startSection = session.startSection,
                 endSection = session.endSection,
+                countdownEndMillis = nowMillis?.let { now ->
+                    val start = parseMinuteOfDay(startTime)
+                    val end = parseMinuteOfDay(endTime)
+                    if (start != null && end != null && minuteOfDay(now) in start until end) {
+                        atMinuteOfLocalDay(now, end)
+                    } else null
+                },
                 timeText = if (startTime.isNotEmpty() && endTime.isNotEmpty()) {
                     "$startTime-$endTime"
                 } else {
@@ -168,6 +181,9 @@ private fun courseEntries(
         }
     }
 }
+
+private fun sectionStartMinute(sessionTimes: List<String>, section: Int): Int? =
+    sessionTimes.getOrNull(section - 1)?.substringBefore("-")?.trim()?.let(::parseMinuteOfDay)
 
 private fun sectionEndMinute(sessionTimes: List<String>, section: Int): Int? {
     val endText = sessionTimes.getOrNull(section - 1)?.substringAfter("-", "")?.trim()

@@ -63,7 +63,7 @@ class WidgetModelsTest {
 
         assertEquals(listOf("Morning one", "Morning two"), before.entries.map { it.name })
         assertEquals(listOf("Morning two", "Late course"), after.entries.map { it.name })
-        assertEquals(millis(2026, Calendar.AUGUST, 31, 11, 25), after.nextRefreshAtMillis)
+        assertEquals(millis(2026, Calendar.AUGUST, 31, 9, 50), after.nextRefreshAtMillis)
     }
 
     @Test
@@ -128,6 +128,22 @@ class WidgetModelsTest {
         assertFalse(stateAt(17, 5, sessions).isTomorrow)
         assertEquals("Tomorrow one", stateAt(17, 11, sessions).entries.single().name)
         assertTrue(stateAt(17, 11, sessions).isTomorrow)
+    }
+
+    @Test
+    fun `countdown is present only between course start and end`() {
+        val sessions = listOf(CourseSession("m1", 1, 1, 2, listOf(1)))
+        assertEquals(null, stateAt(7, 59, sessions).entries.single().countdownEndMillis)
+        assertEquals(millis(2026, Calendar.AUGUST, 31, 8, 0), stateAt(7, 59, sessions).nextRefreshAtMillis)
+        assertEquals(millis(2026, Calendar.AUGUST, 31, 9, 35), stateAt(8, 0, sessions).entries.single().countdownEndMillis)
+        assertEquals(millis(2026, Calendar.AUGUST, 31, 9, 35), stateAt(9, 34, sessions).entries.single().countdownEndMillis)
+        assertTrue(stateAt(9, 35, sessions).entries.isEmpty())
+    }
+
+    @Test
+    fun `tomorrow courses never show a countdown`() {
+        val sessions = listOf(CourseSession("m1", 2, 1, 2, listOf(1)))
+        assertEquals(null, stateAt(18, 0, sessions).entries.single().countdownEndMillis)
     }
 
     private fun stateAt(

@@ -1,6 +1,11 @@
 package com.example.njupter.widget.ui
 
 import android.graphics.BitmapFactory
+import android.os.SystemClock
+import android.widget.RemoteViews
+import androidx.glance.LocalContext
+import androidx.glance.appwidget.AndroidRemoteViews
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -212,9 +217,11 @@ private fun CourseRow(
             Text(
                 text = listOf(entry.timeText, entry.name, entry.classroom)
                     .filter { it.isNotBlank() }.joinToString("  "),
+                modifier = GlanceModifier.defaultWeight(),
                 style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 12.sp),
                 maxLines = 1
             )
+            CourseCountdown(entry)
         }
         return
     }
@@ -275,7 +282,7 @@ private fun CourseRow(
         Spacer(modifier = GlanceModifier.width(10.dp))
 
         Column(
-            modifier = GlanceModifier.fillMaxWidth(),
+            modifier = GlanceModifier.defaultWeight(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -297,7 +304,24 @@ private fun CourseRow(
                 maxLines = 1
             )
         }
+        CourseCountdown(entry)
     }
+}
+
+@Composable
+private fun CourseCountdown(entry: WidgetCourseEntry) {
+    val endMillis = entry.countdownEndMillis ?: return
+    val context = LocalContext.current
+    val remaining = endMillis - System.currentTimeMillis()
+    if (remaining <= 0) return
+    val views = RemoteViews(context.packageName, R.layout.widget_countdown).apply {
+        setChronometerCountDown(R.id.course_countdown, true)
+        setChronometer(R.id.course_countdown, SystemClock.elapsedRealtime() + remaining, null, true)
+        setTextColor(R.id.course_countdown, GlanceTheme.colors.primary.getColor(context).toArgb())
+        setContentDescription(R.id.course_countdown, context.getString(R.string.widget_countdown))
+    }
+    Spacer(GlanceModifier.width(6.dp))
+    AndroidRemoteViews(views, modifier = GlanceModifier.width(66.dp))
 }
 
 private fun splitTimes(timeText: String): Pair<String, String> {
