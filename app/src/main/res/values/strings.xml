@@ -211,4 +211,10 @@
     <string name="battery_optimization_summary">Keep scheduled reminders reliable in the background</string>
 
     <string name="widget_countdown">Time until class ends</string>
+    <string name="update_available">Update available: %1$s</string>
+    <string name="update_description">A new build is ready. Download the APK to install the update. Ignoring it hides this version only.</string>
+    <string name="update_download">Download</string>
+    <string name="update_ignore">Ignore update</string>
+    <string name="update_download_started">Download started. Open the completed download notification to install.</string>
+    <string name="update_download_failed">Could not start the download. Enable the system Download Manager and try again.</string>
 </resources>

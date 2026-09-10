@@ -210,4 +210,10 @@
     <string name="battery_optimization_summary">提高后台定时提醒的可靠性</string>
 
     <string name="widget_countdown">距离下课</string>
+    <string name="update_available">发现新版本：%1$s</string>
+    <string name="update_description">新版本已构建完成，可下载 APK 安装更新。忽略后不再提醒此版本。</string>
+    <string name="update_download">去下载</string>
+    <string name="update_ignore">忽略更新</string>
+    <string name="update_download_started">已开始下载，完成后点击下载通知安装。</string>
+    <string name="update_download_failed">无法开始下载，请启用系统下载管理器后重试。</string>
 </resources>

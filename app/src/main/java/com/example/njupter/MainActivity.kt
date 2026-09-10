@@ -82,6 +82,7 @@ import java.util.Locale
  */
 
 class MainActivity : ComponentActivity() {
+    private val updateViewModel by viewModels<com.example.njupter.update.AppUpdateViewModel>()
     private fun applyLocaleToActivityResources(languageTag: String) {
         val locale = when {
             languageTag.startsWith("zh") -> Locale.SIMPLIFIED_CHINESE
@@ -200,6 +201,9 @@ class MainActivity : ComponentActivity() {
                 }
 
                 CompositionLocalProvider(LocalContext provides localizedContext) {
+                    if (!uiState.isLoading && importState.result == null && importState.error == null) {
+                        com.example.njupter.update.StartupUpdatePrompt(updateViewModel)
+                    }
                     // 导入预览对话框
                     importState.result?.let { result ->
                         ImportPreviewDialog(
