@@ -342,7 +342,6 @@ class MainActivity : ComponentActivity() {
                                                     showWeekends = uiState.showWeekends,
                                                     showNonCurrentWeekCourses = uiState.showNonCurrentWeekCourses,
                                                     enableCurrentTimeIndicator = enableCurrentTimeIndicator,
-                                                    isLoading = uiState.isLoading,
                                                     onAddCourse = viewModel::addCourse,
                                                     onAddSession = viewModel::addSession,
                                                     onUpdateCourse = viewModel::updateCourse,
