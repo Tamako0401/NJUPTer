@@ -321,7 +321,7 @@ private fun CourseCountdown(entry: WidgetCourseEntry) {
         setContentDescription(R.id.course_countdown, context.getString(R.string.widget_countdown))
     }
     Spacer(GlanceModifier.width(6.dp))
-    AndroidRemoteViews(views, modifier = GlanceModifier.width(66.dp))
+    AndroidRemoteViews(views, modifier = GlanceModifier.width(66.dp).height(24.dp))
 }
 
 private fun splitTimes(timeText: String): Pair<String, String> {
