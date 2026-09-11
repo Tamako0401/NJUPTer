@@ -13,6 +13,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.example.njupter.ui.settings.WidgetContentPreview
 import com.example.njupter.ui.settings.WidgetContentDarkPreview
 import com.example.njupter.ui.settings.WidgetContentCompactPreview
+import com.example.njupter.ui.settings.WidgetContentEndedPreview
 import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.update.AppUpdate
 import com.example.njupter.update.AppUpdateDialog
@@ -26,19 +27,19 @@ class WidgetAndUpdateUiTest {
 
     @Test fun widgetLightCountdownPreview() {
         compose.setContent { Box(Modifier.size(320.dp, 180.dp).testTag("widget")) { WidgetContentPreview() } }
-        compose.onNodeWithText("25:00").assertIsDisplayed()
+        assertMinutesDisplayed()
         captureWidget("widget-light")
     }
 
     @Test fun widgetDarkCountdownPreview() {
         compose.setContent { Box(Modifier.size(320.dp, 180.dp).testTag("widget")) { WidgetContentDarkPreview() } }
-        compose.onNodeWithText("25:00").assertIsDisplayed()
+        assertMinutesDisplayed()
         captureWidget("widget-dark")
     }
 
     @Test fun widgetCompactCountdownPreview() {
         compose.setContent { Box(Modifier.size(320.dp, 120.dp).testTag("widget")) { WidgetContentCompactPreview() } }
-        compose.onNodeWithText("25:00").assertIsDisplayed()
+        assertMinutesDisplayed()
         captureWidget("widget-compact")
     }
 
@@ -64,6 +65,18 @@ class WidgetAndUpdateUiTest {
 
     private fun captureWidget(name: String) {
         saveBitmap(name, compose.onNodeWithTag("widget").captureToImage().asAndroidBitmap())
+    }
+
+    @Test fun widgetEndedCountdownPreview() {
+        compose.setContent { Box(Modifier.size(320.dp, 180.dp).testTag("widget")) { WidgetContentEndedPreview() } }
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        compose.onNodeWithText(context.getString(R.string.widget_countdown_minutes, 0)).assertIsDisplayed()
+        captureWidget("widget-ended")
+    }
+
+    private fun assertMinutesDisplayed() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        compose.onNodeWithText(context.getString(R.string.widget_countdown_minutes, 25)).assertIsDisplayed()
     }
 
     private fun saveBitmap(name: String, bitmap: Bitmap) {

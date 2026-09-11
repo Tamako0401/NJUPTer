@@ -1,7 +1,6 @@
 package com.example.njupter.widget.ui
 
 import android.graphics.BitmapFactory
-import android.os.SystemClock
 import android.widget.RemoteViews
 import androidx.glance.LocalContext
 import androidx.glance.appwidget.AndroidRemoteViews
@@ -36,6 +35,7 @@ import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import com.example.njupter.R
 import com.example.njupter.widget.WidgetCourseEntry
+import com.example.njupter.widget.remainingCourseMinutes
 
 @Composable
 fun CoursesWidgetContent(
@@ -312,11 +312,13 @@ private fun CourseRow(
 private fun CourseCountdown(entry: WidgetCourseEntry) {
     val endMillis = entry.countdownEndMillis ?: return
     val context = LocalContext.current
-    val remaining = endMillis - System.currentTimeMillis()
-    if (remaining <= 0) return
     val views = RemoteViews(context.packageName, R.layout.widget_countdown).apply {
-        setChronometerCountDown(R.id.course_countdown, true)
-        setChronometer(R.id.course_countdown, SystemClock.elapsedRealtime() + remaining, null, true)
+        // A launcher Chronometer keeps running below zero when an alarm is delayed.
+        // Send bounded text instead; the model schedules the next minute refresh.
+        setTextViewText(R.id.course_countdown, context.getString(
+            R.string.widget_countdown_minutes,
+            remainingCourseMinutes(endMillis, System.currentTimeMillis())
+        ))
         setTextColor(R.id.course_countdown, GlanceTheme.colors.primary.getColor(context).toArgb())
         setContentDescription(R.id.course_countdown, context.getString(R.string.widget_countdown))
     }

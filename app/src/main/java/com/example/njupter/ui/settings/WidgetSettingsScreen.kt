@@ -231,7 +231,8 @@ fun WidgetSettingsScreen(onBack: () -> Unit) {
 private fun WidgetPreview(
     backgroundPath: String?,
     transparency: Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    remainingMinutes: Int = 25
 ) {
     val bgBitmap = remember(backgroundPath) {
         backgroundPath?.let { path ->
@@ -305,7 +306,7 @@ private fun WidgetPreview(
                 name = "University Physics",
                 metadata = "${stringResource(R.string.widget_section_range, 1, 2)} | N2-304",
                 color = Color(0xFF7C9CFF),
-                countdown = "25:00",
+                countdown = stringResource(R.string.widget_countdown_minutes, remainingMinutes),
                 compact = compact
             )
             PreviewCourseRow(
@@ -405,6 +406,14 @@ private fun PreviewCountdown(countdown: String?) {
 fun WidgetContentCompactPreview() {
     NJUPTerTheme {
         WidgetPreview(null, 128 / 255f, Modifier.fillMaxSize())
+    }
+}
+
+@Preview(showBackground = true, widthDp = 320, heightDp = 180)
+@Composable
+fun WidgetContentEndedPreview() {
+    NJUPTerTheme {
+        WidgetPreview(null, 128 / 255f, Modifier.fillMaxSize(), remainingMinutes = 0)
     }
 }
 

@@ -2,7 +2,7 @@ package com.example.njupter
 
 import android.content.Context
 import android.os.SystemClock
-import android.widget.Chronometer
+import android.widget.TextView
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.DpSize
@@ -32,16 +32,18 @@ import java.io.File
 class NativeWidgetCountdownTest {
     @get:Rule val rule = createComposeRule()
 
-    @Test fun nativeCountdownTicksInRegularWidget() = verifyCountdown(180)
-    @Test fun nativeCountdownTicksInCompactWidget() = verifyCountdown(120)
+    @Test fun remainingMinutesInRegularWidget() = verifyCountdown(180, false)
+    @Test fun remainingMinutesInCompactWidget() = verifyCountdown(120, false)
+    @Test fun endedCountdownStaysZeroInRegularWidget() = verifyCountdown(180, true)
+    @Test fun endedCountdownStaysZeroInCompactWidget() = verifyCountdown(120, true)
 
-    private fun verifyCountdown(height: Int) {
+    private fun verifyCountdown(height: Int, ended: Boolean) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val widget = object : GlanceAppWidget() {
             override suspend fun provideGlance(context: Context, id: GlanceId) {
                 val entries = listOf(
                     WidgetCourseEntry("大学物理", "教2-304", "李老师", 0, 1, 2, "08:00-09:35",
-                        System.currentTimeMillis() + 25 * 60_000),
+                        System.currentTimeMillis() + if (ended) -1_000 else 25 * 60_000),
                     WidgetCourseEntry("线性代数", "教2-212", "张老师", 1, 3, 4, "09:50-11:25")
                 )
                 provideContent {
@@ -51,7 +53,7 @@ class NativeWidgetCountdownTest {
             }
         }
         val views = runBlocking { widget.compose(context, size = DpSize(320.dp, height.dp)) }
-        lateinit var countdown: Chronometer
+        lateinit var countdown: TextView
         rule.setContent {
             AndroidView(factory = {
                 views.apply(it, null).also { root -> countdown = root.findViewById(R.id.course_countdown) }
@@ -59,14 +61,15 @@ class NativeWidgetCountdownTest {
         }
         var initial = ""
         rule.runOnIdle {
-            assertTrue(countdown.isCountDown)
-            assertTrue(countdown.base > SystemClock.elapsedRealtime())
             initial = countdown.text.toString()
+            assertEquals(context.getString(R.string.widget_countdown_minutes, if (ended) 0 else 25), initial)
+            assertFalse(countdown is android.widget.Chronometer)
         }
+        // Simulate a delayed host refresh: no independent timer can run below zero.
         SystemClock.sleep(1500)
-        rule.runOnIdle { assertNotEquals(initial, countdown.text.toString()) }
+        rule.runOnIdle { assertEquals(initial, countdown.text.toString()) }
         val bitmap = rule.onNodeWithTag("native-widget").captureToImage().asAndroidBitmap()
-        val file = File(context.getExternalFilesDir(null), "ui-validation/native-widget-$height.png")
+        val file = File(context.getExternalFilesDir(null), "ui-validation/native-widget-$height-$ended.png")
         file.parentFile?.mkdirs()
         file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
     }
