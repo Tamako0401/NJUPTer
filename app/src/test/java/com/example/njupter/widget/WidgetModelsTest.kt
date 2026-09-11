@@ -50,20 +50,25 @@ class WidgetModelsTest {
     }
 
     @Test
-    fun `ending course is removed at boundary and next course fills its place`() {
+    fun `ending course stays at zero until next course starts`() {
         val sessions = listOf(
             CourseSession("m1", 1, 1, 2, listOf(1)),
             CourseSession("m2", 1, 3, 4, listOf(1)),
             CourseSession("late", 1, 9, 9, listOf(1))
         )
         val before = stateAt(8, 0, sessions)
-        assertEquals(millis(2026, Calendar.AUGUST, 31, 9, 35), before.nextRefreshAtMillis)
-        val boundary = Calendar.getInstance().apply { timeInMillis = before.nextRefreshAtMillis!! }
-        val after = stateAt(boundary.get(Calendar.HOUR_OF_DAY), boundary.get(Calendar.MINUTE), sessions)
+        assertEquals(millis(2026, Calendar.AUGUST, 31, 8, 1), before.nextRefreshAtMillis)
+        val after = stateAt(9, 35, sessions)
 
         assertEquals(listOf("Morning one", "Morning two"), before.entries.map { it.name })
-        assertEquals(listOf("Morning two", "Late course"), after.entries.map { it.name })
+        assertEquals(listOf("Morning one", "Morning two"), after.entries.map { it.name })
+        assertEquals(0L, remainingCourseMinutes(after.entries.first().countdownEndMillis!!,
+            millis(2026, Calendar.AUGUST, 31, 9, 35)))
         assertEquals(millis(2026, Calendar.AUGUST, 31, 9, 50), after.nextRefreshAtMillis)
+        val next = stateAt(9, 50, sessions)
+        assertEquals(listOf("Morning two", "Late course"), next.entries.map { it.name })
+        assertEquals(95L, remainingCourseMinutes(next.entries.first().countdownEndMillis!!,
+            millis(2026, Calendar.AUGUST, 31, 9, 50)))
     }
 
     @Test
@@ -78,10 +83,10 @@ class WidgetModelsTest {
     }
 
     @Test
-    fun `finished morning shows completed until evening forecast`() {
+    fun `last lesson stays at zero until evening forecast`() {
         val state = stateAt(16, 0, listOf(CourseSession("m1", 1, 1, 2, listOf(1))))
-        assertTrue(state.entries.isEmpty())
-        assertTrue(state.isDayComplete)
+        assertEquals(0L, remainingCourseMinutes(state.entries.single().countdownEndMillis!!,
+            millis(2026, Calendar.AUGUST, 31, 16, 0)))
         assertEquals(millis(2026, Calendar.AUGUST, 31, 17, 0), state.nextRefreshAtMillis)
     }
 
@@ -131,13 +136,25 @@ class WidgetModelsTest {
     }
 
     @Test
-    fun `countdown is present only between course start and end`() {
+    fun `countdown starts with course and stops at end`() {
         val sessions = listOf(CourseSession("m1", 1, 1, 2, listOf(1)))
         assertEquals(null, stateAt(7, 59, sessions).entries.single().countdownEndMillis)
         assertEquals(millis(2026, Calendar.AUGUST, 31, 8, 0), stateAt(7, 59, sessions).nextRefreshAtMillis)
         assertEquals(millis(2026, Calendar.AUGUST, 31, 9, 35), stateAt(8, 0, sessions).entries.single().countdownEndMillis)
         assertEquals(millis(2026, Calendar.AUGUST, 31, 9, 35), stateAt(9, 34, sessions).entries.single().countdownEndMillis)
-        assertTrue(stateAt(9, 35, sessions).entries.isEmpty())
+        assertEquals(0L, remainingCourseMinutes(stateAt(9, 35, sessions).entries.single().countdownEndMillis!!,
+            millis(2026, Calendar.AUGUST, 31, 9, 35)))
+    }
+
+    @Test
+    fun `remaining minutes round up and clamp to zero across end`() {
+        val end = 1_000_000L
+        assertEquals(2L, remainingCourseMinutes(end, end - 60_001))
+        assertEquals(1L, remainingCourseMinutes(end, end - 60_000))
+        assertEquals(1L, remainingCourseMinutes(end, end - 1))
+        assertEquals(0L, remainingCourseMinutes(end, end))
+        assertEquals(0L, remainingCourseMinutes(end, end + 1))
+        assertEquals(0L, remainingCourseMinutes(end, end + 3_600_000))
     }
 
     @Test

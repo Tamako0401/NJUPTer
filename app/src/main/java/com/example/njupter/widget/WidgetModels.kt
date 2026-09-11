@@ -112,11 +112,17 @@ internal fun buildWidgetDisplayState(
         )
     }
 
+    val latestStartedMinute = todaySessions.mapNotNull { session ->
+        sectionStartMinute(metadata.nonNullSessionTimes, session.startSection)
+    }.filter { it <= currentMinute }.maxOrNull()
     val remainingSessions = todaySessions.filter { session ->
         val endMinute = sectionEndMinute(metadata.nonNullSessionTimes, session.endSection)
-        endMinute == null || endMinute > currentMinute
+        // Keep the just-finished lesson at zero through the break. Replace it when
+        // the next lesson starts, rather than leaving a running timer in the host.
+        endMinute == null || endMinute > currentMinute ||
+            sectionStartMinute(metadata.nonNullSessionTimes, session.startSection) == latestStartedMinute
     }
-    // Refresh at both boundaries so the native countdown starts when class begins.
+    // Refresh at lesson boundaries and each minute while a lesson is running.
     val nextBoundaryMinute = remainingSessions.flatMap { session ->
         listOfNotNull(
             sectionStartMinute(metadata.nonNullSessionTimes, session.startSection),
@@ -124,12 +130,17 @@ internal fun buildWidgetDisplayState(
         )
     }.filter { it > currentMinute }.minOrNull()
 
+    val entries = courseEntries(metadata, data, remainingSessions, nowMillis).take(2)
+    val nextBoundaryMillis = atMinuteOfLocalDay(nowMillis, nextBoundaryMinute ?: forecastMinute)
+    val nextRefreshMillis = if (entries.any { (it.countdownEndMillis ?: 0) > nowMillis }) {
+        minOf(nextBoundaryMillis, atMinuteOfLocalDay(nowMillis, currentMinute + 1))
+    } else nextBoundaryMillis
     return WidgetDisplayState(
-        entries = courseEntries(metadata, data, remainingSessions, nowMillis).take(2),
+        entries = entries,
         dayOfWeek = todayDay,
         weekNumber = todayWeek,
         isDayComplete = todaySessions.isNotEmpty() && remainingSessions.isEmpty(),
-        nextRefreshAtMillis = atMinuteOfLocalDay(nowMillis, nextBoundaryMinute ?: forecastMinute)
+        nextRefreshAtMillis = nextRefreshMillis
     )
 }
 
@@ -168,7 +179,7 @@ private fun courseEntries(
                 countdownEndMillis = nowMillis?.let { now ->
                     val start = parseMinuteOfDay(startTime)
                     val end = parseMinuteOfDay(endTime)
-                    if (start != null && end != null && minuteOfDay(now) in start until end) {
+                    if (start != null && end != null && end > start && minuteOfDay(now) >= start) {
                         atMinuteOfLocalDay(now, end)
                     } else null
                 },
@@ -234,3 +245,10 @@ private fun nextMidnightRefresh(timeMillis: Long): Long {
 }
 
 private const val FORECAST_START_MINUTE = 17 * 60
+
+/** Round up the last partial minute and never expose a negative duration. */
+internal fun remainingCourseMinutes(endMillis: Long, nowMillis: Long): Long {
+    if (nowMillis >= endMillis) return 0
+    val remaining = endMillis - nowMillis
+    return remaining / 60_000 + if (remaining % 60_000 == 0L) 0 else 1
+}
