@@ -1,10 +1,12 @@
 package com.example.njupter.widget.ui
 
-import android.graphics.BitmapFactory
+import android.content.res.Configuration
 import android.widget.RemoteViews
-import androidx.glance.LocalContext
 import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.compose.ui.graphics.toArgb
+import com.example.njupter.widget.remainingCourseMinutes
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -13,6 +15,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
@@ -33,9 +36,9 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import com.example.njupter.R
 import com.example.njupter.widget.WidgetCourseEntry
-import com.example.njupter.widget.remainingCourseMinutes
 
 @Composable
 fun CoursesWidgetContent(
@@ -46,26 +49,44 @@ fun CoursesWidgetContent(
     headerTitle: String,
     weekLabel: String,
     emptyText: String,
-    sectionLabel: (Int, Int) -> String
+    sectionLabel: (Int, Int) -> String,
+    showBackgroundImage: Boolean = true,
+    solidColorArgb: Int? = null,
+    solidAlpha: Int = 255
 ) {
+    val context = LocalContext.current
+    // 课程色条与 app 主界面一致：暗色模式用深色板
+    val isDark = (context.resources.configuration.uiMode and
+            Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    val courseColors = if (isDark) WidgetDarkColors else WidgetLightColors
     val size = LocalSize.current
-    val courseColors = WidgetLightColors
     val compact = size.height < 166.dp
-    val maxCourses = 2
     val overlayAlpha = transparency.coerceIn(0, 255)
-    val backgroundBitmap = backgroundImagePath?.let { path ->
-        try {
-            BitmapFactory.decodeFile(path)
-        } catch (_: Exception) {
-            null
-        }
+    val density = context.resources.displayMetrics.density
+    // 解码目标像素尺寸按 widget 实际大小估算，避免每次渲染全尺寸解码大图
+    val targetPx = (maxOf(size.width.value, size.height.value) * density).toInt().coerceAtLeast(1)
+    val backgroundBitmap = if (showBackgroundImage) {
+        backgroundImagePath?.let { path -> decodeSampled(path, targetPx) }
+    } else {
+        null
     }
 
     WidgetTheme(colors = colors) {
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(GlanceTheme.colors.widgetBackground)
+                .background(
+                    solidColorArgb?.let { argb ->
+                        ColorProvider(
+                            Color(
+                                red = (argb shr 16) and 0xFF,
+                                green = (argb shr 8) and 0xFF,
+                                blue = argb and 0xFF,
+                                alpha = solidAlpha.coerceIn(0, 255)
+                            )
+                        )
+                    } ?: ColorProvider(GlanceTheme.colors.widgetBackground.getColor(context).copy(alpha = solidAlpha.coerceIn(0, 255) / 255f))
+                )
                 .cornerRadius(16.dp)
         ) {
             if (backgroundBitmap != null) {
@@ -100,24 +121,48 @@ fun CoursesWidgetContent(
                 if (entries.isEmpty()) {
                     EmptyWidgetContent(emptyText)
                 } else {
-                    entries.take(maxCourses).forEachIndexed { index, entry ->
-                        CourseRow(
-                            entry = entry,
-                            courseColor = getColorForIndex(
-                                entry.name,
-                                entry.colorIndex,
-                                courseColors
-                            ),
-                            sectionText = sectionLabel(entry.startSection, entry.endSection),
-                            compact = compact
-                        )
-                        if (index != minOf(entries.lastIndex, maxCourses - 1)) {
-                            Spacer(modifier = GlanceModifier.height(if (compact) 4.dp else 6.dp))
+                    Column(modifier = GlanceModifier.fillMaxWidth()) {
+                        entries.take(2).forEachIndexed { index, entry ->
+                            if (index > 0) {
+                                Spacer(GlanceModifier.height(if (compact) 4.dp else 6.dp))
+                            }
+                            CourseRow(
+                                entry = entry,
+                                courseColor = getColorForIndex(
+                                    entry.name,
+                                    entry.colorIndex,
+                                    courseColors
+                                ),
+                                sectionText = sectionLabel(entry.startSection, entry.endSection),
+                                compact = compact
+                            )
                         }
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * 采样解码背景图，使最长边落在 [targetPx] 的 1–2 倍内。
+ * OOM 是 Error 不是 Exception，必须捕 Throwable 才能避免崩掉 widget 更新。
+ */
+private fun decodeSampled(path: String, targetPx: Int): Bitmap? {
+    return try {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        var sample = 1
+        while (
+            bounds.outWidth / (sample * 2) >= targetPx ||
+            bounds.outHeight / (sample * 2) >= targetPx
+        ) {
+            sample *= 2
+        }
+        BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
+    } catch (t: Throwable) {
+        null
     }
 }
 
@@ -196,7 +241,8 @@ private fun CourseRow(
     entry: WidgetCourseEntry,
     courseColor: Color,
     sectionText: String,
-    compact: Boolean
+    compact: Boolean,
+    modifier: GlanceModifier = GlanceModifier
 ) {
     val (startTime, endTime) = splitTimes(entry.timeText)
     val metadata = buildList {
@@ -207,7 +253,7 @@ private fun CourseRow(
 
     if (compact) {
         Row(
-            modifier = GlanceModifier.fillMaxWidth().height(28.dp)
+            modifier = modifier.fillMaxWidth().height(28.dp)
                 .background(GlanceTheme.colors.surfaceVariant).cornerRadius(10.dp)
                 .padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -227,7 +273,7 @@ private fun CourseRow(
     }
 
     Row(
-        modifier = GlanceModifier
+        modifier = modifier
             .fillMaxWidth()
             .height(52.dp)
             .background(GlanceTheme.colors.surfaceVariant)

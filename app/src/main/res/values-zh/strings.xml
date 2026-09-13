@@ -226,6 +226,20 @@
     <string name="reminder_lead_range_hint">范围 0–120；0 = 上课时提醒</string>
     <string name="course_reminder_toggle">上课提醒</string>
     <string name="course_reminder_toggle_summary">上课前通知该课程</string>
+    <string name="widget_more_courses">还有 %1$d 节</string>
+    <string name="widget_instances">小组件实例</string>
+    <string name="widget_mode_solid">纯色</string>
+    <string name="widget_mode_image">图片</string>
+    <string name="widget_solid_color">纯色颜色</string>
+    <string name="widget_solid_follow_theme">跟随主题</string>
+    <string name="widget_pin_to_home">添加到桌面</string>
+    <string name="widget_pin_failed">发起添加请求失败</string>
+    <string name="widget_pinned">小组件已添加到桌面</string>
+    <string name="widget_pin_guide_hint">已尝试发起系统添加请求。若未弹出系统确认窗口，请手动添加：</string>
+    <string name="widget_pin_guide_steps">1. 长按桌面空白处\n2. 选择「小组件」或「原子组件」\n3. 找到 NJUPTer，拖动到桌面即可</string>
+    <string name="widget_bg_edit_hint">拖动或双指缩放，调整背景位置和大小</string>
+    <string name="widget_pick_image_failed">所选图片加载失败</string>
+    <string name="widget_preview_no_data">暂无课表数据，添加课程后这里会显示真实预览</string>
     <string name="minutes_unit">分钟</string>
     <string name="section_conflict_blocked">所选节次存在冲突：%1$s。请调整节次或周次后保存。</string>
 </resources>

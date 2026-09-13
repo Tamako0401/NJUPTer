@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.Configuration
 import androidx.glance.GlanceId
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.SizeMode
@@ -18,8 +19,14 @@ class CourseWidget : GlanceAppWidget() {
         val state = WidgetModels.computeWidgetDisplayState(context)
         WidgetDataManager.saveWidgetState(context, state)
         state.nextRefreshAtMillis?.let { WidgetUpdateScheduler.scheduleRefresh(context, it) }
-        val bgPath = WidgetSettingsManager.getBackgroundImagePath(context)
-        val transparency = WidgetSettingsManager.getBackgroundTransparency(context)
+        // 背景图/透明度按 widget 实例区分，多实例可各自定制
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+        val bgPath = WidgetSettingsManager.getRenderableBackgroundPath(context, appWidgetId)
+        val transparency = WidgetSettingsManager.getBackgroundTransparency(context, appWidgetId)
+        val mode = WidgetSettingsManager.getBackgroundMode(context, appWidgetId)
+        val showBackgroundImage = mode == WidgetSettingsManager.MODE_IMAGE && bgPath != null
+        val solidColorArgb = WidgetSettingsManager.getSolidColor(context, appWidgetId)
+        val solidAlpha = WidgetSettingsManager.getSolidAlpha(context, appWidgetId)
         val dayName = context.getString(
             when (state.dayOfWeek) {
                 1 -> R.string.day_mon
@@ -38,6 +45,9 @@ class CourseWidget : GlanceAppWidget() {
         provideContent {
             CoursesWidgetContent(
                 entries = state.entries,
+                showBackgroundImage = showBackgroundImage,
+                solidColorArgb = solidColorArgb,
+                solidAlpha = solidAlpha,
                 backgroundImagePath = bgPath,
                 transparency = transparency,
                 colors = colors,

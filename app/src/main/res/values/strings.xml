@@ -227,6 +227,20 @@
     <string name="reminder_lead_range_hint">Range 0–120; 0 = notify at class start</string>
     <string name="course_reminder_toggle">Class reminder</string>
     <string name="course_reminder_toggle_summary">Notify before this course starts</string>
+    <string name="widget_more_courses">+%1$d more</string>
+    <string name="widget_instances">Widget instances</string>
+    <string name="widget_mode_solid">Solid</string>
+    <string name="widget_mode_image">Image</string>
+    <string name="widget_solid_color">Solid color</string>
+    <string name="widget_solid_follow_theme">Follow theme</string>
+    <string name="widget_pin_to_home">Add to Home Screen</string>
+    <string name="widget_pin_failed">Could not start the add request</string>
+    <string name="widget_pinned">Widget added to Home Screen</string>
+    <string name="widget_pin_guide_hint">Requested the system add dialog. If it did not appear, add manually:</string>
+    <string name="widget_pin_guide_steps">1. Long-press an empty area on the Home screen\n2. Choose “Widgets”\n3. Find NJUPTer and drag it to the Home screen</string>
+    <string name="widget_bg_edit_hint">Drag or pinch to adjust the background</string>
+    <string name="widget_pick_image_failed">Failed to load the selected image</string>
+    <string name="widget_preview_no_data">No timetable data yet — the preview shows real courses once added</string>
     <string name="minutes_unit">min</string>
     <string name="section_conflict_blocked">Conflicting sections: %1$s. Change sections or weeks before saving.</string>
 </resources>
