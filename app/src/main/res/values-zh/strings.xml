@@ -142,7 +142,7 @@
     <string name="default_timetable_name">我的课表</string>
     <string name="course_reminder_channel_name">课程提醒</string>
     <string name="course_reminder_channel_desc">上课前10分钟通知</string>
-    <string name="course_reminder_title">课程还有10分钟开始</string>
+    <string name="course_reminder_title">课程还有%1$d分钟开始</string>
     <string name="course_reminder_content">%1$s · %2$s · %3$s · %4$s</string>
     <string name="notification_permission">通知权限</string>
     <string name="notification_permission_desc">用于显示课程提醒</string>
@@ -217,4 +217,15 @@
     <string name="update_ignore">忽略更新</string>
     <string name="update_download_started">已开始下载，完成后点击下载通知安装。</string>
     <string name="update_download_failed">无法开始下载，请启用系统下载管理器后重试。</string>
+    <string name="note">课程备注</string>
+    <string name="section_range">%1$s–%2$s</string>
+    <string name="reminder_lead_time">提醒提前时间</string>
+    <string name="reminder_lead_time_summary">上课前多少分钟提醒</string>
+    <string name="reminder_lead_min_value">%1$d 分钟</string>
+    <string name="reminder_lead_minutes_label">分钟</string>
+    <string name="reminder_lead_range_hint">范围 0–120；0 = 上课时提醒</string>
+    <string name="course_reminder_toggle">上课提醒</string>
+    <string name="course_reminder_toggle_summary">上课前通知该课程</string>
+    <string name="minutes_unit">分钟</string>
+    <string name="section_conflict_blocked">所选节次存在冲突：%1$s。请调整节次或周次后保存。</string>
 </resources>

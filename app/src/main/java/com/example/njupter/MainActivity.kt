@@ -4,8 +4,11 @@ import android.Manifest
 import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Build
+import android.app.Activity
 import android.view.animation.DecelerateInterpolator
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import com.example.njupter.ui.LocalActivityContext
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -18,37 +21,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.semantics.clearAndSetSemantics
 
 import com.example.njupter.data.FileTimetableRepository
 import com.example.njupter.ui.timetable.TimetableScreen
@@ -67,7 +53,6 @@ import com.example.njupter.ui.animation.AppNavigationTransition
 import com.example.njupter.ui.animation.AppPageTransition
 import com.example.njupter.ui.animation.PredictiveBackSurface
 import com.example.njupter.ui.animation.PredictiveBackOwner
-import com.example.njupter.ui.component.AppBottomBar
 import com.example.njupter.data.defaultSessionTimes
 import com.example.njupter.notification.CourseReminderScheduler
 import com.example.njupter.notification.ReminderBootstrapper
@@ -111,6 +96,7 @@ class MainActivity : ComponentActivity() {
         }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()  // 全面屏适配
+        requestPeakDisplayMode()  // 每 App 帧率策略下，显式要求窗口用最高刷新率模式
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val granted = ContextCompat.checkSelfPermission(
@@ -129,7 +115,7 @@ class MainActivity : ComponentActivity() {
         val dataSource = LocalFileDataSource(this)
         val settingsRepository = SharedPreferencesSettingsRepository(this)
         val repository = FileTimetableRepository(dataSource, settingsRepository)    // 实例化TimetableRepository，传入MainActivity的Context来读取assets下的JSON
-        val reminderScheduler = CourseReminderScheduler(this)
+        val reminderScheduler = CourseReminderScheduler(this, settingsRepository)
 
         lifecycleScope.launch {
             ReminderBootstrapper.rescheduleCurrentTimetable(applicationContext)
@@ -172,7 +158,6 @@ class MainActivity : ComponentActivity() {
                 val enableCurrentTimeIndicator by settingsRepository.getEnableCurrentTimeIndicator().collectAsState(initial = true)
                 val scope = rememberCoroutineScope()
                 val baseContext = LocalContext.current
-                val layoutDirection = LocalLayoutDirection.current
                 var currentTab by remember { mutableStateOf(0) }
                 var showJwxtImport by remember { mutableStateOf(false) }
                 var settingsSubPage by remember { mutableStateOf("main") }
@@ -200,7 +185,11 @@ class MainActivity : ComponentActivity() {
                     applyLocaleToActivityResources(appLanguageTag)
                 }
 
-                CompositionLocalProvider(LocalContext provides localizedContext) {
+                CompositionLocalProvider(
+                    LocalContext provides localizedContext,
+                    LocalActivityContext provides this@MainActivity,
+                    LocalActivityResultRegistryOwner provides this@MainActivity
+                ) {
                     if (!uiState.isLoading && importState.result == null && importState.error == null) {
                         com.example.njupter.update.StartupUpdatePrompt(updateViewModel)
                     }
@@ -208,10 +197,10 @@ class MainActivity : ComponentActivity() {
                     importState.result?.let { result ->
                         ImportPreviewDialog(
                             importResult = result,
-                            onConfirm = { name ->
+                            onConfirm = { name, startDate ->
                                 viewModel.createAndImportTimetable(
                                     name = name,
-                                    startDate = System.currentTimeMillis(),
+                                    startDate = startDate,
                                     totalWeeks = 20,
                                     showWeekends = false,
                                     sessionTimes = defaultSessionTimes,
@@ -240,14 +229,13 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                // Reschedule reminders when timetable identity changes.
-                // courseInfos and sessions are NOT keys — the repository emits them
-                // on every mutation, which would reschedule N times per import/add.
-                // ReminderScheduler reads current repo state when it fires, so we only
-                // need to trigger on structural changes.
-                val reminderKey = uiState.isLoading to uiState.currentTimetableId
+                // Rebuild alarms after course edits as well as timetable changes.
+                // Coalesce the repository's course/session emissions during import.
+                val reminderLeadMinutes by settingsRepository.getReminderLeadMinutes().collectAsState(initial = settingsRepository.peekReminderLeadMinutes())
+                val reminderKey = listOf(uiState.isLoading, uiState.currentTimetableId, uiState.courseInfos, uiState.sessions, uiState.currentStartDate, uiState.currentTotalWeeks, uiState.currentSessionTimes, reminderLeadMinutes)
                 LaunchedEffect(reminderKey) {
                     if (!uiState.isLoading) {
+                        kotlinx.coroutines.delay(250)
                         reminderScheduler.scheduleUpcomingReminders(
                             courseInfos = uiState.courseInfos,
                             sessions = uiState.sessions,
@@ -260,10 +248,10 @@ class MainActivity : ComponentActivity() {
                 }
 
                     PredictiveBackSurface(
-                        enabled = showJwxtImport || settingsSubPage != "main",
+                        enabled = showJwxtImport || settingsSubPage != "main" || currentTab == 1,
                         owner = when {
                             showJwxtImport -> PredictiveBackOwner.IMPORT_PAGE
-                            settingsSubPage != "main" -> PredictiveBackOwner.SETTINGS_PAGE
+                            settingsSubPage != "main" || currentTab == 1 -> PredictiveBackOwner.SETTINGS_PAGE
                             else -> null
                         },
                         animation = predictiveBackAnimation,
@@ -272,6 +260,7 @@ class MainActivity : ComponentActivity() {
                             when {
                                 showJwxtImport -> showJwxtImport = false
                                 settingsSubPage != "main" -> settingsSubPage = "main"
+                                currentTab == 1 -> currentTab = 0
                             }
                         },
                         modifier = Modifier.fillMaxSize()
@@ -289,43 +278,7 @@ class MainActivity : ComponentActivity() {
                             )
                             },
                             mainContent = {
-                            var bottomBarHeightPx by remember { mutableIntStateOf(0) }
-                            val bottomBarHeight = with(LocalDensity.current) {
-                                bottomBarHeightPx.toDp()
-                            }
-                            val bottomBarCoverInteractionSource = remember {
-                                MutableInteractionSource()
-                            }
-
                             Box(modifier = Modifier.fillMaxSize()) {
-                            Scaffold(
-                                bottomBar = {
-                                    AppBottomBar(
-                                        currentTab = currentTab,
-                                        onTimetableClick = {
-                                            currentTab = 0
-                                            settingsSubPage = "main"
-                                        },
-                                        onSettingsClick = { currentTab = 1 },
-                                        modifier = Modifier.onSizeChanged {
-                                            bottomBarHeightPx = it.height
-                                        }
-                                    )
-                                }
-                            ) { innerPadding ->
-                                val scenePadding = PaddingValues(
-                                    start = innerPadding.calculateStartPadding(layoutDirection),
-                                    top = innerPadding.calculateTopPadding(),
-                                    end = innerPadding.calculateEndPadding(layoutDirection),
-                                    bottom = innerPadding.calculateBottomPadding()
-                                )
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(scenePadding)
-                                            .consumeWindowInsets(innerPadding)
-                                    ) {
                                     AppNavigationTransition(
                                         currentTab = currentTab,
                                         settingsSubPage = settingsSubPage,
@@ -355,7 +308,8 @@ class MainActivity : ComponentActivity() {
                                                     onDeleteTimetable = viewModel::deleteTimetable,
                                                     onCurrentWeekChange = viewModel::setCurrentWeek,
                                                     onCreateTimetable = viewModel::createTimetable,
-                                                    onImportClick = { showJwxtImport = true }
+                                                    onImportClick = { showJwxtImport = true },
+                                                    onSettingsClick = { currentTab = 1; settingsSubPage = "main" }
                                                 )
                                             }
                                             subPage == "theme" -> {
@@ -438,6 +392,9 @@ class MainActivity : ComponentActivity() {
                                                     currentTimetableName = uiState.currentTimetableName,
                                                     currentLanguageTag = appLanguageTag,
                                                     currentThemeMode = appThemeMode,
+                                                    onBack = { currentTab = 0 },
+                                                    reminderLeadMinutes = reminderLeadMinutes,
+                                                    onReminderLeadMinutesChange = { minutes -> scope.launch { settingsRepository.setReminderLeadMinutes(minutes) } },
                                                     enableCurrentTimeIndicator = enableCurrentTimeIndicator,
                                                     onThemeSettingsClick = { settingsSubPage = "theme" },
                                                     onLanguageSelectClick = { settingsSubPage = "language" },
@@ -452,30 +409,6 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
                                     }
-                                }
-
-                            }
-
-                            if (
-                                currentTab == 1 &&
-                                settingsSubPage != "main" &&
-                                bottomBarHeightPx > 0
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .fillMaxWidth()
-                                        .height(bottomBarHeight)
-                                        .background(MaterialTheme.colorScheme.background)
-                                        .clickable(
-                                            interactionSource = bottomBarCoverInteractionSource,
-                                            indication = null,
-                                            onClick = {}
-                                        )
-                                        .clearAndSetSemantics {}
-                                )
-                            }
-                            }
                             }
                         }
                         )
@@ -483,5 +416,25 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+}
+
+/**
+ * 请求本窗口使用机型支持的最高刷新率。
+ * 部分 OEM 会用自身的每 App 帧率策略覆盖 AOSP 的 ARR（View 投票、touch boost），
+ * 所以除 preferredRefreshRate 之外还要显式给出显示模式 id。
+ */
+private fun Activity.requestPeakDisplayMode() {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+    val currentDisplay = display ?: return
+    val currentMode = currentDisplay.mode
+    val peak = currentDisplay.supportedModes
+        .filter { it.physicalWidth == currentMode.physicalWidth &&
+            it.physicalHeight == currentMode.physicalHeight && it.refreshRate > 60f }
+        ?.maxByOrNull { it.refreshRate }
+        ?: return
+    window.attributes = window.attributes.apply {
+        preferredRefreshRate = peak.refreshRate
+        preferredDisplayModeId = peak.modeId
     }
 }

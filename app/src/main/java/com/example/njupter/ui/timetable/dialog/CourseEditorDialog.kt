@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
@@ -25,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import com.example.njupter.ui.animation.pressScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,9 +31,9 @@ import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
 import com.example.njupter.domain.validation.CourseValidator
 import com.example.njupter.domain.validation.ValidationError
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import java.util.UUID
-import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.heightIn
@@ -65,6 +63,7 @@ fun CourseEditorDialog(
     colorsList: List<Color>,
     isDarkTheme: Boolean,
     totalWeeks: Int,
+    maxSection: Int = 12,
     initialDay: Int = 1,
     initialStartSection: Int = 1,
     initialEndSection: Int = 2,
@@ -80,6 +79,8 @@ fun CourseEditorDialog(
     var courseName by remember { mutableStateOf(initialCourse?.name ?: "") }
     var teacher by remember { mutableStateOf(initialCourse?.teacher ?: "") }
     var classroom by remember { mutableStateOf(initialCourse?.classroom ?: "") }
+    var reminderEnabled by remember { mutableStateOf(initialCourse?.reminderEnabled ?: false) }
+    var note by remember { mutableStateOf(initialCourse?.note ?: "") }
     var selectedColorIndex by remember { mutableStateOf(initialCourse?.colorIndex ?: -1) }
 
     // Session
@@ -93,28 +94,6 @@ fun CourseEditorDialog(
         mutableStateOf((initialSession?.endSection ?: initialEndSection).toString())
     }
 
-    val unavailableWeeks = remember(
-        day,
-        startSection,
-        endSection,
-        initialSession,
-        existingSessions
-    ) {
-        val start = startSection.toIntOrNull()
-        val end = endSection.toIntOrNull()
-        if (start == null || end == null || start > end) {
-            emptySet()
-        } else {
-            CourseValidator.unavailableWeeksForSession(
-                day = day,
-                start = start,
-                end = end,
-                editingSession = initialSession,
-                allSessions = existingSessions
-            ).filterTo(mutableSetOf()) { it in 1..totalWeeks }
-        }
-    }
-
     // Weeks
     var selectedWeeks by remember(initialSession, initialWeeks, totalWeeks) {
         val requestedWeeks = initialSession?.weeks?.toSet() ?: initialWeeks
@@ -122,17 +101,15 @@ fun CourseEditorDialog(
             requestedWeeks.filterTo(mutableSetOf()) { it in 1..totalWeeks }
         )
     }
-    var automaticallyRemovedWeeks by remember(initialSession, initialWeeks, totalWeeks) {
-        mutableStateOf<Set<Int>>(emptySet())
-    }
     var showCustomWeekDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(unavailableWeeks) {
-        val newlyUnavailable = selectedWeeks intersect unavailableWeeks
-        val newlyAvailable = automaticallyRemovedWeeks - unavailableWeeks
-        selectedWeeks = (selectedWeeks - unavailableWeeks) + newlyAvailable
-        automaticallyRemovedWeeks =
-            (automaticallyRemovedWeeks + newlyUnavailable) intersect unavailableWeeks
+    val conflictingSections = remember(day, selectedWeeks, initialSession, existingSessions, maxSection) {
+        CourseValidator.conflictingSections(day, selectedWeeks, initialSession, existingSessions, maxSection)
+    }
+    val sessionError = remember(day, startSection, endSection, selectedWeeks, initialSession, existingSessions) {
+        CourseValidator.validateSessionInput(
+            day, startSection.toIntOrNull() ?: 1, endSection.toIntOrNull() ?: 1,
+            selectedWeeks.sorted(), initialSession, existingSessions
+        )
     }
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -141,21 +118,13 @@ fun CourseEditorDialog(
     val outlineColor = MaterialTheme.colorScheme.outline
     val primaryColor = MaterialTheme.colorScheme.primary
 
-    // ErrMessage滚动
-    val scrollState = rememberScrollState()
-    val scope = rememberCoroutineScope()
-
     if (showCustomWeekDialog) {
         CustomWeekPickerDialog(
             totalWeeks = totalWeeks,
             initialWeeks = selectedWeeks,
-            disabledWeeks = unavailableWeeks,
             onDismiss = { showCustomWeekDialog = false },
             onConfirm = {
                 selectedWeeks = it
-                // Confirming the picker is an explicit user choice. Do not restore weeks that
-                // were hidden by a previous, temporary time conflict after this point.
-                automaticallyRemovedWeeks = emptySet()
                 showCustomWeekDialog = false
             }
         )
@@ -165,250 +134,37 @@ fun CourseEditorDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (initialSession == null) stringResource(R.string.add_course) else stringResource(R.string.edit_course)) },
         text = {
-            Column(
-                modifier = Modifier
-                    .verticalScroll(scrollState)
-                    .fillMaxWidth()
-                    .animateContentSize(animationSpec = tween(200)),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            CourseEditorForm(
+                courseName = courseName,
+                onCourseNameChange = { courseName = it; errorMessage = null },
+                teacher = teacher,
+                onTeacherChange = { teacher = it },
+                classroom = classroom,
+                onClassroomChange = { classroom = it },
+                reminderEnabled = reminderEnabled,
+                onReminderEnabledChange = { reminderEnabled = it },
+                note = note,
+                onNoteChange = { note = it },
+                selectedColorIndex = selectedColorIndex,
+                onColorSelect = { selectedColorIndex = it },
+                colorsList = colorsList,
+                isDarkTheme = isDarkTheme,
+                maxSection = maxSection,
+                day = day,
+                onDayChange = { day = it },
+                startSection = startSection,
+                onStartSectionChange = { if (it.all { c -> c.isDigit() }) startSection = it },
+                endSection = endSection,
+                onEndSectionChange = { if (it.all { c -> c.isDigit() }) endSection = it },
+                conflictingSections = conflictingSections,
+                selectedWeeks = selectedWeeks,
+                showCustomWeekDialog = showCustomWeekDialog,
+                onCustomWeekClick = { showCustomWeekDialog = true },
+                errorMessage = errorMessage
             )
-            // Details
-            {
-                Text(
-                    stringResource(R.string.course_details),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = primaryColor
-                )
-                OutlinedTextField(
-                    value = courseName,
-                    onValueChange = { courseName = it; errorMessage = null },
-                    label = { Text(stringResource(R.string.course_name)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = classroom,
-                        onValueChange = { classroom = it },
-                        label = { Text(stringResource(R.string.classroom)) },
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    OutlinedTextField(
-                        value = teacher,
-                        onValueChange = { teacher = it },
-                        label = { Text(stringResource(R.string.teacher)) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                HorizontalDivider(Modifier.padding(10.dp, vertical = 10.dp))
-
-                // --- Time & Week Settings ---
-                Text(
-                    stringResource(R.string.time_settings),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = primaryColor
-                )
-
-                // 星期
-                Text(stringResource(R.string.day_of_week), style = MaterialTheme.typography.bodySmall)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    val days = listOf("M", "T", "W", "T", "F", "S", "S")
-                    days.forEachIndexed { index, label ->
-                        val dayNum = index + 1
-                        val isSelected = (day == dayNum)
-                        val dayInteractionSource = remember { MutableInteractionSource() }
-
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(if (isSelected) primaryColor else Color.Transparent)
-                                .pressScale(dayInteractionSource)
-                                .border(
-                                    1.dp,
-                                    if (isSelected) primaryColor else outlineColor,
-                                    CircleShape
-                                )
-                                .clickable(
-                                    interactionSource = dayInteractionSource,
-                                    onClick = { day = dayNum }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                label,
-                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-
-                // 节次
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = startSection,
-                        onValueChange = { if (it.all { c -> c.isDigit() }) startSection = it },
-                        label = { Text(stringResource(R.string.start_sec)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = endSection,
-                        onValueChange = { if (it.all { c -> c.isDigit() }) endSection = it },
-                        label = { Text(stringResource(R.string.end_sec)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                // 周次选择
-                Text(
-                    stringResource(R.string.weeks, if (selectedWeeks.isEmpty()) stringResource(R.string.weeks_none) else stringResource(R.string.weeks_selected, selectedWeeks.size)),
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    SuggestionChip(
-                        onClick = { showCustomWeekDialog = true },
-                        label = { Text(stringResource(R.string.customize)) },
-                        icon = { Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                        colors = if (showCustomWeekDialog) SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ) else SuggestionChipDefaults.suggestionChipColors()
-                    )
-                }
-
-                HorizontalDivider(Modifier.padding(10.dp, vertical = 1.dp))
-
-                // Card Color
-                Text(stringResource(R.string.card_color), style = MaterialTheme.typography.titleSmall)
-
-                Column(){
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier
-                            .padding(vertical = 4.dp)
-                            .fillMaxWidth()
-                    ) {
-                        // Auto 选项
-                        val isAutoSelected = (selectedColorIndex == -1)
-                        val autoBorderColor = if (isAutoSelected) primaryColor else outlineColor
-                        val autoBorderWidth = if (isAutoSelected) 2.dp else 1.dp
-
-                        val autoColorInteractionSource = remember { MutableInteractionSource() }
-
-                        Box(
-                            modifier = Modifier
-                                .size(35.dp)
-                                .clip(CircleShape)
-                                .background(Color.Transparent)
-                                .pressScale(autoColorInteractionSource)
-                                .border(autoBorderWidth, autoBorderColor, CircleShape)
-                                .clickable(
-                                    interactionSource = autoColorInteractionSource,
-                                    onClick = { selectedColorIndex = -1 }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // 显示 "A" 代表 Auto
-                            Text(
-                                stringResource(R.string.auto),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isDarkTheme) Color.White else Color.Black
-                            )
-                        }
-
-                        // 第一行仅显示�?5 个颜�?
-                        colorsList.take(5).forEachIndexed { index, color ->
-                            val isSelected = (selectedColorIndex == index)
-                            val borderWidth = if (isSelected) 2.dp else 1.dp
-                            val borderColor = if (isSelected) primaryColor else outlineColor
-
-                            val colorInteractionSource = remember { MutableInteractionSource() }
-
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .pressScale(colorInteractionSource)
-                                    .border(borderWidth, borderColor, CircleShape)
-                                    .clickable(
-                                        interactionSource = colorInteractionSource,
-                                        onClick = { selectedColorIndex = index }
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = stringResource(R.string.cd_selected),
-                                        tint = MaterialTheme.colorScheme.onSurface, // 自适配文字颜色
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    // 第二行仅显示�?6-8 个颜�?
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier
-                            .padding(vertical = 4.dp)
-                            .fillMaxWidth()
-                    ){
-                        colorsList.drop(5).take(3).forEachIndexed { offset, color ->
-                            val actualIndex = offset + 5
-                            val isSelected = (selectedColorIndex == actualIndex)
-                            val borderWidth = if (isSelected) 2.dp else 1.dp
-                            val borderColor = if (isSelected) primaryColor else outlineColor
-
-                            val colorInteractionSource2 = remember { MutableInteractionSource() }
-
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .pressScale(colorInteractionSource2)
-                                    .border(borderWidth, borderColor, CircleShape)
-                                    .clickable(
-                                        interactionSource = colorInteractionSource2,
-                                        onClick = { selectedColorIndex = actualIndex }
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = stringResource(R.string.cd_selected),
-                                        tint = MaterialTheme.colorScheme.onSurface, // 自适配文字颜色
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (errorMessage != null) {
-                    Text(
-                        text = errorMessage!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 8.dp))
-                }
-            }
         },
         confirmButton = {
-            Button(onClick = {
+            Button(enabled = sessionError == null, onClick = {
                 val d = day
                 val s = startSection.toIntOrNull() ?: 1
                 val e = endSection.toIntOrNull() ?: s
@@ -436,10 +192,6 @@ fun CourseEditorDialog(
 
                 if (timeError != null) {
                     errorMessage = timeError.toLocalizedString(context)
-                    scope.launch {
-                        delay(16)
-                        scrollState.animateScrollTo(scrollState.maxValue)
-                    }
                     return@Button
                 }
 
@@ -454,10 +206,6 @@ fun CourseEditorDialog(
 
                 if (duplicationError != null) {
                     errorMessage = duplicationError.toLocalizedString(context)
-                    scope.launch {
-                        delay(16)
-                        scrollState.animateScrollTo(scrollState.maxValue)
-                    }
                     return@Button
                 }
 
@@ -469,7 +217,9 @@ fun CourseEditorDialog(
                     classroom = classroom,
                     colorIndex = selectedColorIndex,
                     credit = initialCourse?.credit.orEmpty(),
-                    courseNature = initialCourse?.courseNature.orEmpty()
+                    courseNature = initialCourse?.courseNature.orEmpty(),
+                    note = note.trim(),
+                    reminderEnabled = reminderEnabled
                 )
                 // Re-create session with final values
                 val finalSession = CourseSession(
@@ -489,6 +239,277 @@ fun CourseEditorDialog(
             }
         }
     )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CourseEditorForm(
+    courseName: String,
+    onCourseNameChange: (String) -> Unit,
+    teacher: String,
+    onTeacherChange: (String) -> Unit,
+    classroom: String,
+    onClassroomChange: (String) -> Unit,
+    note: String,
+    onNoteChange: (String) -> Unit,
+    reminderEnabled: Boolean = false,
+    onReminderEnabledChange: (Boolean) -> Unit = {},
+    selectedColorIndex: Int,
+    onColorSelect: (Int) -> Unit,
+    colorsList: List<Color>,
+    isDarkTheme: Boolean,
+    day: Int,
+    maxSection: Int,
+    onDayChange: (Int) -> Unit,
+    startSection: String,
+    onStartSectionChange: (String) -> Unit,
+    endSection: String,
+    onEndSectionChange: (String) -> Unit,
+    selectedWeeks: Set<Int>,
+    showCustomWeekDialog: Boolean,
+    onCustomWeekClick: () -> Unit,
+    errorMessage: String?,
+    conflictingSections: Set<Int> = emptySet()
+) {
+    val outlineColor = MaterialTheme.colorScheme.outline
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val scrollState = rememberScrollState()
+
+    // 出错时滚动到底部，让用户看到错误信息
+    LaunchedEffect(errorMessage) {
+        if (errorMessage != null) {
+            delay(16)
+            scrollState.animateScrollTo(scrollState.maxValue)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .verticalScroll(scrollState)
+            .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(200)),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    )
+    // Details
+    {
+        Text(
+            stringResource(R.string.course_details),
+            style = MaterialTheme.typography.titleSmall,
+            color = primaryColor
+        )
+        OutlinedTextField(
+            value = courseName,
+            onValueChange = { onCourseNameChange(it) },
+            label = { Text(stringResource(R.string.course_name)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = classroom,
+                onValueChange = { onClassroomChange(it) },
+                label = { Text(stringResource(R.string.classroom)) },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = teacher,
+                onValueChange = { onTeacherChange(it) },
+                label = { Text(stringResource(R.string.teacher)) },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+        }
+
+        OutlinedTextField(
+            value = note,
+            onValueChange = { onNoteChange(it) },
+            label = { Text(stringResource(R.string.note)) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 1,
+            maxLines = 4
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.course_reminder_toggle),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    stringResource(R.string.course_reminder_toggle_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = reminderEnabled,
+                onCheckedChange = onReminderEnabledChange
+            )
+        }
+
+        HorizontalDivider(Modifier.padding(10.dp, vertical = 10.dp))
+
+        // --- Time & Week Settings ---
+        Text(
+            stringResource(R.string.time_settings),
+            style = MaterialTheme.typography.titleSmall,
+            color = primaryColor
+        )
+
+        // 星期
+        Text(stringResource(R.string.day_of_week), style = MaterialTheme.typography.bodySmall)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            val days = listOf("M", "T", "W", "T", "F", "S", "S")
+            days.forEachIndexed { index, label ->
+                val dayNum = index + 1
+                val isSelected = (day == dayNum)
+                val dayInteractionSource = remember { MutableInteractionSource() }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(1f)
+                        .clip(CircleShape)
+                        .background(if (isSelected) primaryColor else Color.Transparent)
+                        .pressScale(dayInteractionSource)
+                        .border(
+                            1.dp,
+                            if (isSelected) primaryColor else outlineColor,
+                            CircleShape
+                        )
+                        .clickable(
+                            interactionSource = dayInteractionSource,
+                            onClick = { onDayChange(dayNum) }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        label,
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+
+        SectionRangePicker(
+            startSection = (startSection.toIntOrNull() ?: 1).coerceIn(3, maxSection),
+            endSection = (endSection.toIntOrNull() ?: 1).coerceIn(5, maxSection),
+            maxSection = maxSection,
+            conflictingSections = conflictingSections,
+            onRangeChange = { start, end ->
+                onStartSectionChange(start.toString())
+                onEndSectionChange(end.toString())
+            }
+        )
+
+        // 周次选择
+        Text(
+            stringResource(R.string.weeks, if (selectedWeeks.isEmpty()) stringResource(R.string.weeks_none) else stringResource(R.string.weeks_selected, selectedWeeks.size)),
+            style = MaterialTheme.typography.bodySmall
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            SuggestionChip(
+                onClick = { onCustomWeekClick() },
+                label = { Text(stringResource(R.string.customize)) },
+                icon = { Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                colors = if (showCustomWeekDialog) SuggestionChipDefaults.suggestionChipColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ) else SuggestionChipDefaults.suggestionChipColors()
+            )
+        }
+
+        HorizontalDivider(Modifier.padding(10.dp, vertical = 1.dp))
+
+        // Card Color
+        Text(
+            stringResource(R.string.card_color),
+            style = MaterialTheme.typography.titleSmall,
+            color = primaryColor
+        )
+
+        Column {
+            FlowRow(
+                horizontalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .fillMaxWidth()
+            ) {
+                val isAutoSelected = (selectedColorIndex == -1)
+                val autoBorderColor = if (isAutoSelected) primaryColor else outlineColor
+                val autoBorderWidth = if (isAutoSelected) 2.dp else 1.dp
+                val autoColorInteractionSource = remember { MutableInteractionSource() }
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(Color.Transparent)
+                        .pressScale(autoColorInteractionSource)
+                        .border(autoBorderWidth, autoBorderColor, CircleShape)
+                        .clickable(
+                            interactionSource = autoColorInteractionSource,
+                            onClick = { onColorSelect(-1) }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        stringResource(R.string.auto),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDarkTheme) Color.White else Color.Black
+                    )
+                }
+                colorsList.forEachIndexed { index, color ->
+                    val isSelected = (selectedColorIndex == index)
+                    val borderWidth = if (isSelected) 2.dp else 1.dp
+                    val borderColor = if (isSelected) primaryColor else outlineColor
+                    val colorInteractionSource = remember { MutableInteractionSource() }
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .pressScale(colorInteractionSource)
+                            .border(borderWidth, borderColor, CircleShape)
+                            .clickable(
+                                interactionSource = colorInteractionSource,
+                                onClick = { onColorSelect(index) }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = stringResource(R.string.cd_selected),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage!!,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 8.dp))
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -662,35 +683,32 @@ fun WeekGrid(
 
 @Preview(showBackground = true)
 @Composable
-fun CourseEditorDialogPreview() {
-    val sampleCourses = listOf(
-        CourseInfo("1", "高等数学", "张老师", "�?1-101", 0)
-    )
-    val sampleSessions = listOf(
-        CourseSession("1", 1, 1, 2, (1..20).toList())
-    )
+fun CourseEditorFormPreview() {
     MaterialTheme {
-        CourseEditorDialog(
-            initialSession = null,
-            initialCourse = null,
-            existingCourses = sampleCourses,
-            existingSessions = sampleSessions,
-            colorsList = listOf(
-                getCourseColors()[0],
-                getCourseColors()[1],
-                getCourseColors()[2],
-                getCourseColors()[3],
-                getCourseColors()[4],
-                getCourseColors()[5],
-                getCourseColors()[6],
-                getCourseColors()[7]
-
-            ),
+        CourseEditorForm(
+            courseName = "高等数学",
+            onCourseNameChange = {},
+            teacher = "张老师",
+            onTeacherChange = {},
+            classroom = "教2-101",
+            onClassroomChange = {},
+            note = "",
+            onNoteChange = {},
+            selectedColorIndex = 0,
+            onColorSelect = {},
+            colorsList = getCourseColors(),
             isDarkTheme = false,
-            totalWeeks = 20,
-            onDismiss = {},
-            onSave = { _, _, _ -> },
-            onDelete = { }
+            maxSection = 12,
+            day = 1,
+            onDayChange = {},
+            startSection = "1",
+            onStartSectionChange = {},
+            endSection = "2",
+            onEndSectionChange = {},
+            selectedWeeks = (1..20).toSet(),
+            showCustomWeekDialog = false,
+            onCustomWeekClick = {},
+            errorMessage = null
         )
     }
 }

@@ -14,6 +14,17 @@ sealed class ValidationError {
 
 object CourseValidator {
 
+    fun conflictingSections(
+        day: Int,
+        weeks: Set<Int>,
+        editingSession: CourseSession?,
+        allSessions: List<CourseSession>,
+        maxSection: Int
+    ): Set<Int> = (1..maxSection).filterTo(mutableSetOf()) { section ->
+        val error = validateSessionInput(day, section, section, weeks.toList(), editingSession, allSessions)
+        error is ValidationError.TimeConflict
+    }
+
     /**
      * Returns the weeks that cannot be used for the proposed day/section range.
      *

@@ -2,6 +2,7 @@ package com.example.njupter.notification
 
 import android.content.Context
 import com.example.njupter.data.LocalFileDataSource
+import com.example.njupter.data.SharedPreferencesSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -12,20 +13,22 @@ object ReminderBootstrapper {
     suspend fun rescheduleCurrentTimetable(context: Context) = withContext(Dispatchers.IO) {
         val dataSource = LocalFileDataSource(context)
         val timetables = dataSource.getAllTimetables()
-        if (timetables.isEmpty()) return@withContext
 
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val selectedId = prefs.getString(KEY_LAST_SELECTED_TIMETABLE_ID, null)
-        val meta = timetables.find { it.id == selectedId } ?: timetables.firstOrNull() ?: return@withContext
-        val data = dataSource.loadTimetable(meta.id)
+        val meta = timetables.find { it.id == selectedId } ?: timetables.firstOrNull()
+        val data = meta?.let { dataSource.loadTimetable(it.id) }
 
-        CourseReminderScheduler(context).scheduleUpcomingReminders(
-            courseInfos = data.courses,
-            sessions = data.sessions,
-            currentTimetableId = meta.id,
-            startDate = meta.startDate,
-            totalWeeks = meta.totalWeeks,
-            sessionTimes = meta.nonNullSessionTimes
+        CourseReminderScheduler(
+            context,
+            SharedPreferencesSettingsRepository(context)
+        ).scheduleUpcomingReminders(
+            courseInfos = data?.courses.orEmpty(),
+            sessions = data?.sessions.orEmpty(),
+            currentTimetableId = meta?.id,
+            startDate = meta?.startDate ?: 0L,
+            totalWeeks = meta?.totalWeeks ?: 0,
+            sessionTimes = meta?.nonNullSessionTimes.orEmpty()
         )
     }
 }

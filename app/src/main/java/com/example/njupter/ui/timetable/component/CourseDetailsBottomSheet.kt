@@ -122,6 +122,10 @@ fun CourseDetailsBottomSheet(
                 value = course.courseNature.ifBlank { stringResource(R.string.not_set) }
             )
 
+            if (course.note.isNotBlank()) {
+                CourseDetailRow(stringResource(R.string.note), course.note)
+            }
+
             Spacer(Modifier.height(2.dp))
             Button(
                 onClick = {

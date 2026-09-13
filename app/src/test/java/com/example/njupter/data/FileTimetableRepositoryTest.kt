@@ -127,6 +127,9 @@ private class FakeTimetableDataSource(
 
 private class FakeSettingsRepository(lastSelectedId: String?) : SettingsRepository {
     val lastSelectedTimetableIdState = MutableStateFlow(lastSelectedId)
+    private val reminderLeadMinutes = MutableStateFlow(10)
+    override fun getReminderLeadMinutes() = reminderLeadMinutes
+    override suspend fun setReminderLeadMinutes(minutes: Int) { reminderLeadMinutes.value = minutes }
     private val showWeekends = MutableStateFlow(false)
     private val languageTag = MutableStateFlow("")
     private val lastWeekRecords = MutableStateFlow<Map<String, Int>>(emptyMap())
