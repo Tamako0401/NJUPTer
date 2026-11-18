@@ -32,7 +32,8 @@ interface SettingsRepository {
     suspend fun setPredictiveBackExitDirection(direction: PredictiveBackExitDirection)
     fun getReminderLeadMinutes(): Flow<Int>
     suspend fun setReminderLeadMinutes(minutes: Int)
-
+    fun getMorningRunToken(): Flow<String?>
+    suspend fun setMorningRunToken(token: String?)
     fun peekLastSelectedTimetableId(): String? {
         return (getLastSelectedTimetableId() as? StateFlow)?.value
     }
@@ -63,6 +64,10 @@ interface SettingsRepository {
         return (getReminderLeadMinutes() as? StateFlow)?.value ?: DEFAULT_REMINDER_LEAD_MINUTES
     }
 
+    fun peekMorningRunToken(): String? {
+        return (getMorningRunToken() as? StateFlow)?.value
+    }
+
     companion object {
         const val DEFAULT_REMINDER_LEAD_MINUTES = 10
         const val MIN_REMINDER_LEAD_MINUTES = 0
@@ -83,6 +88,7 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         private const val KEY_PREDICTIVE_BACK_ANIMATION = "predictive_back_animation"
         private const val KEY_PREDICTIVE_BACK_EXIT_DIRECTION = "predictive_back_exit_direction"
         private const val KEY_REMINDER_LEAD_MINUTES = "reminder_lead_minutes"
+        private const val KEY_MORNING_RUN_TOKEN = "morning_run_token"
     }
 
     private fun readLastWeekRecords(): Map<String, Int> {
@@ -121,6 +127,7 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
     private val _reminderLeadMinutes = MutableStateFlow(
         prefs.getInt(KEY_REMINDER_LEAD_MINUTES, SettingsRepository.DEFAULT_REMINDER_LEAD_MINUTES)
     )
+    private val _morningRunToken = MutableStateFlow<String?>(prefs.getString(KEY_MORNING_RUN_TOKEN, null))
 
     override fun getShowWeekends(): Flow<Boolean> = _showWeekends.asStateFlow()
 
@@ -201,6 +208,16 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         )
         prefs.edit { putInt(KEY_REMINDER_LEAD_MINUTES, clamped) }
         _reminderLeadMinutes.value = clamped
+    }
+
+    override fun getMorningRunToken(): Flow<String?> = _morningRunToken.asStateFlow()
+
+    override suspend fun setMorningRunToken(token: String?) {
+        prefs.edit {
+            if (token == null) remove(KEY_MORNING_RUN_TOKEN)
+            else putString(KEY_MORNING_RUN_TOKEN, token)
+        }
+        _morningRunToken.value = token
     }
 }
 

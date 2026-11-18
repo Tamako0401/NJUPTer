@@ -168,4 +168,7 @@ private class FakeSettingsRepository(lastSelectedId: String?) : SettingsReposito
     override suspend fun setPredictiveBackExitDirection(direction: PredictiveBackExitDirection) {
         predictiveBackExitDirection.value = direction
     }
+    private val morningRunToken = MutableStateFlow<String?>(null)
+    override fun getMorningRunToken() = morningRunToken
+    override suspend fun setMorningRunToken(token: String?) { morningRunToken.value = token }
 }
