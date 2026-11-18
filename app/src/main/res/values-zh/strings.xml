@@ -250,6 +250,7 @@
     <string name="morning_run_count_value">%1$d 次</string>
     <string name="morning_run_count_label">本学期次数</string>
     <string name="morning_run_bind">绑定小程序 token</string>
+    <string name="morning_run_unbind">解绑</string>
     <string name="morning_run_rebind">重新绑定</string>
     <string name="morning_run_no_token_title">尚未绑定</string>
     <string name="morning_run_no_token_desc">粘贴南邮小程序登录 token 后即可查看晨跑次数。</string>

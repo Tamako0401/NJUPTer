@@ -83,6 +83,11 @@ fun MorningRunScreen(
                     }
                 },
                 actions = {
+                    if (uiState is MorningRunUiState.Ready) {
+                        TextButton(onClick = onClear) {
+                            Text(stringResource(R.string.morning_run_unbind))
+                        }
+                    }
                     IconButton(onClick = onRefresh) {
                         Icon(Icons.Default.Refresh, contentDescription = null)
                     }

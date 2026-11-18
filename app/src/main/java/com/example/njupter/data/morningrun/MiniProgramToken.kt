@@ -23,7 +23,7 @@ object MiniProgramTokenParser {
         val raw = JWT.find(input)?.value ?: return null
         val payloadJson = runCatching {
             String(
-                Base64.UrlSafe.decode(raw.split('.')[1]),
+                Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT).decode(raw.split('.')[1]),
                 StandardCharsets.UTF_8
             )
         }.getOrNull() ?: return null

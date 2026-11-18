@@ -251,6 +251,7 @@
     <string name="morning_run_count_value">%1$d runs</string>
     <string name="morning_run_count_label">Runs this semester</string>
     <string name="morning_run_bind">Link mini-program token</string>
+    <string name="morning_run_unbind">Unlink</string>
     <string name="morning_run_rebind">Link again</string>
     <string name="morning_run_no_token_title">Not linked yet</string>
     <string name="morning_run_no_token_desc">Paste the login token from the NJUPT mini-program to view your morning-run count.</string>
