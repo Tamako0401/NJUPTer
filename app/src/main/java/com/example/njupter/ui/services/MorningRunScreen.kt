@@ -138,7 +138,13 @@ fun MorningRunScreen(
                 }
             }
             is MorningRunUiState.Loading -> {
-                BoxInside(padding) {
+                PullToRefreshBox(
+                    isRefreshing = true,
+                    onRefresh = onRefresh,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                ) {
                     CircularProgressIndicator()
                 }
             }
@@ -153,20 +159,15 @@ fun MorningRunScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = state.message,
+                        text = if (state.tokenExpired) {
+                            stringResource(R.string.morning_run_expired)
+                        } else {
+                            state.message
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.error
                     )
-                    if (state.tokenExpired) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.morning_run_expired),
-                            style = MaterialTheme.typography.bodyLarge,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                     Spacer(Modifier.height(24.dp))
                     Button(onClick = onRefresh) {
                         Text(stringResource(R.string.retry))
@@ -180,7 +181,7 @@ fun MorningRunScreen(
             }
             is MorningRunUiState.Ready -> {
                 PullToRefreshBox(
-                    isRefreshing = false,
+                    isRefreshing = uiState is MorningRunUiState.Loading,
                     onRefresh = onRefresh,
                     modifier = Modifier
                         .fillMaxSize()
@@ -193,20 +194,6 @@ fun MorningRunScreen(
     }
 }
 
-@Composable
-private fun BoxInside(padding: PaddingValues, content: @Composable () -> Unit) {
-    androidx.compose.foundation.layout.Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-    ) {
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier.align(Alignment.Center)
-        ) {
-            content()
-        }
-    }
-}
 
 @Composable
 private fun ReadyContent(state: MorningRunUiState.Ready) {
