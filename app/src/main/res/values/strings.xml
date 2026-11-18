@@ -129,7 +129,6 @@
     <!-- Course Editor -->
     <string name="save_btn">Save</string>
     <string name="cd_timetable">Timetable</string>
-    <string name="cd_settings">Settings</string>
 
     <!-- Validation Errors -->
     <string name="error_start_after_end">Error: Start section (%1$d) cannot be greater than End section (%2$d).</string>
@@ -243,4 +242,27 @@
     <string name="widget_preview_no_data">No timetable data yet — the preview shows real courses once added</string>
     <string name="minutes_unit">min</string>
     <string name="section_conflict_blocked">Conflicting sections: %1$s. Change sections or weeks before saving.</string>
+
+    <!-- Services / Morning Run -->
+    <string name="services">Services</string>
+    <string name="morning_run">Morning Run</string>
+    <string name="morning_run_summary">Check-ins and semester counts</string>
+    <string name="morning_run_unbound">Not linked</string>
+    <string name="morning_run_count_value">%1$d runs</string>
+    <string name="morning_run_count_label">Runs this semester</string>
+    <string name="morning_run_bind">Link mini-program token</string>
+    <string name="morning_run_rebind">Link again</string>
+    <string name="morning_run_no_token_title">Not linked yet</string>
+    <string name="morning_run_no_token_desc">Paste the login token from the NJUPT mini-program to view your morning-run count.</string>
+    <string name="morning_run_token_hint">Paste the token (or any text containing it)</string>
+    <string name="morning_run_token_invalid">No valid token found</string>
+    <string name="morning_run_paste">Paste from clipboard</string>
+    <string name="morning_run_expires">Valid until %1$s</string>
+    <string name="morning_run_expired">Token expired. Link again to continue.</string>
+    <string name="morning_run_no_checkin">No check-in today</string>
+    <string name="morning_run_history">Semesters</string>
+    <string name="morning_run_semester_value">%1$d runs · %2$d short</string>
+    <string name="morning_run_records">Recent check-ins</string>
+    <string name="refresh">Refresh</string>
+    <string name="retry">Retry</string>
 </resources>

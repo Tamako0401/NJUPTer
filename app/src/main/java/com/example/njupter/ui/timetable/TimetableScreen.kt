@@ -16,7 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
@@ -102,11 +101,10 @@ fun TimetableScreen(
     onUpdateCourse: (CourseInfo) -> Unit = {},
     onUpdateSession: (CourseSession, CourseSession) -> Unit = { _, _ -> },
     onDeleteSession: (CourseSession) -> Unit = {},
-    onSwitchTimetable: (String) -> Unit = {},
     onDeleteTimetable: (String) -> Unit = {},
+    onSwitchTimetable: (String) -> Unit = {},
     onCurrentWeekChange: (Int) -> Unit = {},
     onCreateTimetable: (String, Long, Int, Boolean, List<String>) -> Unit = { _, _, _, _, _ -> },
-    onSettingsClick: () -> Unit = {},
     onImportClick: (() -> Unit)? = null
 ) {
     val sectionHeight = 60.dp
@@ -325,16 +323,16 @@ fun TimetableScreen(
 
     // Show empty state if no timetables exist
     if (timetables.isEmpty()) {
-        Scaffold(topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.timetable)) },
-                actions = {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
-                    }
-                }
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.timetable)) }
+                )
+            },
+            contentWindowInsets = WindowInsets.safeDrawing.only(
+                WindowInsetsSides.Top + WindowInsetsSides.Horizontal
             )
-        }) { padding ->
+        ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding)) {
                 EmptyGuidePlaceholder(onCreateTimetable = { showNewTimetableDialog = true })
             }
@@ -421,12 +419,12 @@ fun TimetableScreen(
                             )
                         }
                     }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
-                    }
                 }
             }
         },
+        contentWindowInsets = WindowInsets.safeDrawing.only(
+            WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+        ),
         floatingActionButton = {
             // “今天”按钮的槽位尺寸保持恒定：条件增删会让 FAB 宽度逐帧变化，进而每帧重测
             // pager 里的全部课表格子（翻页收尾那一下发顿的源头）。这里只动 alpha。

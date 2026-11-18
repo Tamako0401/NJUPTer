@@ -225,14 +225,14 @@ fun AppPageTransition(
 @Composable
 fun AppNavigationTransition(
     currentTab: Int,
-    settingsSubPage: String,
+    subPage: String,
     modifier: Modifier = Modifier,
     content: @Composable (tab: Int, subPage: String) -> Unit
 ) {
-    val target = currentTab to settingsSubPage
+    val target = currentTab to subPage
     RetainedLayerHost(
         targetState = target,
-        initiallyRetained = listOf(0 to "main", 1 to "main"),
+        initiallyRetained = listOf(0 to "main", 1 to "main", 2 to "main"),
         previousState = currentTab to "main",
         motionOwner = PredictiveBackOwner.SETTINGS_PAGE,
         depthOf = { (_, subPage) -> if (subPage == "main") 0 else 1 },

@@ -128,7 +128,6 @@
     <!-- Course Editor -->
     <string name="save_btn">保存</string>
     <string name="cd_timetable">课程表</string>
-    <string name="cd_settings">设置</string>
 
     <!-- Validation Errors -->
     <string name="error_start_after_end">错误：开始节次（%1$d）不能大于结束节次（%2$d）。</string>
@@ -242,4 +241,27 @@
     <string name="widget_preview_no_data">暂无课表数据，添加课程后这里会显示真实预览</string>
     <string name="minutes_unit">分钟</string>
     <string name="section_conflict_blocked">所选节次存在冲突：%1$s。请调整节次或周次后保存。</string>
+
+    <!-- 服务 / 晨跑 -->
+    <string name="services">服务</string>
+    <string name="morning_run">晨跑</string>
+    <string name="morning_run_summary">查看打卡记录与学期次数</string>
+    <string name="morning_run_unbound">未绑定</string>
+    <string name="morning_run_count_value">%1$d 次</string>
+    <string name="morning_run_count_label">本学期次数</string>
+    <string name="morning_run_bind">绑定小程序 token</string>
+    <string name="morning_run_rebind">重新绑定</string>
+    <string name="morning_run_no_token_title">尚未绑定</string>
+    <string name="morning_run_no_token_desc">粘贴南邮小程序登录 token 后即可查看晨跑次数。</string>
+    <string name="morning_run_token_hint">粘贴 token（或包含 token 的文本）</string>
+    <string name="morning_run_token_invalid">未找到有效 token</string>
+    <string name="morning_run_paste">从剪贴板粘贴</string>
+    <string name="morning_run_expires">有效期至 %1$s</string>
+    <string name="morning_run_expired">token 已过期，请重新绑定。</string>
+    <string name="morning_run_no_checkin">今日未打卡</string>
+    <string name="morning_run_history">学期统计</string>
+    <string name="morning_run_semester_value">%1$d 次 · 差 %2$d</string>
+    <string name="morning_run_records">最近打卡</string>
+    <string name="refresh">刷新</string>
+    <string name="retry">重试</string>
 </resources>

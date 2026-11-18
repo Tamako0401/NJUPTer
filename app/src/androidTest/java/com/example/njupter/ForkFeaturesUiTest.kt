@@ -18,6 +18,30 @@ class ForkFeaturesUiTest {
     @get:Rule val compose = createComposeRule()
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
+    @Test fun sameCourseDetailsCanBeSavedAtAnotherTime() {
+        val course = CourseInfo("existing", "Math", "Teacher", "Room")
+        val occupied = CourseSession(course.id, 1, 1, 2, listOf(1))
+        var saved: CourseInfo? = null
+        compose.setContent {
+            NJUPTerTheme {
+                CourseEditorDialog(null, null, listOf(course), listOf(occupied),
+                    getCourseColors(), false, 4, initialWeeks = setOf(2, 3, 4),
+                    onDismiss = {}, onSave = { info, _, _ -> saved = info }, onDelete = {})
+            }
+        }
+        compose.onNodeWithText(context.getString(R.string.course_name)).performTextInput(course.name)
+        compose.onNodeWithText(context.getString(R.string.teacher)).performTextInput(course.teacher)
+        compose.onNodeWithText(context.getString(R.string.classroom)).performTextInput(course.classroom)
+        compose.onNodeWithText("2–4").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.save_btn)).performClick()
+        compose.runOnIdle {
+            assertEquals(course.name, saved?.name)
+            assertEquals(course.teacher, saved?.teacher)
+            assertEquals(course.classroom, saved?.classroom)
+            assertNotEquals(course.id, saved?.id)
+        }
+    }
+
     @Test fun conflictingWeeksStaySelectedUntilUserChangesThem() {
         val occupied = CourseSession("other", 1, 1, 2, listOf(1))
         var saved: CourseSession? = null
@@ -36,19 +60,17 @@ class ForkFeaturesUiTest {
         compose.runOnIdle { assertEquals(listOf(2), saved?.weeks) }
     }
 
-    @Test fun arrowsRemainAndSettingsOpensFromTimetable() {
-        var opened = false
+    @Test fun arrowsRemainWithoutGearEntry() {
         compose.setContent {
             NJUPTerTheme {
                 TimetableScreen(emptyList(), emptyList(), timetables = listOf(TimetableMetadata("test", "Test", 0L)), currentTimetableId = "test",
-                    currentTimetableName = "Test", onSettingsClick = { opened = true })
+                    currentTimetableName = "Test")
             }
         }
         compose.onNodeWithContentDescription(context.getString(R.string.cd_previous_week)).assertIsDisplayed()
         compose.onNodeWithContentDescription(context.getString(R.string.cd_next_week)).assertIsDisplayed().performClick()
         compose.onNodeWithText(context.getString(R.string.week, 2)).assertIsDisplayed()
-        compose.onNodeWithContentDescription(context.getString(R.string.settings)).assertIsDisplayed().performClick()
-        compose.runOnIdle { assertTrue(opened) }
+        compose.onNodeWithContentDescription(context.getString(R.string.settings)).assertDoesNotExist()
     }
 
     @Test fun editorPreservesNotesReminderAndDeletePlacement() {

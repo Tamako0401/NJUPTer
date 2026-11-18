@@ -27,19 +27,34 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 
 import com.example.njupter.data.FileTimetableRepository
+import com.example.njupter.data.LocalFileDataSource
+import com.example.njupter.ui.services.ServicesScreen
+import com.example.njupter.ui.services.MorningRunScreen
 import com.example.njupter.ui.timetable.TimetableScreen
 import com.example.njupter.viewmodels.TimetableViewModel
-import com.example.njupter.data.LocalFileDataSource
+import com.example.njupter.viewmodels.MorningRunViewModel
+import com.example.njupter.viewmodels.MorningRunUiState
+import com.example.njupter.data.morningrun.MorningRunRepository
 import com.example.njupter.data.SharedPreferencesSettingsRepository
 import com.example.njupter.ui.settings.LanguageSelectScreen
 import com.example.njupter.ui.settings.SettingsScreen
@@ -61,6 +76,11 @@ import com.example.njupter.widget.WidgetUpdateScheduler
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Locale
+
+/** Bottom-bar primary tabs. */
+private const val TAB_TIMETABLE = 0
+private const val TAB_SERVICES = 1
+private const val TAB_SETTINGS = 2
 
 /**
  * 初始化依赖关系，连接ViewModel与UI，设置应用主题
@@ -126,6 +146,9 @@ class MainActivity : ComponentActivity() {
         val viewModel by viewModels<TimetableViewModel> {
             TimetableViewModel.provideFactory(repository, settingsRepository, this@MainActivity)
         }
+        val morningRunViewModel by viewModels<MorningRunViewModel> {
+            MorningRunViewModel.provideFactory(MorningRunRepository(), settingsRepository)
+        }
 
         lifecycleScope.launch {
             viewModel.uiState.collectLatest { uiState ->
@@ -153,14 +176,18 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = dynamicColorEnabled
             ) {
                 val uiState by viewModel.uiState.collectAsState()   // 观察状态，将StateFlow转换成Compose的State
+                val morningRunState by morningRunViewModel.uiState.collectAsState()
                 val importState by viewModel.importState.collectAsState()   // 同上
                 val appLanguageTag by settingsRepository.getAppLanguageTag().collectAsState(initial = settingsRepository.peekAppLanguageTag())
                 val enableCurrentTimeIndicator by settingsRepository.getEnableCurrentTimeIndicator().collectAsState(initial = true)
                 val scope = rememberCoroutineScope()
                 val baseContext = LocalContext.current
-                var currentTab by remember { mutableStateOf(0) }
+                var currentTab by remember { mutableStateOf(TAB_TIMETABLE) }
                 var showJwxtImport by remember { mutableStateOf(false) }
-                var settingsSubPage by remember { mutableStateOf("main") }
+                var subPage by remember { mutableStateOf("main") }
+                fun selectTab(tab: Int) {
+                    if (currentTab == tab) subPage = "main" else { currentTab = tab; subPage = "main" }
+                }
 
                 // Only keyed on languageTag — other config changes (dark mode, font scale)
                 // don't affect string resolution from the context, so we avoid unnecessary
@@ -248,10 +275,10 @@ class MainActivity : ComponentActivity() {
                 }
 
                     PredictiveBackSurface(
-                        enabled = showJwxtImport || settingsSubPage != "main" || currentTab == 1,
+                        enabled = showJwxtImport || subPage != "main" || currentTab != TAB_TIMETABLE,
                         owner = when {
                             showJwxtImport -> PredictiveBackOwner.IMPORT_PAGE
-                            settingsSubPage != "main" || currentTab == 1 -> PredictiveBackOwner.SETTINGS_PAGE
+                            subPage != "main" || currentTab != TAB_TIMETABLE -> PredictiveBackOwner.SETTINGS_PAGE
                             else -> null
                         },
                         animation = predictiveBackAnimation,
@@ -259,8 +286,8 @@ class MainActivity : ComponentActivity() {
                         onBack = {
                             when {
                                 showJwxtImport -> showJwxtImport = false
-                                settingsSubPage != "main" -> settingsSubPage = "main"
-                                currentTab == 1 -> currentTab = 0
+                                subPage != "main" -> subPage = "main"
+                                else -> currentTab = TAB_TIMETABLE
                             }
                         },
                         modifier = Modifier.fillMaxSize()
@@ -269,23 +296,47 @@ class MainActivity : ComponentActivity() {
                             showImport = showJwxtImport,
                             modifier = Modifier.fillMaxSize(),
                             importContent = {
-                            JwxtImportScreen(
-                                isActive = showJwxtImport,
-                                onBack = { showJwxtImport = false },
-                                onTimetableHtmlObtained = { html ->
-                                    viewModel.processTimetableImport(html)
-                                }
-                            )
+                                JwxtImportScreen(
+                                    isActive = showJwxtImport,
+                                    onBack = { showJwxtImport = false },
+                                    onTimetableHtmlObtained = { html ->
+                                        viewModel.processTimetableImport(html)
+                                    }
+                                )
                             },
                             mainContent = {
-                            Box(modifier = Modifier.fillMaxSize()) {
+                                Scaffold(
+                                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                                    bottomBar = {
+                                        NavigationBar {
+                                            NavigationBarItem(
+                                                selected = currentTab == TAB_TIMETABLE,
+                                                onClick = { selectTab(TAB_TIMETABLE) },
+                                                icon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
+                                                label = { Text(stringResource(R.string.timetable)) }
+                                            )
+                                            NavigationBarItem(
+                                                selected = currentTab == TAB_SERVICES,
+                                                onClick = { selectTab(TAB_SERVICES) },
+                                                icon = { Icon(Icons.Default.Apps, contentDescription = null) },
+                                                label = { Text(stringResource(R.string.services)) }
+                                            )
+                                            NavigationBarItem(
+                                                selected = currentTab == TAB_SETTINGS,
+                                                onClick = { selectTab(TAB_SETTINGS) },
+                                                icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                                                label = { Text(stringResource(R.string.settings)) }
+                                            )
+                                        }
+                                    }
+                                ) { inner ->
                                     AppNavigationTransition(
                                         currentTab = currentTab,
-                                        settingsSubPage = settingsSubPage,
-                                        modifier = Modifier.fillMaxSize()
-                                    ) { tab, subPage ->
+                                        subPage = subPage,
+                                        modifier = Modifier.fillMaxSize().padding(inner)
+                                    ) { tab, page ->
                                         when {
-                                            tab == 0 -> {
+                                            tab == TAB_TIMETABLE -> {
                                                 TimetableScreen(
                                                     courseInfos = uiState.courseInfos,
                                                     courseSessions = uiState.sessions,
@@ -308,11 +359,32 @@ class MainActivity : ComponentActivity() {
                                                     onDeleteTimetable = viewModel::deleteTimetable,
                                                     onCurrentWeekChange = viewModel::setCurrentWeek,
                                                     onCreateTimetable = viewModel::createTimetable,
-                                                    onImportClick = { showJwxtImport = true },
-                                                    onSettingsClick = { currentTab = 1; settingsSubPage = "main" }
+                                                    onImportClick = { showJwxtImport = true }
                                                 )
                                             }
-                                            subPage == "theme" -> {
+                                            tab == TAB_SERVICES && page == "main" -> {
+                                                ServicesScreen(
+                                                    boundName = when (val state = morningRunState) {
+                                                        is MorningRunUiState.Ready -> state.token.name
+                                                        else -> null
+                                                    },
+                                                    count = when (val state = morningRunState) {
+                                                        is MorningRunUiState.Ready -> state.snapshot.count
+                                                        else -> null
+                                                    },
+                                                    onMorningRunClick = { subPage = "morning_run" }
+                                                )
+                                            }
+                                            tab == TAB_SERVICES && page == "morning_run" -> {
+                                                MorningRunScreen(
+                                                    uiState = morningRunState,
+                                                    onBack = { subPage = "main" },
+                                                    onRefresh = morningRunViewModel::refresh,
+                                                    onBind = morningRunViewModel::bind,
+                                                    onClear = morningRunViewModel::clearToken
+                                                )
+                                            }
+                                            page == "theme" -> {
                                                 ThemeSettingsScreen(
                                                     themeMode = appThemeMode,
                                                     dynamicColorEnabled = dynamicColorEnabled,
@@ -338,23 +410,21 @@ class MainActivity : ComponentActivity() {
                                                             settingsRepository.setPredictiveBackExitDirection(direction)
                                                         }
                                                     },
-                                                    onBack = { settingsSubPage = "main" }
+                                                    onBack = { subPage = "main" }
                                                 )
                                             }
-                                            subPage == "language" -> {
+                                            page == "language" -> {
                                                 LanguageSelectScreen(
                                                     currentLanguageTag = appLanguageTag,
-                                                    onBack = { settingsSubPage = "main" },  // {settingsSubPage = "main"}这个东西叫做无参lambda，表示被调用时要执行的语句
+                                                    onBack = { subPage = "main" },
                                                     onSelectLanguage = { languageTag ->
                                                         scope.launch {
                                                             settingsRepository.setAppLanguageTag(languageTag)
-                                                            // lambda 的写法是： { 参数列表 -> 函数体 }
-                                                            // -> 左边把参数接住，右边是lambda被调用时要执行的代码
                                                         }
                                                     }
                                                 )
                                             }
-                                            subPage == "timetable" -> {
+                                            page == "timetable" -> {
                                                 TimetableSettingsScreen(
                                                     currentTimetableName = uiState.currentTimetableName,
                                                     currentStartDate = uiState.currentStartDate,
@@ -362,7 +432,7 @@ class MainActivity : ComponentActivity() {
                                                     currentShowWeekends = uiState.showWeekends,
                                                     currentShowNonCurrentWeekCourses = uiState.showNonCurrentWeekCourses,
                                                     currentSessionTimes = uiState.currentSessionTimes,
-                                                    onBack = { settingsSubPage = "main" },
+                                                    onBack = { subPage = "main" },
                                                     onSave = { name, startDate, weeks, showWeekends, showNonCurrentWeekCourses, sessionTimes ->
                                                         uiState.currentTimetableId?.let { timetableId ->
                                                             viewModel.updateTimetableMetadata(
@@ -381,9 +451,9 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                 )
                                             }
-                                            subPage == "widget" -> {
+                                            page == "widget" -> {
                                                 WidgetSettingsScreen(
-                                                    onBack = { settingsSubPage = "main" }
+                                                    onBack = { subPage = "main" }
                                                 )
                                             }
                                             else -> {
@@ -392,14 +462,14 @@ class MainActivity : ComponentActivity() {
                                                     currentTimetableName = uiState.currentTimetableName,
                                                     currentLanguageTag = appLanguageTag,
                                                     currentThemeMode = appThemeMode,
-                                                    onBack = { currentTab = 0 },
+                                                    onBack = { currentTab = TAB_TIMETABLE },
                                                     reminderLeadMinutes = reminderLeadMinutes,
                                                     onReminderLeadMinutesChange = { minutes -> scope.launch { settingsRepository.setReminderLeadMinutes(minutes) } },
                                                     enableCurrentTimeIndicator = enableCurrentTimeIndicator,
-                                                    onThemeSettingsClick = { settingsSubPage = "theme" },
-                                                    onLanguageSelectClick = { settingsSubPage = "language" },
-                                                    onTimetableSettingsClick = { settingsSubPage = "timetable" },
-                                                    onWidgetSettingsClick = { settingsSubPage = "widget" },
+                                                    onThemeSettingsClick = { subPage = "theme" },
+                                                    onLanguageSelectClick = { subPage = "language" },
+                                                    onTimetableSettingsClick = { subPage = "timetable" },
+                                                    onWidgetSettingsClick = { subPage = "widget" },
                                                     onToggleCurrentTimeIndicator = { enabled ->
                                                         scope.launch {
                                                             settingsRepository.setEnableCurrentTimeIndicator(enabled)
@@ -409,8 +479,8 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
                                     }
+                                }
                             }
-                        }
                         )
                     }
                 }
