@@ -256,6 +256,14 @@
     <string name="morning_run_no_token_desc">粘贴南邮小程序登录 token 后即可查看晨跑次数。</string>
     <string name="morning_run_token_hint">粘贴 token（或包含 token 的文本）</string>
     <string name="morning_run_token_invalid">未找到有效 token</string>
+    <string name="morning_run_how_to_get">如何获取 token？</string>
+    <string name="morning_run_guide_title">如何获取 token</string>
+    <string name="morning_run_guide_step1">token 只能在南邮微信小程序运行时抓取，需要能解密 HTTPS 的抓包环境（任意 HTTPS 抓包工具均可，推荐 Reqable）。</string>
+    <string name="morning_run_guide_step2">打开企业微信工作台里的南邮小程序并完成登录。</string>
+    <string name="morning_run_guide_step3">在抓包工具里过滤 wechat.njupt.edu.cn 的请求。</string>
+    <string name="morning_run_guide_step4">找到 login/bind 或 login/refreshUserInfo 的响应。</string>
+    <string name="morning_run_guide_step5">复制响应里 data.token 的值（粘贴整段响应 JSON 也可以）。</string>
+    <string name="morning_run_guide_step6">token 有效期约 2 小时，过期后需重新抓取。</string>
     <string name="morning_run_paste">从剪贴板粘贴</string>
     <string name="morning_run_expires">有效期至 %1$s</string>
     <string name="morning_run_expired">token 已过期，请重新绑定。</string>

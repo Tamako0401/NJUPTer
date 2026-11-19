@@ -257,6 +257,14 @@
     <string name="morning_run_no_token_desc">Paste the login token from the NJUPT mini-program to view your morning-run count.</string>
     <string name="morning_run_token_hint">Paste the token (or any text containing it)</string>
     <string name="morning_run_token_invalid">No valid token found</string>
+    <string name="morning_run_how_to_get">How to get a token?</string>
+    <string name="morning_run_guide_title">How to get a token</string>
+    <string name="morning_run_guide_step1">The token can only be captured from the NJUPT WeChat mini-program, so you need an HTTPS-capture setup (any capture tool that decrypts HTTPS; Reqable is a good choice).</string>
+    <string name="morning_run_guide_step2">Open the NJUPT mini-program (from the WeCom workbench) and log in.</string>
+    <string name="morning_run_guide_step3">In the capture tool, filter requests to wechat.njupt.edu.cn.</string>
+    <string name="morning_run_guide_step4">Find the response of login/bind or login/refreshUserInfo.</string>
+    <string name="morning_run_guide_step5">Copy the value of data.token in that response (pasting the whole response JSON also works).</string>
+    <string name="morning_run_guide_step6">A token stays valid for about 2 hours; capture a fresh one after it expires.</string>
     <string name="morning_run_paste">Paste from clipboard</string>
     <string name="morning_run_expires">Valid until %1$s</string>
     <string name="morning_run_expired">Token expired. Link again to continue.</string>

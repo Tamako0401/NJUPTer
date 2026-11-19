@@ -1,11 +1,13 @@
 package com.example.njupter.ui.services
-
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -36,7 +38,12 @@ fun MorningRunTokenSheet(
 ) {
     var input by remember { mutableStateOf("") }
     var showInvalid by remember { mutableStateOf(false) }
+    var showGuide by remember { mutableStateOf(false) }
     val clipboard = LocalClipboardManager.current
+
+    if (showGuide) {
+        MorningRunTokenGuideDialog(onDismiss = { showGuide = false })
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -48,11 +55,20 @@ fun MorningRunTokenSheet(
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 32.dp)
         ) {
-            Text(
-                text = stringResource(R.string.morning_run_bind),
-                style = MaterialTheme.typography.titleMedium
-            )
-            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.morning_run_bind),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                TextButton(onClick = { showGuide = true }) {
+                    Text(stringResource(R.string.morning_run_how_to_get))
+                }
+            }
+            Spacer(Modifier.height(4.dp))
             OutlinedTextField(
                 value = input,
                 onValueChange = {
@@ -100,4 +116,41 @@ fun MorningRunTokenSheet(
             }
         }
     }
+}
+
+/**
+ * 《token 获取指南》全文弹窗：六步说明 token 只能从小程序运行时抓包取得。
+ */
+@Composable
+private fun MorningRunTokenGuideDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.morning_run_guide_title)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                val steps = listOf(
+                    stringResource(R.string.morning_run_guide_step1),
+                    stringResource(R.string.morning_run_guide_step2),
+                    stringResource(R.string.morning_run_guide_step3),
+                    stringResource(R.string.morning_run_guide_step4),
+                    stringResource(R.string.morning_run_guide_step5),
+                    stringResource(R.string.morning_run_guide_step6)
+                )
+                steps.forEachIndexed { index, step ->
+                    Text(
+                        text = "${index + 1}. $step",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.confirm))
+            }
+        }
+    )
 }
