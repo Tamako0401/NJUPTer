@@ -171,4 +171,7 @@ private class FakeSettingsRepository(lastSelectedId: String?) : SettingsReposito
     private val morningRunToken = MutableStateFlow<String?>(null)
     override fun getMorningRunToken() = morningRunToken
     override suspend fun setMorningRunToken(token: String?) { morningRunToken.value = token }
+    private val campusPassToken = MutableStateFlow<String?>(null)
+    override fun getCampusPassToken() = campusPassToken
+    override suspend fun setCampusPassToken(token: String?) { campusPassToken.value = token }
 }

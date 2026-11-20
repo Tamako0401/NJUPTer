@@ -34,6 +34,8 @@ interface SettingsRepository {
     suspend fun setReminderLeadMinutes(minutes: Int)
     fun getMorningRunToken(): Flow<String?>
     suspend fun setMorningRunToken(token: String?)
+    fun getCampusPassToken(): Flow<String?>
+    suspend fun setCampusPassToken(token: String?)
     fun peekLastSelectedTimetableId(): String? {
         return (getLastSelectedTimetableId() as? StateFlow)?.value
     }
@@ -68,6 +70,10 @@ interface SettingsRepository {
         return (getMorningRunToken() as? StateFlow)?.value
     }
 
+    fun peekCampusPassToken(): String? {
+        return (getCampusPassToken() as? StateFlow)?.value
+    }
+
     companion object {
         const val DEFAULT_REMINDER_LEAD_MINUTES = 10
         const val MIN_REMINDER_LEAD_MINUTES = 0
@@ -89,6 +95,7 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         private const val KEY_PREDICTIVE_BACK_EXIT_DIRECTION = "predictive_back_exit_direction"
         private const val KEY_REMINDER_LEAD_MINUTES = "reminder_lead_minutes"
         private const val KEY_MORNING_RUN_TOKEN = "morning_run_token"
+        private const val KEY_CAMPUS_PASS_TOKEN = "campus_pass_token"
     }
 
     private fun readLastWeekRecords(): Map<String, Int> {
@@ -128,6 +135,7 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         prefs.getInt(KEY_REMINDER_LEAD_MINUTES, SettingsRepository.DEFAULT_REMINDER_LEAD_MINUTES)
     )
     private val _morningRunToken = MutableStateFlow<String?>(prefs.getString(KEY_MORNING_RUN_TOKEN, null))
+    private val _campusPassToken = MutableStateFlow<String?>(prefs.getString(KEY_CAMPUS_PASS_TOKEN, null))
 
     override fun getShowWeekends(): Flow<Boolean> = _showWeekends.asStateFlow()
 
@@ -218,6 +226,16 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
             else putString(KEY_MORNING_RUN_TOKEN, token)
         }
         _morningRunToken.value = token
+    }
+
+    override fun getCampusPassToken(): Flow<String?> = _campusPassToken.asStateFlow()
+
+    override suspend fun setCampusPassToken(token: String?) {
+        prefs.edit {
+            if (token == null) remove(KEY_CAMPUS_PASS_TOKEN)
+            else putString(KEY_CAMPUS_PASS_TOKEN, token)
+        }
+        _campusPassToken.value = token
     }
 }
 
