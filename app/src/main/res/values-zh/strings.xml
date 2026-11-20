@@ -273,4 +273,35 @@
     <string name="morning_run_records">最近打卡</string>
     <string name="refresh">刷新</string>
     <string name="retry">重试</string>
+
+    <!-- 服务 / 校园通行 -->
+    <string name="campus_pass">校园通行</string>
+    <string name="campus_pass_summary">在校与在寝状态</string>
+    <string name="campus_pass_unbound">未绑定</string>
+    <string name="campus_pass_on_campus">在校</string>
+    <string name="campus_pass_off_campus">不在校</string>
+    <string name="campus_pass_in_dorm">在寝</string>
+    <string name="campus_pass_not_in_dorm">不在寝</string>
+    <string name="campus_pass_not_returned">未返校</string>
+    <string name="campus_pass_unknown">未知</string>
+    <string name="campus_pass_bind">绑定校园通行 token</string>
+    <string name="campus_pass_rebind">重新绑定</string>
+    <string name="campus_pass_unbind">解绑</string>
+    <string name="campus_pass_no_token_title">尚未绑定</string>
+    <string name="campus_pass_no_token_desc">粘贴校园通行 token 后即可查看在校与在寝状态。</string>
+    <string name="campus_pass_token_hint">粘贴 token（或包含 token 的文本）</string>
+    <string name="campus_pass_token_invalid">未找到有效 token</string>
+    <string name="campus_pass_paste">从剪贴板粘贴</string>
+    <string name="campus_pass_expires">有效期至 %1$s</string>
+    <string name="campus_pass_expired">token 已过期，请重新绑定。</string>
+    <string name="campus_pass_last_access">最后出行记录</string>
+    <string name="campus_pass_dorm_location">宿舍</string>
+    <string name="campus_pass_how_to_get">如何获取 token？</string>
+    <string name="campus_pass_guide_title">如何获取 token</string>
+    <string name="campus_pass_guide_step1">token 只能从企业微信打开的校园通行页面抓取，需要能解密 HTTPS 的抓包环境（任意 HTTPS 抓包工具均可，推荐 Reqable）。</string>
+    <string name="campus_pass_guide_step2">在企业微信工作台打开「校园通行」，页面会自动完成登录。</string>
+    <string name="campus_pass_guide_step3">在抓包工具里过滤 0trust-y.njupt.edu.cn 的请求。</string>
+    <string name="campus_pass_guide_step4">找到 /accessRecord/department/vxLogin 的响应。</string>
+    <string name="campus_pass_guide_step5">复制响应里 data.token 的值（粘贴整段响应 JSON 也可以）。</string>
+    <string name="campus_pass_guide_step6">token 有效期约 3 小时，过期后需重新抓取。</string>
 </resources>

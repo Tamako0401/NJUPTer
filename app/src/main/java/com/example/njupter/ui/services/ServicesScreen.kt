@@ -12,6 +12,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -32,7 +33,9 @@ import com.example.njupter.ui.settings.model.SettingsSection
 fun ServicesScreen(
     boundName: String?,
     count: Int?,
+    campusPassSummary: String?,
     onMorningRunClick: () -> Unit,
+    onCampusPassClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val morningRunSummary = when {
@@ -48,6 +51,14 @@ fun ServicesScreen(
             value = morningRunSummary,
             emphasized = true,
             onClick = onMorningRunClick
+        ),
+        SettingsItem.Navigation(
+            icon = SettingsIcon.Vector(Icons.Default.LocationOn),
+            title = stringResource(R.string.campus_pass),
+            description = stringResource(R.string.campus_pass_summary),
+            value = campusPassSummary ?: stringResource(R.string.campus_pass_unbound),
+            emphasized = true,
+            onClick = onCampusPassClick
         )
     )
 

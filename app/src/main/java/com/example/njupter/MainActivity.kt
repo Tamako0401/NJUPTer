@@ -50,11 +50,15 @@ import com.example.njupter.data.FileTimetableRepository
 import com.example.njupter.data.LocalFileDataSource
 import com.example.njupter.ui.services.ServicesScreen
 import com.example.njupter.ui.services.MorningRunScreen
+import com.example.njupter.ui.services.CampusPassScreen
 import com.example.njupter.ui.timetable.TimetableScreen
 import com.example.njupter.viewmodels.TimetableViewModel
 import com.example.njupter.viewmodels.MorningRunViewModel
 import com.example.njupter.viewmodels.MorningRunUiState
 import com.example.njupter.data.morningrun.MorningRunRepository
+import com.example.njupter.viewmodels.CampusPassViewModel
+import com.example.njupter.viewmodels.CampusPassUiState
+import com.example.njupter.data.campuspass.CampusPassRepository
 import com.example.njupter.data.SharedPreferencesSettingsRepository
 import com.example.njupter.ui.settings.LanguageSelectScreen
 import com.example.njupter.ui.settings.SettingsScreen
@@ -149,6 +153,9 @@ class MainActivity : ComponentActivity() {
         val morningRunViewModel by viewModels<MorningRunViewModel> {
             MorningRunViewModel.provideFactory(MorningRunRepository(), settingsRepository)
         }
+        val campusPassViewModel by viewModels<CampusPassViewModel> {
+            CampusPassViewModel.provideFactory(CampusPassRepository(), settingsRepository)
+        }
 
         lifecycleScope.launch {
             viewModel.uiState.collectLatest { uiState ->
@@ -177,6 +184,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 val uiState by viewModel.uiState.collectAsState()   // 观察状态，将StateFlow转换成Compose的State
                 val morningRunState by morningRunViewModel.uiState.collectAsState()
+                val campusPassState by campusPassViewModel.uiState.collectAsState()
                 val importState by viewModel.importState.collectAsState()   // 同上
                 val appLanguageTag by settingsRepository.getAppLanguageTag().collectAsState(initial = settingsRepository.peekAppLanguageTag())
                 val enableCurrentTimeIndicator by settingsRepository.getEnableCurrentTimeIndicator().collectAsState(initial = true)
@@ -372,7 +380,15 @@ class MainActivity : ComponentActivity() {
                                                         is MorningRunUiState.Ready -> state.snapshot.count
                                                         else -> null
                                                     },
-                                                    onMorningRunClick = { subPage = "morning_run" }
+                                                    campusPassSummary = when (val state = campusPassState) {
+                                                        is CampusPassUiState.Ready -> stringResource(
+                                                            if (state.snapshot.onCampus == true) R.string.campus_pass_on_campus
+                                                            else R.string.campus_pass_off_campus
+                                                        )
+                                                        else -> null
+                                                    },
+                                                    onMorningRunClick = { subPage = "morning_run" },
+                                                    onCampusPassClick = { subPage = "campus_pass" }
                                                 )
                                             }
                                             tab == TAB_SERVICES && page == "morning_run" -> {
@@ -382,6 +398,15 @@ class MainActivity : ComponentActivity() {
                                                     onRefresh = morningRunViewModel::refresh,
                                                     onBind = morningRunViewModel::bind,
                                                     onClear = morningRunViewModel::clearToken
+                                                )
+                                            }
+                                            tab == TAB_SERVICES && page == "campus_pass" -> {
+                                                CampusPassScreen(
+                                                    uiState = campusPassState,
+                                                    onBack = { subPage = "main" },
+                                                    onRefresh = campusPassViewModel::refresh,
+                                                    onBind = campusPassViewModel::bind,
+                                                    onClear = campusPassViewModel::clearToken
                                                 )
                                             }
                                             page == "theme" -> {

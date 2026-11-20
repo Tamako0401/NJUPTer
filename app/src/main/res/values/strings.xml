@@ -274,4 +274,35 @@
     <string name="morning_run_records">Recent check-ins</string>
     <string name="refresh">Refresh</string>
     <string name="retry">Retry</string>
+
+    <!-- Services / Campus Pass -->
+    <string name="campus_pass">Campus Pass</string>
+    <string name="campus_pass_summary">On-campus &amp; dorm status</string>
+    <string name="campus_pass_unbound">Not linked</string>
+    <string name="campus_pass_on_campus">On campus</string>
+    <string name="campus_pass_off_campus">Off campus</string>
+    <string name="campus_pass_in_dorm">In dorm</string>
+    <string name="campus_pass_not_in_dorm">Out of dorm</string>
+    <string name="campus_pass_not_returned">Not returned</string>
+    <string name="campus_pass_unknown">Unknown</string>
+    <string name="campus_pass_bind">Link campus-pass token</string>
+    <string name="campus_pass_rebind">Link again</string>
+    <string name="campus_pass_unbind">Unlink</string>
+    <string name="campus_pass_no_token_title">Not linked yet</string>
+    <string name="campus_pass_no_token_desc">Paste your campus-pass token to view on-campus and dorm status.</string>
+    <string name="campus_pass_token_hint">Paste the token (or any text containing it)</string>
+    <string name="campus_pass_token_invalid">No valid token found</string>
+    <string name="campus_pass_paste">Paste from clipboard</string>
+    <string name="campus_pass_expires">Valid until %1$s</string>
+    <string name="campus_pass_expired">Token expired. Link again to continue.</string>
+    <string name="campus_pass_last_access">Last access</string>
+    <string name="campus_pass_dorm_location">Dorm</string>
+    <string name="campus_pass_how_to_get">How to get a token?</string>
+    <string name="campus_pass_guide_title">How to get a token</string>
+    <string name="campus_pass_guide_step1">The token can only be captured from the campus-pass page opened in WeCom, so you need an HTTPS-capture setup (any capture tool that decrypts HTTPS; Reqable is a good choice).</string>
+    <string name="campus_pass_guide_step2">Open Campus Pass from the WeCom workbench; the page signs in automatically.</string>
+    <string name="campus_pass_guide_step3">Filter requests to 0trust-y.njupt.edu.cn in the capture tool.</string>
+    <string name="campus_pass_guide_step4">Find the response of /accessRecord/department/vxLogin.</string>
+    <string name="campus_pass_guide_step5">Copy the value of data.token in that response (pasting the whole response JSON also works).</string>
+    <string name="campus_pass_guide_step6">A token stays valid for about 3 hours; capture a fresh one after it expires.</string>
 </resources>
