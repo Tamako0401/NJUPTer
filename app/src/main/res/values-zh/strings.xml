@@ -187,6 +187,8 @@
     <string name="theme_mode_dark">深色</string>
     <string name="dynamic_color">动态取色</string>
     <string name="dynamic_color_summary">使用壁纸颜色生成应用配色</string>
+    <string name="floating_nav_bar">悬浮底栏</string>
+    <string name="floating_nav_bar_summary">底栏悬浮于内容之上，减少对课程表的遮挡</string>
     <string name="dynamic_color_unavailable">动态取色需要 Android 12 或更高版本</string>
     <string name="predictive_back_animation">预测性返回动画</string>
     <string name="predictive_back_animation_summary">返回手势过程中预览目标页面</string>

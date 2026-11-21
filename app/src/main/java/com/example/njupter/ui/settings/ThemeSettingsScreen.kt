@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Animation
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -62,10 +63,12 @@ private enum class ThemeChoiceDialog {
 fun ThemeSettingsScreen(
     themeMode: AppThemeMode,
     dynamicColorEnabled: Boolean,
+    floatingNavBarEnabled: Boolean,
     predictiveBackAnimation: PredictiveBackAnimation,
     predictiveBackExitDirection: PredictiveBackExitDirection,
     onThemeModeChange: (AppThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    onFloatingNavBarChange: (Boolean) -> Unit,
     onPredictiveBackAnimationChange: (PredictiveBackAnimation) -> Unit,
     onPredictiveBackExitDirectionChange: (PredictiveBackExitDirection) -> Unit,
     onBack: () -> Unit
@@ -94,6 +97,13 @@ fun ThemeSettingsScreen(
                     onDynamicColorChange(!dynamicColorEnabled)
                 }
             }
+        ),
+        SettingsItem.Toggle(
+            icon = SettingsIcon.Vector(Icons.Default.Navigation),
+            title = stringResource(R.string.floating_nav_bar),
+            description = stringResource(R.string.floating_nav_bar_summary),
+            checked = floatingNavBarEnabled,
+            onToggle = { onFloatingNavBarChange(!floatingNavBarEnabled) }
         )
     )
 

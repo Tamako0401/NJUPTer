@@ -27,9 +27,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +47,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 
 import com.example.njupter.data.FileTimetableRepository
@@ -51,6 +55,8 @@ import com.example.njupter.data.LocalFileDataSource
 import com.example.njupter.ui.services.ServicesScreen
 import com.example.njupter.ui.services.MorningRunScreen
 import com.example.njupter.ui.services.CampusPassScreen
+import com.example.njupter.ui.component.FloatingNavigationBar
+import com.example.njupter.ui.component.floatingNavBarBottomOccupancy
 import com.example.njupter.ui.timetable.TimetableScreen
 import com.example.njupter.viewmodels.TimetableViewModel
 import com.example.njupter.viewmodels.MorningRunViewModel
@@ -172,6 +178,9 @@ class MainActivity : ComponentActivity() {
             )
             val dynamicColorEnabled by settingsRepository.getDynamicColorEnabled().collectAsState(
                 initial = settingsRepository.peekDynamicColorEnabled()
+            )
+            val floatingNavBarEnabled by settingsRepository.getFloatingNavBarEnabled().collectAsState(
+                initial = settingsRepository.peekFloatingNavBarEnabled()
             )
             val predictiveBackAnimation by settingsRepository.getPredictiveBackAnimation()
                 .collectAsState(initial = settingsRepository.peekPredictiveBackAnimation())
@@ -316,32 +325,47 @@ class MainActivity : ComponentActivity() {
                                 Scaffold(
                                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
                                     bottomBar = {
-                                        NavigationBar {
-                                            NavigationBarItem(
-                                                selected = currentTab == TAB_TIMETABLE,
-                                                onClick = { selectTab(TAB_TIMETABLE) },
-                                                icon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
-                                                label = { Text(stringResource(R.string.timetable)) }
+                                        if (floatingNavBarEnabled) {
+                                            FloatingNavigationBar(
+                                                currentTab = currentTab,
+                                                onSelect = ::selectTab
                                             )
-                                            NavigationBarItem(
-                                                selected = currentTab == TAB_SERVICES,
-                                                onClick = { selectTab(TAB_SERVICES) },
-                                                icon = { Icon(Icons.Default.Apps, contentDescription = null) },
-                                                label = { Text(stringResource(R.string.services)) }
-                                            )
-                                            NavigationBarItem(
-                                                selected = currentTab == TAB_SETTINGS,
-                                                onClick = { selectTab(TAB_SETTINGS) },
-                                                icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                                                label = { Text(stringResource(R.string.settings)) }
-                                            )
+                                        } else {
+                                            NavigationBar {
+                                                NavigationBarItem(
+                                                    selected = currentTab == TAB_TIMETABLE,
+                                                    onClick = { selectTab(TAB_TIMETABLE) },
+                                                    icon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
+                                                    label = { Text(stringResource(R.string.timetable)) }
+                                                )
+                                                NavigationBarItem(
+                                                    selected = currentTab == TAB_SERVICES,
+                                                    onClick = { selectTab(TAB_SERVICES) },
+                                                    icon = { Icon(Icons.Default.Apps, contentDescription = null) },
+                                                    label = { Text(stringResource(R.string.services)) }
+                                                )
+                                                NavigationBarItem(
+                                                    selected = currentTab == TAB_SETTINGS,
+                                                    onClick = { selectTab(TAB_SETTINGS) },
+                                                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                                                    label = { Text(stringResource(R.string.settings)) }
+                                                )
+                                            }
                                         }
                                     }
                                 ) { inner ->
+                                    // 悬浮模式：内容只让出胶囊实际占位（公式见 FloatingNavigationBar.kt），
+                                    // 比经典整栏矮，第 12 节完整可见；胶囊仍浮于内容之上。
+                                    val innerPadding = if (floatingNavBarEnabled) {
+                                        val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                                        PaddingValues(bottom = floatingNavBarBottomOccupancy(navInset))
+                                    } else {
+                                        inner
+                                    }
                                     AppNavigationTransition(
                                         currentTab = currentTab,
                                         subPage = subPage,
-                                        modifier = Modifier.fillMaxSize().padding(inner)
+                                        modifier = Modifier.fillMaxSize().padding(innerPadding)
                                     ) { tab, page ->
                                         when {
                                             tab == TAB_TIMETABLE -> {
@@ -413,6 +437,7 @@ class MainActivity : ComponentActivity() {
                                                 ThemeSettingsScreen(
                                                     themeMode = appThemeMode,
                                                     dynamicColorEnabled = dynamicColorEnabled,
+                                                    floatingNavBarEnabled = floatingNavBarEnabled,
                                                     predictiveBackAnimation = predictiveBackAnimation,
                                                     predictiveBackExitDirection = predictiveBackExitDirection,
                                                     onThemeModeChange = { mode ->
@@ -423,6 +448,11 @@ class MainActivity : ComponentActivity() {
                                                     onDynamicColorChange = { enabled ->
                                                         scope.launch {
                                                             settingsRepository.setDynamicColorEnabled(enabled)
+                                                        }
+                                                    },
+                                                    onFloatingNavBarChange = { enabled ->
+                                                        scope.launch {
+                                                            settingsRepository.setFloatingNavBarEnabled(enabled)
                                                         }
                                                     },
                                                     onPredictiveBackAnimationChange = { animation ->

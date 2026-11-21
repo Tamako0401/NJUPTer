@@ -188,6 +188,8 @@
     <string name="theme_mode_dark">Dark</string>
     <string name="dynamic_color">Dynamic color</string>
     <string name="dynamic_color_summary">Use colors from your wallpaper</string>
+    <string name="floating_nav_bar">Floating bottom bar</string>
+    <string name="floating_nav_bar_summary">Float the bottom bar over content so it covers less of the timetable</string>
     <string name="dynamic_color_unavailable">Dynamic color requires Android 12 or newer</string>
     <string name="predictive_back_animation">Predictive back animation</string>
     <string name="predictive_back_animation_summary">Preview the destination while swiping back</string>

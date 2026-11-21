@@ -26,6 +26,8 @@ interface SettingsRepository {
     suspend fun setAppThemeMode(mode: AppThemeMode)
     fun getDynamicColorEnabled(): Flow<Boolean>
     suspend fun setDynamicColorEnabled(enabled: Boolean)
+    fun getFloatingNavBarEnabled(): Flow<Boolean>
+    suspend fun setFloatingNavBarEnabled(enabled: Boolean)
     fun getPredictiveBackAnimation(): Flow<PredictiveBackAnimation>
     suspend fun setPredictiveBackAnimation(animation: PredictiveBackAnimation)
     fun getPredictiveBackExitDirection(): Flow<PredictiveBackExitDirection>
@@ -50,6 +52,10 @@ interface SettingsRepository {
 
     fun peekDynamicColorEnabled(): Boolean {
         return (getDynamicColorEnabled() as? StateFlow)?.value ?: true
+    }
+
+    fun peekFloatingNavBarEnabled(): Boolean {
+        return (getFloatingNavBarEnabled() as? StateFlow)?.value ?: true
     }
 
     fun peekPredictiveBackAnimation(): PredictiveBackAnimation {
@@ -91,6 +97,7 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         private const val KEY_CURRENT_TIME_INDICATOR = "enable_current_time_indicator"
         private const val KEY_APP_THEME_MODE = "app_theme_mode"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"
+        private const val KEY_FLOATING_NAV_BAR = "floating_nav_bar"
         private const val KEY_PREDICTIVE_BACK_ANIMATION = "predictive_back_animation"
         private const val KEY_PREDICTIVE_BACK_EXIT_DIRECTION = "predictive_back_exit_direction"
         private const val KEY_REMINDER_LEAD_MINUTES = "reminder_lead_minutes"
@@ -122,6 +129,7 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         prefs.enumValue(KEY_APP_THEME_MODE, AppThemeMode.SYSTEM)
     )
     private val _dynamicColorEnabled = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, true))
+    private val _floatingNavBarEnabled = MutableStateFlow(prefs.getBoolean(KEY_FLOATING_NAV_BAR, true))
     private val _predictiveBackAnimation = MutableStateFlow(
         prefs.enumValue(KEY_PREDICTIVE_BACK_ANIMATION, PredictiveBackAnimation.SCALE)
     )
@@ -191,6 +199,12 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         _dynamicColorEnabled.value = enabled
     }
 
+    override fun getFloatingNavBarEnabled(): Flow<Boolean> = _floatingNavBarEnabled.asStateFlow()
+
+    override suspend fun setFloatingNavBarEnabled(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_FLOATING_NAV_BAR, enabled) }
+        _floatingNavBarEnabled.value = enabled
+    }
     override fun getPredictiveBackAnimation(): Flow<PredictiveBackAnimation> =
         _predictiveBackAnimation.asStateFlow()
 

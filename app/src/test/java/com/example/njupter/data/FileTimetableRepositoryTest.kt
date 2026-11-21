@@ -136,6 +136,9 @@ private class FakeSettingsRepository(lastSelectedId: String?) : SettingsReposito
     private val currentTimeIndicator = MutableStateFlow(true)
     private val themeMode = MutableStateFlow(AppThemeMode.SYSTEM)
     private val dynamicColor = MutableStateFlow(true)
+    private val floatingNavBar = MutableStateFlow(true)
+    override fun getFloatingNavBarEnabled() = floatingNavBar
+    override suspend fun setFloatingNavBarEnabled(enabled: Boolean) { floatingNavBar.value = enabled }
     private val predictiveBackAnimation = MutableStateFlow(PredictiveBackAnimation.SCALE)
     private val predictiveBackExitDirection =
         MutableStateFlow(PredictiveBackExitDirection.FOLLOW_GESTURE)
