@@ -118,8 +118,12 @@ fun TimetableScreen(
     val courseMap = remember(courseInfos) { courseInfos.associateBy { it.id } }
 
     val gridBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-    val gridHeaderBg = MaterialTheme.colorScheme.surface
-    val gridContentBg = MaterialTheme.colorScheme.background
+    // 自定义背景启用时网格区域保持透明，让主题层背景透出；否则维持原纯色底。
+    val hasCustomBackground = LocalHasCustomBackground.current
+    val gridHeaderBg = if (hasCustomBackground) Color.Transparent
+    else MaterialTheme.colorScheme.surface
+    val gridContentBg = if (hasCustomBackground) Color.Transparent
+    else MaterialTheme.colorScheme.background
 
     var showDialog by remember { mutableStateOf(false) }
     var editingSession by remember { mutableStateOf<CourseSession?>(null) }
@@ -357,7 +361,8 @@ fun TimetableScreen(
         topBar = {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surface,
+                color = if (hasCustomBackground) Color.Transparent
+                else MaterialTheme.colorScheme.surface,
                 tonalElevation = 0.dp,
                 shadowElevation = 0.dp
             ) {
