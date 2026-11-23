@@ -17,7 +17,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,6 +76,7 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.ui.theme.AppThemeMode
+import com.example.njupter.ui.theme.LocalHasCustomBackground
 import com.example.njupter.widget.WidgetModels
 import com.example.njupter.widget.remainingCourseMinutes
 import androidx.compose.ui.res.painterResource
@@ -93,7 +93,6 @@ import com.example.njupter.widget.WidgetPinResultReceiver
 import com.example.njupter.widget.WidgetDataManager
 import com.example.njupter.widget.WidgetDisplayState
 import com.example.njupter.widget.WidgetSettingsManager
-import com.example.njupter.widget.ui.WidgetDarkColors
 import com.example.njupter.widget.ui.WidgetLightColors
 import com.example.njupter.widget.ui.getColorForIndex
 import java.io.File
@@ -244,6 +243,8 @@ fun WidgetSettingsScreen(
     }
 
     Scaffold(
+        containerColor = if (LocalHasCustomBackground.current) Color.Transparent
+        else MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.widget_settings)) },
@@ -317,6 +318,8 @@ fun WidgetSettingsScreen(
                     Text(stringResource(R.string.widget_pin_to_home))
                 }
             }
+
+            WidgetRefreshSettings()
 
             // Preview section
             Text(
@@ -639,7 +642,7 @@ private fun WidgetPreview(
         widgetState.isDayComplete -> stringResource(R.string.widget_courses_completed)
         else -> stringResource(R.string.widget_no_courses_today)
     }
-    val courseColors = if (isSystemInDarkTheme()) WidgetDarkColors else WidgetLightColors
+    val courseColors = WidgetLightColors
 
     val solidBg = solidColorArgb?.let {
         Color(
@@ -1040,7 +1043,8 @@ fun WidgetContentDarkPreview() {
 @Preview(showBackground = true, widthDp = 320, heightDp = 180)
 @Composable
 fun WidgetContentEndedPreview() {
-    NJUPTerTheme { WidgetPreview(sampleWidgetState(0), false, null, 0.5f, null, 1f, Modifier.fillMaxSize()) }
+    val state = sampleWidgetState().copy(entries = emptyList(), isDayComplete = true)
+    NJUPTerTheme { WidgetPreview(state, false, null, 0.5f, null, 1f, Modifier.fillMaxSize()) }
 }
 
 @Preview(showBackground = true, widthDp = 320, heightDp = 120)

@@ -46,9 +46,10 @@ import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
 import com.example.njupter.data.TimetableMetadata
 import com.example.njupter.data.defaultSessionTimes
+import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.ui.theme.getCourseColors
 import com.example.njupter.ui.theme.isAppInDarkTheme
-import com.example.njupter.ui.theme.NJUPTerTheme
+import com.example.njupter.ui.theme.LocalHasCustomBackground
 import com.example.njupter.domain.getDateForWeekDay
 import com.example.njupter.domain.getTodayDayOfWeek
 import com.example.njupter.domain.getTodayWeekIndex
@@ -324,6 +325,8 @@ fun TimetableScreen(
     // Show empty state if no timetables exist
     if (timetables.isEmpty()) {
         Scaffold(
+            containerColor = if (LocalHasCustomBackground.current) Color.Transparent
+            else MaterialTheme.colorScheme.surface,
             topBar = {
                 TopAppBar(
                     title = { Text(stringResource(R.string.timetable)) }
@@ -349,6 +352,8 @@ fun TimetableScreen(
     }
 
     Scaffold(
+        containerColor = if (LocalHasCustomBackground.current) Color.Transparent
+        else MaterialTheme.colorScheme.surface,
         topBar = {
             Surface(
                 modifier = Modifier.fillMaxWidth(),

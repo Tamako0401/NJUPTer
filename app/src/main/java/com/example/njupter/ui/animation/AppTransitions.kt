@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.njupter.ui.animation.predictiveback.NavigationMotionProfile
+import com.example.njupter.ui.theme.LocalHasCustomBackground
 import com.example.njupter.ui.animation.predictiveback.PredictiveBackAnimation
 import com.example.njupter.ui.animation.predictiveback.PredictiveBackAnimationHandler
 import com.example.njupter.ui.animation.predictiveback.PredictiveBackExitDirection
@@ -286,7 +287,8 @@ private fun <T> RetainedLayerHost(
     )
     val predictiveMotion = LocalPredictiveBackMotion.current
     val navigationMotion = predictiveMotion?.handler?.navigationMotion ?: NavigationMotionProfile()
-    val layerColor = MaterialTheme.colorScheme.background
+    val layerColor = if (LocalHasCustomBackground.current) Color.Transparent
+    else MaterialTheme.colorScheme.background
 
     Box(modifier = modifier.background(layerColor)) {
         retainedStates.forEach { layerState ->
@@ -411,7 +413,11 @@ private fun <T> RetainedLayerHost(
                         )
                         // Every retained route is an opaque scene. This also fixes legacy pages
                         // whose own root was a transparent Column rather than a Scaffold.
-                        .background(layerColor)
+                        // (自定义背景开启时保持透明，让主题层背景透出。)
+                        .background(
+                            if (LocalHasCustomBackground.current) Color.Transparent
+                            else layerColor
+                        )
                 ) {
                     content(layerState)
                 }

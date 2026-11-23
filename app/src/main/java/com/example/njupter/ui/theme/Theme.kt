@@ -1,8 +1,13 @@
 package com.example.njupter.ui.theme
 
 import android.app.Activity
+import android.graphics.BitmapFactory
 import android.os.Build
+import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -12,17 +17,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import androidx.compose.ui.graphics.Color
 
 @Composable
 fun NJUPTerTheme(
     themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
+    customBackgroundUri: String? = null,
+    backgroundDim: Float = 0.3f,
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (themeMode) {
@@ -53,10 +65,75 @@ fun NJUPTerTheme(
         }
     }
 
-    CompositionLocalProvider(LocalAppDarkTheme provides darkTheme) {
+    val hasBackground = remember(customBackgroundUri) {
+        if (customBackgroundUri == null) false
+        else runCatching {
+            val path = android.net.Uri.parse(customBackgroundUri).path
+                ?: customBackgroundUri.removePrefix("file:")
+            java.io.File(path).exists()
+        }.getOrDefault(false)
+    }
+    CompositionLocalProvider(
+        LocalAppDarkTheme provides darkTheme,
+        LocalHasCustomBackground provides hasBackground
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            content = content
+            content = {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    CustomBackgroundLayer(
+                        backgroundUri = customBackgroundUri,
+                        dim = backgroundDim
+                    )
+                    content()
+                }
+            }
+        )
+    }
+}
+
+/**
+ * 自定义背景层（ReSukiSU Theme.kt 的简化移植）：
+ * 图片铺满 + surfaceContainer 半透明遮罩压暗，保证前景可读。
+ * dim = 0 全亮，dim = 1 全遮。
+ */
+@Composable
+private fun CustomBackgroundLayer(
+    backgroundUri: String?,
+    dim: Float
+) {
+    if (backgroundUri == null) return
+    val imageBitmap = remember(backgroundUri) {
+        runCatching {
+            // 存储侧保存的是 file: URI 指向应用私有目录，直接按路径解码，
+            // 不走 ContentResolver（file:// scheme 在 contentResolver 下不可读）。
+            val path = android.net.Uri.parse(backgroundUri).path
+                ?: backgroundUri.removePrefix("file:")
+            val file = java.io.File(path)
+            val decoded = if (file.exists()) {
+                file.inputStream().use { input ->
+                    BitmapFactory.decodeStream(input)?.asImageBitmap()
+                }
+            } else {
+                null
+            }
+            decoded
+        }.getOrNull()
+    } ?: return
+
+    Image(
+        bitmap = imageBitmap,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier.fillMaxSize()
+    )
+    if (dim > 0f) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    MaterialTheme.colorScheme.surfaceContainer.copy(alpha = dim.coerceIn(0f, 1f))
+                )
         )
     }
 }

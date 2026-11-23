@@ -21,6 +21,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.njupter.R
 import com.example.njupter.data.import.JwxtEndpoints
 import com.example.njupter.ui.theme.NJUPTerTheme
+import com.example.njupter.ui.theme.LocalHasCustomBackground
+import androidx.compose.ui.graphics.Color
 import java.net.URI
 import org.json.JSONTokener
 
@@ -40,6 +42,8 @@ fun JwxtImportScreen(
     var hasRequestedTimetable by remember { mutableStateOf(false) }
 
     Scaffold(
+        containerColor = if (LocalHasCustomBackground.current) Color.Transparent
+        else MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = { Text(title) },

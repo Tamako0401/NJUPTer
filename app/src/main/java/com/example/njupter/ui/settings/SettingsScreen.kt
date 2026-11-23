@@ -38,6 +38,8 @@ import com.example.njupter.ui.settings.model.SettingsSection
 import android.widget.Toast
 import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.ui.theme.AppThemeMode
+import com.example.njupter.ui.theme.LocalHasCustomBackground
+import androidx.compose.ui.graphics.Color
 import com.example.njupter.ui.settings.model.SettingsIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,11 +47,9 @@ import com.example.njupter.ui.settings.model.SettingsIcon
 fun SettingsScreen(
     currentTimetableId: String?,
     currentTimetableName: String,
-    currentLanguageTag: String,
     currentThemeMode: AppThemeMode,
     enableCurrentTimeIndicator: Boolean,
     onThemeSettingsClick: () -> Unit,
-    onLanguageSelectClick: () -> Unit,
     onTimetableSettingsClick: () -> Unit,
     onWidgetSettingsClick: () -> Unit,
     onBack: () -> Unit = {},
@@ -93,12 +93,6 @@ fun SettingsScreen(
         }
     }
 
-    val currentLanguageLabel = if (currentLanguageTag.startsWith("zh")) {
-        stringResource(R.string.language_zh)
-    } else {
-        stringResource(R.string.language_en)
-    }
-
     val timetableSectionItems = if (currentTimetableId == null) {
         emptyList()
     } else {
@@ -136,13 +130,6 @@ fun SettingsScreen(
             title = stringResource(R.string.widget_settings),
             description = stringResource(R.string.widget_settings_summary),
             onClick = onWidgetSettingsClick
-        ),
-        SettingsItem.Navigation(
-            icon = SettingsIcon.Vector(Icons.Default.Language),
-            title = stringResource(R.string.language),
-            description = stringResource(R.string.language_settings_summary),
-            value = currentLanguageLabel,
-            onClick = onLanguageSelectClick
         ),
         SettingsItem.Toggle(
             icon = SettingsIcon.Vector(Icons.Default.AccessTime),
@@ -189,6 +176,8 @@ fun SettingsScreen(
     )
 
     Scaffold(
+        containerColor = if (LocalHasCustomBackground.current) Color.Transparent
+        else MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings)) },
@@ -297,11 +286,9 @@ fun SettingsScreenPreview() {
         SettingsScreen(
             currentTimetableId = "1",
             currentTimetableName = "2026 春季学期",
-            currentLanguageTag = "zh",
             currentThemeMode = AppThemeMode.SYSTEM,
             enableCurrentTimeIndicator = true,
             onThemeSettingsClick = {},
-            onLanguageSelectClick = {},
             onTimetableSettingsClick = {},
             onWidgetSettingsClick = {},
             onToggleCurrentTimeIndicator = {}

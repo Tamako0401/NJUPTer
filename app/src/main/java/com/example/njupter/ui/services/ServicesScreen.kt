@@ -24,6 +24,9 @@ import com.example.njupter.ui.settings.component.SettingsSectionCard
 import com.example.njupter.ui.settings.model.SettingsIcon
 import com.example.njupter.ui.settings.model.SettingsItem
 import com.example.njupter.ui.settings.model.SettingsSection
+import com.example.njupter.ui.theme.LocalHasCustomBackground
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
 
 /**
  * 服务页：查询类功能的入口卡片列表。后续查询功能在 [queryItems] 追加条目即可。
@@ -64,6 +67,8 @@ fun ServicesScreen(
 
     Scaffold(
         modifier = modifier,
+        containerColor = if (LocalHasCustomBackground.current) Color.Transparent
+        else MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.services)) },
