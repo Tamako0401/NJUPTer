@@ -10,12 +10,12 @@ import kotlin.io.encoding.Base64
 class MiniProgramTokenParserTest {
 
     companion object {
-        // Mirrors the captured mini-program token: payload {"userInfo":"<JSON string>","exp":<seconds>}.
+        // A synthetic mini-program token: payload {"userInfo":"<JSON string>","exp":<seconds>}.
         // userInfo carries {name, studentId, department, openId, role[]}.
-        private const val STUDENT_ID = "B25091308"
-        private const val NAME = "卜羿涵"
-        private const val DEPARTMENT = "计算机学院"
-        private const val EXP = 1795018971L
+        private const val STUDENT_ID = "test-morning-student"
+        private const val NAME = "示例学生"
+        private const val DEPARTMENT = "测试学院"
+        private const val EXP = 1_700_000_000L
 
         private fun b64(bytes: ByteArray): String =
             Base64.UrlSafe.encode(bytes).trimEnd('=')
@@ -69,7 +69,9 @@ class MiniProgramTokenParserTest {
     fun `rejects malformed segments`() {
         assertNull(MiniProgramTokenParser.parse("eyJ.eyJ."))
         // Three well-formed segments whose middle does not decode to JSON.
-        val bad = "eyJh.eyJi.eyJj"
+        val header = b64("""{"alg":"HS256","typ":"JWT"}""".toByteArray(StandardCharsets.UTF_8))
+        val payload = b64("not JSON".toByteArray(StandardCharsets.UTF_8))
+        val bad = "$header.$payload.test"
         assertNull(MiniProgramTokenParser.parse(bad))
     }
 
@@ -78,7 +80,7 @@ class MiniProgramTokenParserTest {
         val header = b64("""{"alg":"HS256","typ":"JWT"}""".toByteArray(StandardCharsets.UTF_8))
         val noExp = b64("""{"userInfo":"{\"studentId\":\"B1\"}"}""".toByteArray(StandardCharsets.UTF_8))
         assertNull(MiniProgramTokenParser.parse("$header.$noExp.eyJz"))
-        val noStudent = b64("""{"userInfo":"{\"name\":\"x\"}","exp":1795018971}""".toByteArray(StandardCharsets.UTF_8))
+        val noStudent = b64("""{"userInfo":"{\"name\":\"x\"}","exp":$EXP}""".toByteArray(StandardCharsets.UTF_8))
         assertNull(MiniProgramTokenParser.parse("$header.$noStudent.eyJz"))
     }
 
@@ -87,14 +89,14 @@ class MiniProgramTokenParserTest {
         // kotlin.io Base64 defaults to PaddingOption.PRESENT; JWT segments carry no '='.
         // A payload 2 mod 4 (two missing pad chars) is the case that default rejects.
         val header = b64("""{"alg":"HS256","typ":"JWT"}""".toByteArray(StandardCharsets.UTF_8))
-        // Full captured-shape userInfo (name/studentId/department/openId/role) so the
-        // payload bytes % 3 == 1 → base64 len % 4 == 2, exactly like the real token.
+        // The synthetic userInfo keeps the payload byte length congruent to 1 modulo 3,
+        // so the unpadded Base64 string has length congruent to 2 modulo 4.
         val user = Gson().toJson(
             mapOf(
                 "name" to NAME,
                 "studentId" to STUDENT_ID,
                 "department" to DEPARTMENT,
-                "openId" to "oTest",
+                "openId" to "test-open",
                 "role" to listOf("student")
             )
         )

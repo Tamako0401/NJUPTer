@@ -15,14 +15,16 @@ import java.io.IOException
 
 class CampusPassRepositoryTest {
 
-    private val token = CampusPassTokenParser.parse(
-        "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3OTUwOTc3MDMsImV4cCI6MTc5NTEwODUwMywibm8iOiJCMjUwOTEzMDgiLCJpc3MiOiJjZHIifQ.FO4OW9RlDn0FRhjboiERxQ46-jOg-O8EfUXuPV9UGbM"
-    )!!
+    private val token = CampusPassToken(
+        raw = "synthetic-campus-pass-token",
+        studentId = "test-campus-student",
+        expiresAtEpochSeconds = 1_700_010_800L
+    )
 
-    private val stuStateBody = """{"data":{"code":"B25091308","state":1},"status":200,"msg":"success","time":"1795099078794"}"""
-    private val stubyTableBody = """{"data":{"pagination":{"current":1,"pageSize":1,"total":1},"result":[{"yq":"柳苑","xm":"卜羿涵","xh":"B25091308","inorout":1,"fh":"304","lh":"柳苑37","xs":"2","xy":"通信与信息工程学院","ch":"4","access_DATA":"2026-11-19 22:29:40","bj":"B250130"}]},"status":200,"msg":"success","time":"1795099078822"}"""
+    private val stuStateBody = """{"data":{"code":"${token.studentId}","state":1},"status":200,"msg":"success","time":"1700000000000"}"""
+    private val stubyTableBody = """{"data":{"pagination":{"current":1,"pageSize":1,"total":1},"result":[{"yq":"虚构校区","xh":"${token.studentId}","inorout":1,"fh":"T-101","lh":"测试宿舍 A 栋","access_DATA":"2023-11-14 22:13:20"}]},"status":200,"msg":"success","time":"1700000000000"}"""
     private val emptyResultBody = """{"data":{"pagination":{"current":1,"pageSize":1,"total":0},"result":[]},"status":200,"msg":"success"}"""
-    private val rejectedBody = """{"msg":"400","data":"请重新登录","time":"1795098598171"}"""
+    private val rejectedBody = """{"msg":"400","data":"请重新登录","time":"1700000000000"}"""
 
     private fun repository(bodyForPath: (String) -> String) = CampusPassRepository(
         OkHttpClient.Builder().addInterceptor { chain ->
@@ -43,10 +45,10 @@ class CampusPassRepositoryTest {
 
         assertEquals(true, snapshot.onCampus)
         assertEquals(true, snapshot.inDorm)
-        assertEquals("2026-11-19 22:29:40", snapshot.lastAccessTime)
-        assertEquals("柳苑", snapshot.lastAccessPlace)
-        assertEquals("柳苑37", snapshot.dormBuilding)
-        assertEquals("304", snapshot.dormRoom)
+        assertEquals("2023-11-14 22:13:20", snapshot.lastAccessTime)
+        assertEquals("虚构校区", snapshot.lastAccessPlace)
+        assertEquals("测试宿舍 A 栋", snapshot.dormBuilding)
+        assertEquals("T-101", snapshot.dormRoom)
     }
 
     @Test
@@ -124,8 +126,8 @@ class CampusPassRepositoryTest {
         )
         repo.fetch(token)
         assertEquals(token.raw, seenToken)
-        assertEquals("B25091308", seenPersonCode)
-        assertEquals("B25091308", seenXh)
+        assertEquals(token.studentId, seenPersonCode)
+        assertEquals(token.studentId, seenXh)
     }
 
     @Test

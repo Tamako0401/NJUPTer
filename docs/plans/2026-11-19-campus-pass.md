@@ -53,8 +53,8 @@
 - [ ] **Step 1: 写失败测试**
 
 `CampusPassTokenParserTest`：
-- `parses full cdr token`：手工构造三段式（header `{"alg":"HS256","typ":"JWT"}`、payload `{"iat":1795097703,"exp":1795108503,"no":"B25091308","iss":"cdr"}`，ABSENT padding 编码），断言 `studentId=="B25091308"`、`expiresAtEpochSeconds==1795108503`、`raw==原串`。
-- `extracts token from full vxLogin response json`：`{"data":{"token":"<JWT>","id":"B25091308"}}` 文本 → 解析成功。
+- `parses full cdr token`：手工构造三段式（header `{"alg":"HS256","typ":"JWT"}`、payload `{"iat":1700000000,"exp":1700010800,"no":"test-campus-student","iss":"cdr"}`，ABSENT padding 编码），断言 `studentId=="test-campus-student"`、`expiresAtEpochSeconds==1700010800`、`raw==原串`。
+- `extracts token from full vxLogin response json`：`{"data":{"token":"<JWT>","id":"test-campus-student"}}` 文本 → 解析成功。
 - `rejects missing no`：payload 无 `no` → null。
 - `rejects non token input`：`"abc"`、`""` → null。
 
@@ -94,7 +94,7 @@ git commit -m "feat(campus-pass): parse and persist 0trust cdr token"
 - [ ] **Step 1: 写失败测试**
 
 Interceptor 按 URL 分流（照 `MorningRunRepositoryTest` 模式）：
-- `fetch aggregates state and latest record`：`selectStuState` 返回 `{"data":{"code":"B25091308","state":1},"status":200,"msg":"success"}`，`getstubytable` 返回实测结构 → 断言 `onCampus==true`、`inDorm==true`、`lastAccessTime=="2026-11-19 22:29:40"`、`lastAccessPlace=="柳苑"`、`dormBuilding=="柳苑37"`、`dormRoom=="304"`。
+- `fetch aggregates state and latest record`：用合成响应。 `selectStuState` 返回 `{"data":{"code":"test-campus-student","state":1},"status":200,"msg":"success"}`， `getstubytable` 保留实测字段结构并使用虚构值。 断言 `onCampus==true`、`inDorm==true`、`lastAccessTime=="2023-11-14 22:13:20"`、`lastAccessPlace=="虚构校区"`、`dormBuilding=="测试宿舍 A 栋"`、`dormRoom=="T-101"`。
 - `empty result means not returned`：`getstubytable` 返回空 result → `inDorm==null`、时间/地点为空串。
 - `token rejection when msg 400`：两接口均返回 `{"msg":"400","data":"请重新登录","time":...}` → 断言抛 `CampusPassTokenRejectedException`。
 - `requests carry token header and form body`：捕获 `token` header 值与 `personCode` form 值断言。
@@ -205,7 +205,7 @@ git commit -m "feat(campus-pass): status screen with bind sheet and token guide"
 
 - [ ] **Step 1: 模拟器 installDebug + 走查**
 
-服务页两张卡片；进入校园通行页 → 绑定弹窗（入口/指南六步完整）；注入 HAR 中的真实 cdr JWT（`vxLogin` 响应 `data.token`）→ force-stop 重启 → Ready 态显示在校/在寝徽章 + 最后出行（柳苑 · 时间）+ 宿舍（柳苑37 304）；过期 token → Error 态本地化文案 + 重新绑定；清 token 回 Unbound。
+服务页两张卡片；进入校园通行页 → 绑定弹窗（入口/指南六步完整）；使用专用测试账号生成临时令牌，仅在设备会话中使用 → force-stop 重启 → Ready 态显示在校/在寝徽章、最后出行时间与地点及宿舍信息；过期 token → Error 态本地化文案 + 重新绑定；清 token 回 Unbound。
 
 - [ ] **Step 2: 视觉核对（截图）**
 

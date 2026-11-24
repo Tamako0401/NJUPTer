@@ -10,9 +10,9 @@ import kotlin.io.encoding.Base64
 class CampusPassTokenParserTest {
 
     companion object {
-        private const val STUDENT_ID = "B25091308"
-        private const val IAT = 1795097703L
-        private const val EXP = 1795108503L
+        private const val STUDENT_ID = "test-campus-student"
+        private const val IAT = 1_700_000_000L
+        private const val EXP = 1_700_010_800L
 
         private fun b64u(bytes: ByteArray): String =
             Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT).encode(bytes)
@@ -40,7 +40,7 @@ class CampusPassTokenParserTest {
     @Test
     fun `extracts token from full vxLogin response json`() {
         val raw = jwt(realShapePayload)
-        val response = """{"status":200,"msg":"success","data":{"id":"$STUDENT_ID","token":"$raw"},"time":"1795097703850"}"""
+        val response = """{"status":200,"msg":"success","data":{"id":"$STUDENT_ID","token":"$raw"},"time":"1700000000000"}"""
         val token = CampusPassTokenParser.parse(response)!!
         assertEquals(raw, token.raw)
         assertEquals(STUDENT_ID, token.studentId)
