@@ -44,13 +44,13 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.njupter.R
 import android.content.Context
 import com.example.njupter.ui.theme.getCourseColors
+import com.example.njupter.ui.timetable.component.formatWeekRanges
 
 private fun ValidationError.toLocalizedString(context: Context): String {
     return when (this) {
         is ValidationError.StartAfterEnd -> context.getString(R.string.error_start_after_end, start, end)
         is ValidationError.NoWeekSelected -> context.getString(R.string.error_no_week)
         is ValidationError.TimeConflict -> context.getString(R.string.error_time_conflict, day, startSection, endSection)
-        is ValidationError.CourseDuplicate -> context.getString(R.string.error_course_duplicate, name, teacher, classroom)
     }
 }
 
@@ -192,20 +192,6 @@ fun CourseEditorDialog(
 
                 if (timeError != null) {
                     errorMessage = timeError.toLocalizedString(context)
-                    return@Button
-                }
-
-                // 2. Course Duplication Check
-                val duplicationError = CourseValidator.validateCourseDuplication(
-                    currentId = courseId,
-                    name = courseName,
-                    teacher = teacher,
-                    classroom = classroom,
-                    existingCourses = existingCourses
-                )
-
-                if (duplicationError != null) {
-                    errorMessage = duplicationError.toLocalizedString(context)
                     return@Button
                 }
 
@@ -401,8 +387,8 @@ private fun CourseEditorForm(
         }
 
         SectionRangePicker(
-            startSection = (startSection.toIntOrNull() ?: 1).coerceIn(3, maxSection),
-            endSection = (endSection.toIntOrNull() ?: 1).coerceIn(5, maxSection),
+            startSection = (startSection.toIntOrNull() ?: 1).coerceIn(1, maxSection),
+            endSection = (endSection.toIntOrNull() ?: 1).coerceIn(1, maxSection),
             maxSection = maxSection,
             conflictingSections = conflictingSections,
             onRangeChange = { start, end ->
@@ -413,11 +399,12 @@ private fun CourseEditorForm(
 
         // 周次选择
         Text(
-            stringResource(R.string.weeks, if (selectedWeeks.isEmpty()) stringResource(R.string.weeks_none) else stringResource(R.string.weeks_selected, selectedWeeks.size)),
+            stringResource(R.string.weeks),
             style = MaterialTheme.typography.bodySmall
         )
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
             SuggestionChip(
@@ -427,6 +414,13 @@ private fun CourseEditorForm(
                 colors = if (showCustomWeekDialog) SuggestionChipDefaults.suggestionChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 ) else SuggestionChipDefaults.suggestionChipColors()
+            )
+            Text(
+                text = "已选择：第 " + formatWeekRanges(selectedWeeks.toList()) + " 周"
+                    .ifEmpty { stringResource(R.string.weeks_none) },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
             )
         }
 
@@ -441,7 +435,8 @@ private fun CourseEditorForm(
 
         Column {
             FlowRow(
-                horizontalArrangement = Arrangement.Center,
+                maxItemsInEachRow = 6,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .padding(vertical = 4.dp)

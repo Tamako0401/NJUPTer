@@ -1,6 +1,7 @@
 package com.example.njupter.widget.ui
 
-import android.content.res.Configuration
+import android.content.ComponentName
+import android.content.Intent
 import android.widget.RemoteViews
 import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.compose.ui.graphics.toArgb
@@ -17,6 +18,8 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
+import androidx.glance.action.clickable
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.color.ColorProviders
@@ -38,6 +41,7 @@ import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.example.njupter.R
+import com.example.njupter.MainActivity
 import com.example.njupter.widget.WidgetCourseEntry
 
 @Composable
@@ -55,10 +59,13 @@ fun CoursesWidgetContent(
     solidAlpha: Int = 255
 ) {
     val context = LocalContext.current
-    // 课程色条与 app 主界面一致：暗色模式用深色板
-    val isDark = (context.resources.configuration.uiMode and
-            Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-    val courseColors = if (isDark) WidgetDarkColors else WidgetLightColors
+    // Resume the app like its launcher icon, preserving any in-progress editing.
+    val openAppAction = actionStartActivity(
+        Intent.makeMainActivity(ComponentName(context, MainActivity::class.java)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+    )
+    val courseColors = WidgetLightColors
     val size = LocalSize.current
     val compact = size.height < 166.dp
     val overlayAlpha = transparency.coerceIn(0, 255)
@@ -88,6 +95,8 @@ fun CoursesWidgetContent(
                     } ?: ColorProvider(GlanceTheme.colors.widgetBackground.getColor(context).copy(alpha = solidAlpha.coerceIn(0, 255) / 255f))
                 )
                 .cornerRadius(16.dp)
+                // One target covers the header, courses, empty state and background.
+                .clickable(openAppAction)
         ) {
             if (backgroundBitmap != null) {
                 Image(

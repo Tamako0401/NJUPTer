@@ -14,15 +14,33 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.njupter.MainActivity
 import com.example.njupter.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class CourseReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                postReminder(context.applicationContext, intent)
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+
+    private fun postReminder(context: Context, intent: Intent) {
         val notificationId = intent.getIntExtra(CourseReminderContract.EXTRA_NOTIFICATION_ID, 0)
         val courseName = intent.getStringExtra(CourseReminderContract.EXTRA_COURSE_NAME).orEmpty()
         val timeText = intent.getStringExtra(CourseReminderContract.EXTRA_TIME_TEXT).orEmpty()
         val classroom = intent.getStringExtra(CourseReminderContract.EXTRA_CLASSROOM).orEmpty()
         val teacher = intent.getStringExtra(CourseReminderContract.EXTRA_TEACHER).orEmpty()
         val leadMinutes = intent.getIntExtra(CourseReminderContract.EXTRA_LEAD_MINUTES, 10)
+        val now = System.currentTimeMillis()
+        val startMillis = intent.getLongExtra(CourseReminderContract.EXTRA_START_MILLIS, 0)
+        if (startMillis > 0 && startMillis <= now) return
+        val lifetime = if (startMillis > 0) startMillis - now else leadMinutes.coerceAtLeast(1) * 60_000L
 
         ensureChannel(context)
 
@@ -45,15 +63,18 @@ class CourseReminderReceiver : BroadcastReceiver() {
         )
 
         val notification = NotificationCompat.Builder(context, CourseReminderContract.CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_course_reminder)
             .setContentTitle(
-                context.getString(R.string.course_reminder_title, leadMinutes)
+                "$courseName · ${timeText.substringBefore('-')} 上课"
             )
             .setContentText(contentText)
             .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(launchPendingIntent)
+            .setTimeoutAfter(lifetime)
+            .addExtras(CourseFocusNotification.extras(context, launchPendingIntent,
+                courseName, classroom, timeText, lifetime))
             .build()
 
         if (!canPostNotifications(context)) return

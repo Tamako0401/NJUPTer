@@ -1,6 +1,7 @@
 package com.example.njupter.notification
 
 object CourseReminderContract {
+    const val EXTRA_START_MILLIS = "extra_start_millis"
     const val CHANNEL_ID = "course_reminder_channel"
     const val EXTRA_NOTIFICATION_ID = "extra_notification_id"
     const val EXTRA_COURSE_NAME = "extra_course_name"

@@ -60,7 +60,8 @@ internal fun SectionRangeTrack(state: RangeSliderState, conflictingSections: Set
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Box {
         // Keep Material 3's corner alignment line, thumb gaps and endpoint insets.
-        SliderDefaults.Track(rangeSliderState = state)
+        // Use ordinary ticks at the endpoints too, without special stop-indicator colors.
+        SliderDefaults.Track(rangeSliderState = state, drawStopIndicator = null)
         if (conflictingSections.isNotEmpty()) {
             SliderDefaults.Track(
                 rangeSliderState = state,
@@ -70,6 +71,7 @@ internal fun SectionRangeTrack(state: RangeSliderState, conflictingSections: Set
                     inactiveTrackColor = colors.onSurface.copy(alpha = 0.12f),
                     inactiveTickColor = colors.onSurface.copy(alpha = 0.38f)
                 ),
+                drawStopIndicator = null,
                 modifier = Modifier.matchParentSize().drawWithContent {
                     // Default ticks run between the centers of the rounded end caps.
                     val inset = size.height / 2f

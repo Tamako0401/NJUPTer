@@ -70,7 +70,8 @@ class WidgetAndUpdateUiTest {
     @Test fun widgetEndedCountdownPreview() {
         compose.setContent { Box(Modifier.size(320.dp, 180.dp).testTag("widget")) { WidgetContentEndedPreview() } }
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        compose.onNodeWithText(context.getString(R.string.widget_countdown_minutes, 0)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.widget_courses_completed)).assertIsDisplayed()
+        compose.onNodeWithText(context.getString(R.string.widget_countdown_minutes, 0)).assertDoesNotExist()
         captureWidget("widget-ended")
     }
 

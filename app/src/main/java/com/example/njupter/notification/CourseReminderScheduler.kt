@@ -88,6 +88,7 @@ class CourseReminderScheduler(
                 val requestCode = buildRequestCode(currentTimetableId, session.courseId, week, classStartMillis)
 
                 val reminderIntent = Intent(context, CourseReminderReceiver::class.java).apply {
+                    putExtra(CourseReminderContract.EXTRA_START_MILLIS, classStartMillis)
                     putExtra(CourseReminderContract.EXTRA_NOTIFICATION_ID, requestCode)
                     putExtra(CourseReminderContract.EXTRA_COURSE_NAME, course.name)
                     putExtra(CourseReminderContract.EXTRA_TIME_TEXT, timeText)
