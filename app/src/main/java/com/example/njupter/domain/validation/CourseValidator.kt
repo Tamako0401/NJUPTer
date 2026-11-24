@@ -18,9 +18,21 @@ object CourseValidator {
         editingSession: CourseSession?,
         allSessions: List<CourseSession>,
         maxSection: Int
-    ): Set<Int> = (1..maxSection).filterTo(mutableSetOf()) { section ->
-        val error = validateSessionInput(day, section, section, weeks.toList(), editingSession, allSessions)
-        error is ValidationError.TimeConflict
+    ): Set<Int> {
+        if (weeks.isEmpty() || maxSection < 1) return emptySet()
+
+        val editingIndex = editingSessionIndex(editingSession, allSessions)
+        return buildSet {
+            allSessions.forEachIndexed { index, session ->
+                if (index == editingIndex || session.day != day) return@forEachIndexed
+
+                val start = max(1, session.startSection)
+                val end = min(maxSection, session.endSection)
+                if (start <= end && session.weeks.any { it in weeks }) {
+                    addAll(start..end)
+                }
+            }
+        }
     }
 
     /**
