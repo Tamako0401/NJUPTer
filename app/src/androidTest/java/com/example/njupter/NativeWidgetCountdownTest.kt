@@ -53,14 +53,20 @@ class NativeWidgetCountdownTest {
             }
         }
         val views = runBlocking { widget.compose(context, size = DpSize(320.dp, height.dp)) }
-        lateinit var countdown: TextView
+        lateinit var widgetRoot: android.view.View
         rule.setContent {
             AndroidView(factory = {
-                views.apply(it, null).also { root -> countdown = root.findViewById(R.id.course_countdown) }
+                views.apply(it, null).also { root -> widgetRoot = root }
             }, modifier = Modifier.size(320.dp, height.dp).testTag("native-widget"))
         }
+        // Wait until the RemoteViews hierarchy is attached before inspecting it.
+        rule.waitUntil(timeoutMillis = 10_000) {
+            widgetRoot.findViewById<TextView>(R.id.course_countdown) != null
+        }
+        lateinit var countdown: TextView
         var initial = ""
         rule.runOnIdle {
+            countdown = widgetRoot.findViewById(R.id.course_countdown)
             initial = countdown.text.toString()
             assertEquals(context.getString(R.string.widget_countdown_minutes, if (ended) 0 else 25), initial)
             assertFalse(countdown is android.widget.Chronometer)

@@ -50,7 +50,7 @@ class WidgetModelsTest {
     }
 
     @Test
-    fun `ending course stays at zero until next course starts`() {
+    fun `ending course is removed at end boundary before next course starts`() {
         val sessions = listOf(
             CourseSession("m1", 1, 1, 2, listOf(1)),
             CourseSession("m2", 1, 3, 4, listOf(1)),
@@ -61,9 +61,11 @@ class WidgetModelsTest {
         val after = stateAt(9, 35, sessions)
 
         assertEquals(listOf("Morning one", "Morning two"), before.entries.map { it.name })
-        assertEquals(listOf("Morning one", "Morning two"), after.entries.map { it.name })
-        assertEquals(0L, remainingCourseMinutes(after.entries.first().countdownEndMillis!!,
-            millis(2026, Calendar.AUGUST, 31, 9, 35)))
+        assertEquals(listOf("Morning two", "Late course"), after.entries.map { it.name })
+        assertEquals(null, after.entries.first().countdownEndMillis)
+        assertEquals(millis(2026, Calendar.AUGUST, 31, 9, 35),
+            stateAt(9, 34, sessions).nextRefreshAtMillis)
+        assertEquals(after.entries, stateAt(9, 40, sessions).entries)
         assertEquals(millis(2026, Calendar.AUGUST, 31, 9, 50), after.nextRefreshAtMillis)
         val next = stateAt(9, 50, sessions)
         assertEquals(listOf("Morning two", "Late course"), next.entries.map { it.name })
@@ -83,10 +85,10 @@ class WidgetModelsTest {
     }
 
     @Test
-    fun `last lesson stays at zero until evening forecast`() {
+    fun `last lesson is removed and day completes before evening forecast`() {
         val state = stateAt(16, 0, listOf(CourseSession("m1", 1, 1, 2, listOf(1))))
-        assertEquals(0L, remainingCourseMinutes(state.entries.single().countdownEndMillis!!,
-            millis(2026, Calendar.AUGUST, 31, 16, 0)))
+        assertTrue(state.entries.isEmpty())
+        assertTrue(state.isDayComplete)
         assertEquals(millis(2026, Calendar.AUGUST, 31, 17, 0), state.nextRefreshAtMillis)
     }
 
@@ -142,8 +144,8 @@ class WidgetModelsTest {
         assertEquals(millis(2026, Calendar.AUGUST, 31, 8, 0), stateAt(7, 59, sessions).nextRefreshAtMillis)
         assertEquals(millis(2026, Calendar.AUGUST, 31, 9, 35), stateAt(8, 0, sessions).entries.single().countdownEndMillis)
         assertEquals(millis(2026, Calendar.AUGUST, 31, 9, 35), stateAt(9, 34, sessions).entries.single().countdownEndMillis)
-        assertEquals(0L, remainingCourseMinutes(stateAt(9, 35, sessions).entries.single().countdownEndMillis!!,
-            millis(2026, Calendar.AUGUST, 31, 9, 35)))
+        assertTrue(stateAt(9, 35, sessions).entries.isEmpty())
+        assertTrue(stateAt(9, 35, sessions).isDayComplete)
     }
 
     @Test

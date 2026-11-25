@@ -26,11 +26,22 @@ interface SettingsRepository {
     suspend fun setAppThemeMode(mode: AppThemeMode)
     fun getDynamicColorEnabled(): Flow<Boolean>
     suspend fun setDynamicColorEnabled(enabled: Boolean)
+    fun getAppDpi(): Flow<Int>
+    suspend fun setAppDpi(dpi: Int)
+    fun getCustomBackgroundUri(): Flow<String?>
+    suspend fun setCustomBackgroundUri(uri: String?)
+    fun getBackgroundDim(): Flow<Float>
+    suspend fun setBackgroundDim(dim: Float)
     fun getPredictiveBackAnimation(): Flow<PredictiveBackAnimation>
     suspend fun setPredictiveBackAnimation(animation: PredictiveBackAnimation)
     fun getPredictiveBackExitDirection(): Flow<PredictiveBackExitDirection>
     suspend fun setPredictiveBackExitDirection(direction: PredictiveBackExitDirection)
-
+    fun getReminderLeadMinutes(): Flow<Int>
+    suspend fun setReminderLeadMinutes(minutes: Int)
+    fun getMorningRunToken(): Flow<String?>
+    suspend fun setMorningRunToken(token: String?)
+    fun getCampusPassToken(): Flow<String?>
+    suspend fun setCampusPassToken(token: String?)
     fun peekLastSelectedTimetableId(): String? {
         return (getLastSelectedTimetableId() as? StateFlow)?.value
     }
@@ -47,6 +58,14 @@ interface SettingsRepository {
         return (getDynamicColorEnabled() as? StateFlow)?.value ?: true
     }
 
+    fun peekAppDpi(): Int {
+        return (getAppDpi() as? StateFlow)?.value ?: 0
+    }
+
+    fun peekCustomBackgroundUri(): String? {
+        return (getCustomBackgroundUri() as? StateFlow)?.value
+    }
+
     fun peekPredictiveBackAnimation(): PredictiveBackAnimation {
         return (getPredictiveBackAnimation() as? StateFlow)?.value
             ?: PredictiveBackAnimation.SCALE
@@ -55,6 +74,24 @@ interface SettingsRepository {
     fun peekPredictiveBackExitDirection(): PredictiveBackExitDirection {
         return (getPredictiveBackExitDirection() as? StateFlow)?.value
             ?: PredictiveBackExitDirection.FOLLOW_GESTURE
+    }
+
+    fun peekReminderLeadMinutes(): Int {
+        return (getReminderLeadMinutes() as? StateFlow)?.value ?: DEFAULT_REMINDER_LEAD_MINUTES
+    }
+
+    fun peekMorningRunToken(): String? {
+        return (getMorningRunToken() as? StateFlow)?.value
+    }
+
+    fun peekCampusPassToken(): String? {
+        return (getCampusPassToken() as? StateFlow)?.value
+    }
+
+    companion object {
+        const val DEFAULT_REMINDER_LEAD_MINUTES = 10
+        const val MIN_REMINDER_LEAD_MINUTES = 0
+        const val MAX_REMINDER_LEAD_MINUTES = 120
     }
 }
 
@@ -68,8 +105,14 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         private const val KEY_CURRENT_TIME_INDICATOR = "enable_current_time_indicator"
         private const val KEY_APP_THEME_MODE = "app_theme_mode"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"
+        private const val KEY_APP_DPI = "app_dpi"
+        private const val KEY_CUSTOM_BACKGROUND = "custom_background"
+        private const val KEY_BACKGROUND_DIM = "background_dim"
         private const val KEY_PREDICTIVE_BACK_ANIMATION = "predictive_back_animation"
         private const val KEY_PREDICTIVE_BACK_EXIT_DIRECTION = "predictive_back_exit_direction"
+        private const val KEY_REMINDER_LEAD_MINUTES = "reminder_lead_minutes"
+        private const val KEY_MORNING_RUN_TOKEN = "morning_run_token"
+        private const val KEY_CAMPUS_PASS_TOKEN = "campus_pass_token"
     }
 
     private fun readLastWeekRecords(): Map<String, Int> {
@@ -96,6 +139,9 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         prefs.enumValue(KEY_APP_THEME_MODE, AppThemeMode.SYSTEM)
     )
     private val _dynamicColorEnabled = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, true))
+    private val _appDpi = MutableStateFlow(prefs.getInt(KEY_APP_DPI, 0))
+    private val _customBackgroundUri = MutableStateFlow<String?>(prefs.getString(KEY_CUSTOM_BACKGROUND, null))
+    private val _backgroundDim = MutableStateFlow(prefs.getFloat(KEY_BACKGROUND_DIM, 0.3f))
     private val _predictiveBackAnimation = MutableStateFlow(
         prefs.enumValue(KEY_PREDICTIVE_BACK_ANIMATION, PredictiveBackAnimation.SCALE)
     )
@@ -105,6 +151,11 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
             PredictiveBackExitDirection.FOLLOW_GESTURE
         )
     )
+    private val _reminderLeadMinutes = MutableStateFlow(
+        prefs.getInt(KEY_REMINDER_LEAD_MINUTES, SettingsRepository.DEFAULT_REMINDER_LEAD_MINUTES)
+    )
+    private val _morningRunToken = MutableStateFlow<String?>(prefs.getString(KEY_MORNING_RUN_TOKEN, null))
+    private val _campusPassToken = MutableStateFlow<String?>(prefs.getString(KEY_CAMPUS_PASS_TOKEN, null))
 
     override fun getShowWeekends(): Flow<Boolean> = _showWeekends.asStateFlow()
 
@@ -160,6 +211,29 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
         _dynamicColorEnabled.value = enabled
     }
 
+    override fun getAppDpi(): Flow<Int> = _appDpi.asStateFlow()
+
+    override suspend fun setAppDpi(dpi: Int) {
+        prefs.edit { putInt(KEY_APP_DPI, dpi) }
+        _appDpi.value = dpi
+    }
+
+    override fun getCustomBackgroundUri(): Flow<String?> = _customBackgroundUri.asStateFlow()
+
+    override suspend fun setCustomBackgroundUri(uri: String?) {
+        prefs.edit {
+            if (uri == null) remove(KEY_CUSTOM_BACKGROUND) else putString(KEY_CUSTOM_BACKGROUND, uri)
+        }
+        _customBackgroundUri.value = uri
+    }
+
+    override fun getBackgroundDim(): Flow<Float> = _backgroundDim.asStateFlow()
+
+    override suspend fun setBackgroundDim(dim: Float) {
+        prefs.edit { putFloat(KEY_BACKGROUND_DIM, dim) }
+        _backgroundDim.value = dim
+    }
+
     override fun getPredictiveBackAnimation(): Flow<PredictiveBackAnimation> =
         _predictiveBackAnimation.asStateFlow()
 
@@ -174,6 +248,37 @@ class SharedPreferencesSettingsRepository(context: Context) : SettingsRepository
     override suspend fun setPredictiveBackExitDirection(direction: PredictiveBackExitDirection) {
         prefs.edit { putString(KEY_PREDICTIVE_BACK_EXIT_DIRECTION, direction.name) }
         _predictiveBackExitDirection.value = direction
+    }
+
+    override fun getReminderLeadMinutes(): Flow<Int> = _reminderLeadMinutes.asStateFlow()
+
+    override suspend fun setReminderLeadMinutes(minutes: Int) {
+        val clamped = minutes.coerceIn(
+            SettingsRepository.MIN_REMINDER_LEAD_MINUTES,
+            SettingsRepository.MAX_REMINDER_LEAD_MINUTES
+        )
+        prefs.edit { putInt(KEY_REMINDER_LEAD_MINUTES, clamped) }
+        _reminderLeadMinutes.value = clamped
+    }
+
+    override fun getMorningRunToken(): Flow<String?> = _morningRunToken.asStateFlow()
+
+    override suspend fun setMorningRunToken(token: String?) {
+        prefs.edit {
+            if (token == null) remove(KEY_MORNING_RUN_TOKEN)
+            else putString(KEY_MORNING_RUN_TOKEN, token)
+        }
+        _morningRunToken.value = token
+    }
+
+    override fun getCampusPassToken(): Flow<String?> = _campusPassToken.asStateFlow()
+
+    override suspend fun setCampusPassToken(token: String?) {
+        prefs.edit {
+            if (token == null) remove(KEY_CAMPUS_PASS_TOKEN)
+            else putString(KEY_CAMPUS_PASS_TOKEN, token)
+        }
+        _campusPassToken.value = token
     }
 }
 

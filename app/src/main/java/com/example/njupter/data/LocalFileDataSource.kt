@@ -96,9 +96,9 @@ class LocalFileDataSource(private val context: Context) : TimetableDataSource {
         val file = getDataFile(id)
         if (file.exists()) {
             try {
-                val reader = file.reader()
-                val root = gson.fromJson(reader, TimetableJsonRoot::class.java)
-                reader.close()
+                val root = file.reader().use { reader ->
+                    gson.fromJson(reader, TimetableJsonRoot::class.java)
+                }
 
                 val domainCourses = root.courses.map {
                     CourseInfo(
@@ -108,7 +108,9 @@ class LocalFileDataSource(private val context: Context) : TimetableDataSource {
                         classroom = it.room,
                         colorIndex = it.colorIndex,
                         credit = it.credit.orEmpty(),
-                        courseNature = it.courseNature.orEmpty()
+                        courseNature = it.courseNature.orEmpty(),
+                        note = it.note.orEmpty(),
+                        reminderEnabled = it.reminderEnabled ?: true
                     )
                 }
                 val domainSessions = root.sessions.map {
@@ -139,7 +141,9 @@ class LocalFileDataSource(private val context: Context) : TimetableDataSource {
                     room = it.classroom,
                     colorIndex = it.colorIndex,
                     credit = it.credit,
-                    courseNature = it.courseNature
+                    courseNature = it.courseNature,
+                    note = it.note,
+                    reminderEnabled = it.reminderEnabled
                 )
             },
             sessions = data.sessions.map {

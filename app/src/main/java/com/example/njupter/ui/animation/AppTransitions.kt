@@ -34,10 +34,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.njupter.ui.animation.predictiveback.NavigationMotionProfile
+import com.example.njupter.ui.theme.LocalHasCustomBackground
 import com.example.njupter.ui.animation.predictiveback.PredictiveBackAnimation
 import com.example.njupter.ui.animation.predictiveback.PredictiveBackAnimationHandler
 import com.example.njupter.ui.animation.predictiveback.PredictiveBackExitDirection
@@ -224,14 +226,14 @@ fun AppPageTransition(
 @Composable
 fun AppNavigationTransition(
     currentTab: Int,
-    settingsSubPage: String,
+    subPage: String,
     modifier: Modifier = Modifier,
     content: @Composable (tab: Int, subPage: String) -> Unit
 ) {
-    val target = currentTab to settingsSubPage
+    val target = currentTab to subPage
     RetainedLayerHost(
         targetState = target,
-        initiallyRetained = listOf(0 to "main", 1 to "main"),
+        initiallyRetained = listOf(0 to "main", 1 to "main", 2 to "main"),
         previousState = currentTab to "main",
         motionOwner = PredictiveBackOwner.SETTINGS_PAGE,
         depthOf = { (_, subPage) -> if (subPage == "main") 0 else 1 },
@@ -285,7 +287,8 @@ private fun <T> RetainedLayerHost(
     )
     val predictiveMotion = LocalPredictiveBackMotion.current
     val navigationMotion = predictiveMotion?.handler?.navigationMotion ?: NavigationMotionProfile()
-    val layerColor = MaterialTheme.colorScheme.background
+    val layerColor = if (LocalHasCustomBackground.current) Color.Transparent
+    else MaterialTheme.colorScheme.background
 
     Box(modifier = modifier.background(layerColor)) {
         retainedStates.forEach { layerState ->
@@ -398,6 +401,7 @@ private fun <T> RetainedLayerHost(
                         .fillMaxSize()
                         .zIndex(zIndex)
                         .then(if (isActive) Modifier else Modifier.clearAndSetSemantics { })
+                        .then(if (isActive || isPredictiveBackground) Modifier else Modifier.invisibleLayerStopsHits())
                         .motionLayer(
                             normalAlpha = { alpha.value },
                             normalTranslation = { translation.value },
@@ -409,7 +413,11 @@ private fun <T> RetainedLayerHost(
                         )
                         // Every retained route is an opaque scene. This also fixes legacy pages
                         // whose own root was a transparent Column rather than a Scaffold.
-                        .background(layerColor)
+                        // (自定义背景开启时保持透明，让主题层背景透出。)
+                        .background(
+                            if (LocalHasCustomBackground.current) Color.Transparent
+                            else layerColor
+                        )
                 ) {
                     content(layerState)
                 }
@@ -474,6 +482,18 @@ private fun <T> layerScale(
         else -> 1f
     }
     else -> 1f
+}
+
+/**
+ * 保留层在 alpha=0 时仍参与命中测试（graphicsLayer 不影响 hit test），
+ * 不加拦截会让点击穿透到不可见的残留路由层（幽灵点击）。
+ */
+private fun Modifier.invisibleLayerStopsHits(): Modifier = pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            awaitPointerEvent().changes.forEach { it.consume() }
+        }
+    }
 }
 
 private fun Modifier.motionLayer(

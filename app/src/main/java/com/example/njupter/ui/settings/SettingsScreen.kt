@@ -12,6 +12,7 @@ import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -37,6 +38,8 @@ import com.example.njupter.ui.settings.model.SettingsSection
 import android.widget.Toast
 import com.example.njupter.ui.theme.NJUPTerTheme
 import com.example.njupter.ui.theme.AppThemeMode
+import com.example.njupter.ui.theme.LocalHasCustomBackground
+import androidx.compose.ui.graphics.Color
 import com.example.njupter.ui.settings.model.SettingsIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,16 +47,26 @@ import com.example.njupter.ui.settings.model.SettingsIcon
 fun SettingsScreen(
     currentTimetableId: String?,
     currentTimetableName: String,
-    currentLanguageTag: String,
     currentThemeMode: AppThemeMode,
     enableCurrentTimeIndicator: Boolean,
     onThemeSettingsClick: () -> Unit,
-    onLanguageSelectClick: () -> Unit,
     onTimetableSettingsClick: () -> Unit,
     onWidgetSettingsClick: () -> Unit,
+    onBack: () -> Unit = {},
+    reminderLeadMinutes: Int = 10,
+    onReminderLeadMinutesChange: (Int) -> Unit = {},
     onToggleCurrentTimeIndicator: (Boolean) -> Unit
 ) {
+    var showReminderLeadDialog by remember { mutableStateOf(false) }
+    if (showReminderLeadDialog) {
+        com.example.njupter.ui.settings.dialog.ReminderLeadDialog(
+            initialMinutes = reminderLeadMinutes,
+            onDismiss = { showReminderLeadDialog = false },
+            onConfirm = { onReminderLeadMinutesChange(it); showReminderLeadDialog = false }
+        )
+    }
     val context = LocalContext.current
+    val activityContext = com.example.njupter.ui.LocalActivityContext.current ?: context
     val lifecycleOwner = LocalLifecycleOwner.current
 
     var notificationEnabled by remember { 
@@ -80,12 +93,6 @@ fun SettingsScreen(
         }
     }
 
-    val currentLanguageLabel = if (currentLanguageTag.startsWith("zh")) {
-        stringResource(R.string.language_zh)
-    } else {
-        stringResource(R.string.language_en)
-    }
-
     val timetableSectionItems = if (currentTimetableId == null) {
         emptyList()
     } else {
@@ -101,6 +108,12 @@ fun SettingsScreen(
     }
 
     val appSectionItems = listOf(
+        SettingsItem.Navigation(
+            icon = SettingsIcon.Vector(Icons.Default.Notifications),
+            title = stringResource(R.string.reminder_lead_time),
+            value = stringResource(R.string.reminder_lead_min_value, reminderLeadMinutes),
+            onClick = { showReminderLeadDialog = true }
+        ),
         SettingsItem.Navigation(
             icon = SettingsIcon.Vector(Icons.Default.Palette),
             title = stringResource(R.string.theme_settings),
@@ -118,13 +131,6 @@ fun SettingsScreen(
             description = stringResource(R.string.widget_settings_summary),
             onClick = onWidgetSettingsClick
         ),
-        SettingsItem.Navigation(
-            icon = SettingsIcon.Vector(Icons.Default.Language),
-            title = stringResource(R.string.language),
-            description = stringResource(R.string.language_settings_summary),
-            value = currentLanguageLabel,
-            onClick = onLanguageSelectClick
-        ),
         SettingsItem.Toggle(
             icon = SettingsIcon.Vector(Icons.Default.AccessTime),
             title = stringResource(R.string.current_time_indicator),
@@ -138,7 +144,7 @@ fun SettingsScreen(
             description = stringResource(R.string.notification_permission_summary),
             checked = notificationEnabled,
             onToggle = {
-                val ok = openNotificationSettings(context)
+                val ok = openNotificationSettings(activityContext)
                 if (!ok) {
                     Toast.makeText(context, R.string.cannot_open_settings, Toast.LENGTH_SHORT).show()
                 }
@@ -150,7 +156,7 @@ fun SettingsScreen(
             description = stringResource(R.string.battery_optimization_summary),
             checked = batteryWhitelistEnabled,
             onToggle = {
-                val ok = openBatteryOptimizationSettings(context)
+                val ok = openBatteryOptimizationSettings(activityContext)
                 if (!ok) {
                     Toast.makeText(context, R.string.cannot_open_settings, Toast.LENGTH_SHORT).show()
                 }
@@ -170,11 +176,21 @@ fun SettingsScreen(
     )
 
     Scaffold(
+        containerColor = if (LocalHasCustomBackground.current) Color.Transparent
+        else MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings)) }
+                title = { Text(stringResource(R.string.settings)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+                    }
+                }
             )
-        }
+        },
+        contentWindowInsets = WindowInsets.safeDrawing.only(
+            WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+        )
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -270,11 +286,9 @@ fun SettingsScreenPreview() {
         SettingsScreen(
             currentTimetableId = "1",
             currentTimetableName = "2026 春季学期",
-            currentLanguageTag = "zh",
             currentThemeMode = AppThemeMode.SYSTEM,
             enableCurrentTimeIndicator = true,
             onThemeSettingsClick = {},
-            onLanguageSelectClick = {},
             onTimetableSettingsClick = {},
             onWidgetSettingsClick = {},
             onToggleCurrentTimeIndicator = {}

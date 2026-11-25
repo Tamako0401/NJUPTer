@@ -127,12 +127,24 @@ private class FakeTimetableDataSource(
 
 private class FakeSettingsRepository(lastSelectedId: String?) : SettingsRepository {
     val lastSelectedTimetableIdState = MutableStateFlow(lastSelectedId)
+    private val reminderLeadMinutes = MutableStateFlow(10)
+    override fun getReminderLeadMinutes() = reminderLeadMinutes
+    override suspend fun setReminderLeadMinutes(minutes: Int) { reminderLeadMinutes.value = minutes }
     private val showWeekends = MutableStateFlow(false)
     private val languageTag = MutableStateFlow("")
     private val lastWeekRecords = MutableStateFlow<Map<String, Int>>(emptyMap())
     private val currentTimeIndicator = MutableStateFlow(true)
     private val themeMode = MutableStateFlow(AppThemeMode.SYSTEM)
     private val dynamicColor = MutableStateFlow(true)
+    private val appDpi = MutableStateFlow(0)
+    override fun getAppDpi() = appDpi
+    override suspend fun setAppDpi(dpi: Int) { appDpi.value = dpi }
+    private val customBackgroundUri = MutableStateFlow<String?>(null)
+    override fun getCustomBackgroundUri() = customBackgroundUri
+    override suspend fun setCustomBackgroundUri(uri: String?) { customBackgroundUri.value = uri }
+    private val backgroundDim = MutableStateFlow(0.3f)
+    override fun getBackgroundDim() = backgroundDim
+    override suspend fun setBackgroundDim(dim: Float) { backgroundDim.value = dim }
     private val predictiveBackAnimation = MutableStateFlow(PredictiveBackAnimation.SCALE)
     private val predictiveBackExitDirection =
         MutableStateFlow(PredictiveBackExitDirection.FOLLOW_GESTURE)
@@ -165,4 +177,10 @@ private class FakeSettingsRepository(lastSelectedId: String?) : SettingsReposito
     override suspend fun setPredictiveBackExitDirection(direction: PredictiveBackExitDirection) {
         predictiveBackExitDirection.value = direction
     }
+    private val morningRunToken = MutableStateFlow<String?>(null)
+    override fun getMorningRunToken() = morningRunToken
+    override suspend fun setMorningRunToken(token: String?) { morningRunToken.value = token }
+    private val campusPassToken = MutableStateFlow<String?>(null)
+    override fun getCampusPassToken() = campusPassToken
+    override suspend fun setCampusPassToken(token: String?) { campusPassToken.value = token }
 }

@@ -129,7 +129,6 @@
     <!-- Course Editor -->
     <string name="save_btn">Save</string>
     <string name="cd_timetable">Timetable</string>
-    <string name="cd_settings">Settings</string>
 
     <!-- Validation Errors -->
     <string name="error_start_after_end">Error: Start section (%1$d) cannot be greater than End section (%2$d).</string>
@@ -143,7 +142,7 @@
     <string name="default_timetable_name">My Timetable</string>
     <string name="course_reminder_channel_name">Course Reminder</string>
     <string name="course_reminder_channel_desc">Notifies 10 minutes before class starts</string>
-    <string name="course_reminder_title">Class starts in 10 minutes</string>
+    <string name="course_reminder_title">Class starts in %1$d minutes</string>
     <string name="course_reminder_content">%1$s · %2$s · %3$s · %4$s</string>
     <string name="notification_permission">Notification Permission</string>
     <string name="notification_permission_desc">Required to display class reminders</string>
@@ -189,6 +188,21 @@
     <string name="theme_mode_dark">Dark</string>
     <string name="dynamic_color">Dynamic color</string>
     <string name="dynamic_color_summary">Use colors from your wallpaper</string>
+    <string name="app_language">App language</string>
+    <string name="app_language_summary">Choose the language used inside the app</string>
+    <string name="app_dpi">App DPI</string>
+    <string name="app_dpi_summary">Scale the whole interface without changing system display size</string>
+    <string name="app_dpi_system">Follow system</string>
+    <string name="app_dpi_dialog_summary">Drag the slider or tap a preset; larger values show a larger interface</string>
+    <string name="app_dpi_small">S</string>
+    <string name="app_dpi_medium">M</string>
+    <string name="app_dpi_large">L</string>
+    <string name="app_dpi_extra_large">XL</string>
+    <string name="app_dpi_reset_system">Reset to system default</string>
+    <string name="custom_background">Custom background</string>
+    <string name="custom_background_summary">Pick an image as the app-wide background</string>
+    <string name="background_dim">Background dim</string>
+    <string name="background_dim_summary">Darken the custom background so content stays readable</string>
     <string name="dynamic_color_unavailable">Dynamic color requires Android 12 or newer</string>
     <string name="predictive_back_animation">Predictive back animation</string>
     <string name="predictive_back_animation_summary">Preview the destination while swiping back</string>
@@ -218,4 +232,92 @@
     <string name="update_ignore">Ignore update</string>
     <string name="update_download_started">Download started. Open the completed download notification to install.</string>
     <string name="update_download_failed">Could not start the download. Enable the system Download Manager and try again.</string>
+    <string name="note">Notes</string>
+    <string name="section_range">%1$s–%2$s</string>
+    <string name="reminder_lead_time">Reminder lead time</string>
+    <string name="reminder_lead_time_summary">Minutes before class to notify</string>
+    <string name="reminder_lead_min_value">%1$d min</string>
+    <string name="reminder_lead_minutes_label">Minutes</string>
+    <string name="reminder_lead_range_hint">Range 0–120; 0 = notify at class start</string>
+    <string name="course_reminder_toggle">Class reminder</string>
+    <string name="course_reminder_toggle_summary">Notify before this course starts</string>
+    <string name="widget_more_courses">+%1$d more</string>
+    <string name="widget_instances">Widget instances</string>
+    <string name="widget_mode_solid">Solid</string>
+    <string name="widget_mode_image">Image</string>
+    <string name="widget_solid_color">Solid color</string>
+    <string name="widget_solid_follow_theme">Follow theme</string>
+    <string name="widget_pin_to_home">Add to Home Screen</string>
+    <string name="widget_pin_failed">Could not start the add request</string>
+    <string name="widget_pinned">Widget added to Home Screen</string>
+    <string name="widget_pin_guide_hint">Requested the system add dialog. If it did not appear, add manually:</string>
+    <string name="widget_pin_guide_steps">1. Long-press an empty area on the Home screen\n2. Choose “Widgets”\n3. Find NJUPTer and drag it to the Home screen</string>
+    <string name="widget_bg_edit_hint">Drag or pinch to adjust the background</string>
+    <string name="widget_pick_image_failed">Failed to load the selected image</string>
+    <string name="widget_preview_no_data">No timetable data yet — the preview shows real courses once added</string>
+    <string name="minutes_unit">min</string>
+    <string name="section_conflict_blocked">Conflicting sections: %1$s. Change sections or weeks before saving.</string>
+
+    <!-- Services / Morning Run -->
+    <string name="services">Services</string>
+    <string name="morning_run">Morning Run</string>
+    <string name="morning_run_summary">Check-ins and semester counts</string>
+    <string name="morning_run_unbound">Not linked</string>
+    <string name="morning_run_count_value">%1$d runs</string>
+    <string name="morning_run_count_label">Runs this semester</string>
+    <string name="morning_run_bind">Link mini-program token</string>
+    <string name="morning_run_unbind">Unlink</string>
+    <string name="morning_run_rebind">Link again</string>
+    <string name="morning_run_no_token_title">Not linked yet</string>
+    <string name="morning_run_no_token_desc">Paste the login token from the NJUPT mini-program to view your morning-run count.</string>
+    <string name="morning_run_token_hint">Paste the token (or any text containing it)</string>
+    <string name="morning_run_token_invalid">No valid token found</string>
+    <string name="morning_run_how_to_get">How to get a token?</string>
+    <string name="morning_run_guide_title">How to get a token</string>
+    <string name="morning_run_guide_step1">The token can only be captured from the NJUPT WeChat mini-program, so you need an HTTPS-capture setup (any capture tool that decrypts HTTPS; Reqable is a good choice).</string>
+    <string name="morning_run_guide_step2">Open the NJUPT mini-program (from the WeCom workbench) and log in.</string>
+    <string name="morning_run_guide_step3">In the capture tool, filter requests to wechat.njupt.edu.cn.</string>
+    <string name="morning_run_guide_step4">Find the response of login/bind or login/refreshUserInfo.</string>
+    <string name="morning_run_guide_step5">Copy the value of data.token in that response (pasting the whole response JSON also works).</string>
+    <string name="morning_run_guide_step6">A token stays valid for about 2 hours; capture a fresh one after it expires.</string>
+    <string name="morning_run_paste">Paste from clipboard</string>
+    <string name="morning_run_expires">Valid until %1$s</string>
+    <string name="morning_run_expired">Token expired. Link again to continue.</string>
+    <string name="morning_run_no_checkin">No check-in today</string>
+    <string name="morning_run_history">Semesters</string>
+    <string name="morning_run_semester_value">%1$d runs · %2$d short</string>
+    <string name="morning_run_records">Recent check-ins</string>
+    <string name="refresh">Refresh</string>
+    <string name="retry">Retry</string>
+
+    <!-- Services / Campus Pass -->
+    <string name="campus_pass">Campus Pass</string>
+    <string name="campus_pass_summary">On-campus &amp; dorm status</string>
+    <string name="campus_pass_unbound">Not linked</string>
+    <string name="campus_pass_on_campus">On campus</string>
+    <string name="campus_pass_off_campus">Off campus</string>
+    <string name="campus_pass_in_dorm">In dorm</string>
+    <string name="campus_pass_not_in_dorm">Out of dorm</string>
+    <string name="campus_pass_not_returned">Not returned</string>
+    <string name="campus_pass_unknown">Unknown</string>
+    <string name="campus_pass_bind">Link campus-pass token</string>
+    <string name="campus_pass_rebind">Link again</string>
+    <string name="campus_pass_unbind">Unlink</string>
+    <string name="campus_pass_no_token_title">Not linked yet</string>
+    <string name="campus_pass_no_token_desc">Paste your campus-pass token to view on-campus and dorm status.</string>
+    <string name="campus_pass_token_hint">Paste the token (or any text containing it)</string>
+    <string name="campus_pass_token_invalid">No valid token found</string>
+    <string name="campus_pass_paste">Paste from clipboard</string>
+    <string name="campus_pass_expires">Valid until %1$s</string>
+    <string name="campus_pass_expired">Token expired. Link again to continue.</string>
+    <string name="campus_pass_last_access">Last access</string>
+    <string name="campus_pass_dorm_location">Dorm</string>
+    <string name="campus_pass_how_to_get">How to get a token?</string>
+    <string name="campus_pass_guide_title">How to get a token</string>
+    <string name="campus_pass_guide_step1">The token can only be captured from the campus-pass page opened in WeCom, so you need an HTTPS-capture setup (any capture tool that decrypts HTTPS; Reqable is a good choice).</string>
+    <string name="campus_pass_guide_step2">Open Campus Pass from the WeCom workbench; the page signs in automatically.</string>
+    <string name="campus_pass_guide_step3">Filter requests to 0trust-y.njupt.edu.cn in the capture tool.</string>
+    <string name="campus_pass_guide_step4">Find the response of /accessRecord/department/vxLogin.</string>
+    <string name="campus_pass_guide_step5">Copy the value of data.token in that response (pasting the whole response JSON also works).</string>
+    <string name="campus_pass_guide_step6">A token stays valid for about 3 hours; capture a fresh one after it expires.</string>
 </resources>

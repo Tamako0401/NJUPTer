@@ -7,6 +7,25 @@ import org.junit.Test
 
 class CourseValidatorTest {
     @Test
+    fun sameCourseCanUseDifferentDaysSectionsOrWeeks() {
+        val occupied = CourseSession("same-course", 1, 1, 2, listOf(1, 2))
+        val alternatives = listOf(
+            occupied.copy(day = 2),
+            occupied.copy(startSection = 3, endSection = 4),
+            occupied.copy(weeks = listOf(3, 4))
+        )
+        alternatives.forEach { candidate ->
+            assertEquals(null, CourseValidator.validateSessionInput(
+                candidate.day, candidate.startSection, candidate.endSection, candidate.weeks,
+                null, listOf(occupied)
+            ))
+        }
+        assertTrue(CourseValidator.validateSessionInput(
+            1, 2, 3, listOf(2, 3), null, listOf(occupied)
+        ) is ValidationError.TimeConflict)
+    }
+
+    @Test
     fun unavailableWeeks_mergesOnlyOverlappingDayAndSections() {
         val sessions = listOf(
             CourseSession("a", day = 2, startSection = 3, endSection = 4, weeks = listOf(1, 3)),

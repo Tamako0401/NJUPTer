@@ -112,15 +112,9 @@ internal fun buildWidgetDisplayState(
         )
     }
 
-    val latestStartedMinute = todaySessions.mapNotNull { session ->
-        sectionStartMinute(metadata.nonNullSessionTimes, session.startSection)
-    }.filter { it <= currentMinute }.maxOrNull()
     val remainingSessions = todaySessions.filter { session ->
         val endMinute = sectionEndMinute(metadata.nonNullSessionTimes, session.endSection)
-        // Keep the just-finished lesson at zero through the break. Replace it when
-        // the next lesson starts, rather than leaving a running timer in the host.
-        endMinute == null || endMinute > currentMinute ||
-            sectionStartMinute(metadata.nonNullSessionTimes, session.startSection) == latestStartedMinute
+        endMinute == null || endMinute > currentMinute
     }
     // Refresh at lesson boundaries and each minute while a lesson is running.
     val nextBoundaryMinute = remainingSessions.flatMap { session ->

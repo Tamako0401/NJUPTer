@@ -17,3 +17,14 @@
 local.properties
 .claude
 CLAUDE.md
+
+# Local tooling and previews
+/.agents/
+/skills-lock.json
+/docs/course-focus-notification.md
+/docs/course-focus-preview.html
+/nul
+*.log
+.env
+.env.*
+!.env.example

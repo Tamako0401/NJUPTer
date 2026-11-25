@@ -2,6 +2,10 @@ package com.example.njupter.widget
 
 import android.content.Context
 import androidx.glance.appwidget.updateAll
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.state.updateAppWidgetState
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
@@ -10,6 +14,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 
 object WidgetDataManager {
+    internal val displayStateKey = stringPreferencesKey("display_state_json")
+    internal val refreshTimeKey = longPreferencesKey("refresh_time")
     private const val PREFS_NAME = "widget_courses"
     private const val KEY_DATA = "today_courses_json"
     private const val KEY_DISPLAY_STATE = "display_state_json"
@@ -58,6 +64,13 @@ object WidgetDataManager {
     suspend fun refreshWidgetAndWait(context: Context) {
         val state = WidgetModels.computeWidgetDisplayState(context)
         saveWidgetState(context, state)
+        GlanceAppWidgetManager(context).getGlanceIds(CourseWidget::class.java).forEach { id ->
+            updateAppWidgetState(context, id) { prefs ->
+                prefs[displayStateKey] = gson.toJson(state)
+                // The course list may be unchanged while its minute countdown changes.
+                prefs[refreshTimeKey] = System.currentTimeMillis()
+            }
+        }
         state.nextRefreshAtMillis?.let { triggerAtMillis ->
             WidgetUpdateScheduler.scheduleRefresh(context, triggerAtMillis)
         }

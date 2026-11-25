@@ -1,22 +1,29 @@
 package com.example.njupter.ui.settings
 
 import android.os.Build
-import androidx.compose.foundation.clickable
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Animation
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -24,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.njupter.R
@@ -46,11 +55,13 @@ import com.example.njupter.ui.settings.model.SettingsIcon
 import com.example.njupter.ui.settings.model.SettingsItem
 import com.example.njupter.ui.settings.model.SettingsSection
 import com.example.njupter.ui.theme.AppThemeMode
+import com.example.njupter.ui.theme.LocalHasCustomBackground
+import androidx.compose.ui.graphics.Color
 
 private enum class ThemeChoiceDialog {
     THEME_MODE,
-    PREDICTIVE_ANIMATION,
-    EXIT_DIRECTION
+    LANGUAGE,
+    APP_DPI
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,17 +69,43 @@ private enum class ThemeChoiceDialog {
 fun ThemeSettingsScreen(
     themeMode: AppThemeMode,
     dynamicColorEnabled: Boolean,
+    appLanguageTag: String,
+    appDpi: Int,
+    systemDpi: Int,
+    customBackgroundEnabled: Boolean,
+    backgroundDim: Float,
     predictiveBackAnimation: PredictiveBackAnimation,
     predictiveBackExitDirection: PredictiveBackExitDirection,
     onThemeModeChange: (AppThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    onAppLanguageChange: (String) -> Unit,
+    onAppDpiChange: (Int) -> Unit,
+    onCustomBackgroundChange: (Boolean) -> Unit,
+    onBackgroundDimChange: (Float) -> Unit,
     onPredictiveBackAnimationChange: (PredictiveBackAnimation) -> Unit,
     onPredictiveBackExitDirectionChange: (PredictiveBackExitDirection) -> Unit,
     onBack: () -> Unit
 ) {
     var choiceDialog by remember { mutableStateOf<ThemeChoiceDialog?>(null) }
+    var predictiveAnimationDialog by remember { mutableStateOf(false) }
+    var predictiveExitDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val pickBackground = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null && copyBackgroundToAppStorage(context, uri)) {
+            onCustomBackgroundChange(true)
+        }
+    }
 
     val appearanceItems = listOf(
+        SettingsItem.Navigation(
+            icon = SettingsIcon.Vector(Icons.Default.Language),
+            title = stringResource(R.string.app_language),
+            description = stringResource(R.string.app_language_summary),
+            value = appLanguageLabel(appLanguageTag),
+            onClick = { choiceDialog = ThemeChoiceDialog.LANGUAGE }
+        ),
         SettingsItem.Navigation(
             icon = SettingsIcon.Vector(Icons.Default.DarkMode),
             title = stringResource(R.string.theme_mode),
@@ -90,7 +127,24 @@ fun ThemeSettingsScreen(
                     onDynamicColorChange(!dynamicColorEnabled)
                 }
             }
-        )
+        ),
+        SettingsItem.Navigation(
+            icon = SettingsIcon.Vector(Icons.Default.AspectRatio),
+            title = stringResource(R.string.app_dpi),
+            description = stringResource(R.string.app_dpi_summary),
+            value = if (appDpi > 0) "$appDpi" else stringResource(R.string.app_dpi_system),
+            onClick = { choiceDialog = ThemeChoiceDialog.APP_DPI }
+        ),
+        SettingsItem.Toggle(
+            icon = SettingsIcon.Vector(Icons.Default.Wallpaper),
+            title = stringResource(R.string.custom_background),
+            description = stringResource(R.string.custom_background_summary),
+            checked = customBackgroundEnabled,
+            onToggle = {
+                if (!customBackgroundEnabled) pickBackground.launch("image/*")
+                else onCustomBackgroundChange(false)
+            }
+        ),
     )
 
     val motionItems = buildList {
@@ -100,7 +154,7 @@ fun ThemeSettingsScreen(
                 title = stringResource(R.string.predictive_back_animation),
                 description = stringResource(R.string.predictive_back_animation_summary),
                 value = predictiveBackAnimation.label(),
-                onClick = { choiceDialog = ThemeChoiceDialog.PREDICTIVE_ANIMATION }
+                onClick = { predictiveAnimationDialog = true }
             )
         )
         if (predictiveBackAnimation != PredictiveBackAnimation.NONE) {
@@ -110,13 +164,15 @@ fun ThemeSettingsScreen(
                     title = stringResource(R.string.predictive_back_exit_direction),
                     description = stringResource(R.string.predictive_back_exit_direction_summary),
                     value = predictiveBackExitDirection.label(),
-                    onClick = { choiceDialog = ThemeChoiceDialog.EXIT_DIRECTION }
+                    onClick = { predictiveExitDialog = true }
                 )
             )
         }
     }
 
     Scaffold(
+        containerColor = if (LocalHasCustomBackground.current) Color.Transparent
+        else MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.theme_settings)) },
@@ -129,7 +185,10 @@ fun ThemeSettingsScreen(
                     }
                 }
             )
-        }
+        },
+        contentWindowInsets = WindowInsets.safeDrawing.only(
+            WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+        )
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -157,47 +216,79 @@ fun ThemeSettingsScreen(
                     )
                 )
             }
+            if (customBackgroundEnabled) {
+                item {
+                    BackgroundDimSlider(
+                        dim = backgroundDim,
+                        onDimChange = onBackgroundDimChange
+                    )
+                }
+            }
         }
     }
 
     when (choiceDialog) {
         ThemeChoiceDialog.THEME_MODE -> {
-            val values = AppThemeMode.entries
             SingleChoiceSettingsDialog(
                 title = stringResource(R.string.theme_mode),
-                labels = values.map { it.label() },
-                selectedIndex = values.indexOf(themeMode),
+                labels = listOf(
+                    stringResource(R.string.theme_mode_system),
+                    stringResource(R.string.theme_mode_light),
+                    stringResource(R.string.theme_mode_dark)
+                ),
+                selectedIndex = when (themeMode) {
+                    AppThemeMode.SYSTEM -> 0
+                    AppThemeMode.LIGHT -> 1
+                    AppThemeMode.DARK -> 2
+                },
                 onDismiss = { choiceDialog = null },
                 onConfirm = { index ->
-                    values.getOrNull(index)?.let(onThemeModeChange)
+                    onThemeModeChange(
+                        when (index) {
+                            0 -> AppThemeMode.SYSTEM
+                            1 -> AppThemeMode.LIGHT
+                            else -> AppThemeMode.DARK
+                        }
+                    )
                     choiceDialog = null
                 }
             )
         }
 
-        ThemeChoiceDialog.PREDICTIVE_ANIMATION -> {
-            val values = PredictiveBackAnimation.entries
+        ThemeChoiceDialog.LANGUAGE -> {
             SingleChoiceSettingsDialog(
-                title = stringResource(R.string.predictive_back_animation),
-                labels = values.map { it.label() },
-                selectedIndex = values.indexOf(predictiveBackAnimation),
+                title = stringResource(R.string.app_language),
+                labels = listOf(
+                    stringResource(R.string.language_system),
+                    stringResource(R.string.language_zh),
+                    stringResource(R.string.language_en)
+                ),
+                selectedIndex = when {
+                    appLanguageTag.isEmpty() || appLanguageTag == "system" -> 0
+                    appLanguageTag.startsWith("zh") -> 1
+                    else -> 2
+                },
                 onDismiss = { choiceDialog = null },
                 onConfirm = { index ->
-                    values.getOrNull(index)?.let(onPredictiveBackAnimationChange)
+                    onAppLanguageChange(
+                        when (index) {
+                            0 -> "system"
+                            1 -> "zh"
+                            else -> "en"
+                        }
+                    )
                     choiceDialog = null
                 }
             )
         }
 
-        ThemeChoiceDialog.EXIT_DIRECTION -> {
-            val values = PredictiveBackExitDirection.entries
-            SingleChoiceSettingsDialog(
-                title = stringResource(R.string.predictive_back_exit_direction),
-                labels = values.map { it.label() },
-                selectedIndex = values.indexOf(predictiveBackExitDirection),
+        ThemeChoiceDialog.APP_DPI -> {
+            AppDpiDialog(
+                currentDpi = if (appDpi > 0) appDpi else systemDpi,
+                isCustom = appDpi > 0,
                 onDismiss = { choiceDialog = null },
-                onConfirm = { index ->
-                    values.getOrNull(index)?.let(onPredictiveBackExitDirectionChange)
+                onConfirm = { dpi ->
+                    onAppDpiChange(dpi)
                     choiceDialog = null
                 }
             )
@@ -205,6 +296,134 @@ fun ThemeSettingsScreen(
 
         null -> Unit
     }
+
+    if (predictiveAnimationDialog) {
+        SingleChoiceSettingsDialog(
+            title = stringResource(R.string.predictive_back_animation),
+            labels = listOf(
+                stringResource(R.string.predictive_back_animation_none),
+                stringResource(R.string.predictive_back_animation_aosp),
+                stringResource(R.string.predictive_back_animation_miuix),
+                stringResource(R.string.predictive_back_animation_scale),
+                stringResource(R.string.predictive_back_animation_ksu_classic)
+            ),
+            selectedIndex = when (predictiveBackAnimation) {
+                PredictiveBackAnimation.NONE -> 0
+                PredictiveBackAnimation.AOSP -> 1
+                PredictiveBackAnimation.MIUIX -> 2
+                PredictiveBackAnimation.SCALE -> 3
+                PredictiveBackAnimation.KSU_CLASSIC -> 4
+            },
+            onDismiss = { predictiveAnimationDialog = false },
+            onConfirm = { index ->
+                onPredictiveBackAnimationChange(
+                    when (index) {
+                        0 -> PredictiveBackAnimation.NONE
+                        1 -> PredictiveBackAnimation.AOSP
+                        2 -> PredictiveBackAnimation.MIUIX
+                        3 -> PredictiveBackAnimation.SCALE
+                        else -> PredictiveBackAnimation.KSU_CLASSIC
+                    }
+                )
+                predictiveAnimationDialog = false
+            }
+        )
+    }
+
+    if (predictiveExitDialog) {
+        SingleChoiceSettingsDialog(
+            title = stringResource(R.string.predictive_back_exit_direction),
+            labels = listOf(
+                stringResource(R.string.predictive_back_exit_direction_follow_gesture),
+                stringResource(R.string.predictive_back_exit_direction_always_right),
+                stringResource(R.string.predictive_back_exit_direction_always_left)
+            ),
+            selectedIndex = when (predictiveBackExitDirection) {
+                PredictiveBackExitDirection.FOLLOW_GESTURE -> 0
+                PredictiveBackExitDirection.ALWAYS_RIGHT -> 1
+                PredictiveBackExitDirection.ALWAYS_LEFT -> 2
+            },
+            onDismiss = { predictiveExitDialog = false },
+            onConfirm = { index ->
+                onPredictiveBackExitDirectionChange(
+                    when (index) {
+                        0 -> PredictiveBackExitDirection.FOLLOW_GESTURE
+                        1 -> PredictiveBackExitDirection.ALWAYS_RIGHT
+                        else -> PredictiveBackExitDirection.ALWAYS_LEFT
+                    }
+                )
+                predictiveExitDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun BackgroundDimSlider(
+    dim: Float,
+    onDimChange: (Float) -> Unit
+) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainer
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.background_dim),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = stringResource(R.string.background_dim_summary),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Slider(
+                    value = dim,
+                    onValueChange = onDimChange,
+                    valueRange = 0f..1f,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "${(dim * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 12.dp)
+                )
+            }
+        }
+    }
+}
+
+private fun copyBackgroundToAppStorage(
+    context: android.content.Context,
+    source: android.net.Uri
+): Boolean {
+    return try {
+        val dst = java.io.File(context.filesDir, "custom_background.jpg")
+        context.contentResolver.openInputStream(source)?.use { input ->
+            dst.outputStream().use { output -> input.copyTo(output, 8 * 1024) }
+        } != null
+    } catch (e: Exception) {
+        false
+    }
+}
+
+@Composable
+private fun appLanguageLabel(tag: String): String = when {
+    tag.isEmpty() || tag == "system" -> stringResource(R.string.language_system)
+    tag.startsWith("zh") -> stringResource(R.string.language_zh)
+    else -> stringResource(R.string.language_en)
 }
 
 @Composable
@@ -215,60 +434,168 @@ private fun SingleChoiceSettingsDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit
 ) {
-    var pendingIndex by remember(selectedIndex) { mutableIntStateOf(selectedIndex) }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column {
                 labels.forEachIndexed { index, label ->
-                    val shape = RoundedCornerShape(
-                        topStart = if (index == 0) 18.dp else 6.dp,
-                        topEnd = if (index == 0) 18.dp else 6.dp,
-                        bottomStart = if (index == labels.lastIndex) 18.dp else 6.dp,
-                        bottomEnd = if (index == labels.lastIndex) 18.dp else 6.dp
-                    )
-                    Surface(
-                        shape = shape,
-                        color = if (index == pendingIndex) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerHigh
-                        }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { pendingIndex = index }
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = index == pendingIndex,
-                                onClick = null
-                            )
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
+                        RadioButton(
+                            selected = index == selectedIndex,
+                            onClick = {
+                                onConfirm(index)
+                            }
+                        )
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
                     }
                 }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.close))
+            }
+        }
+    )
+}
+
+private const val DPI_MIN = 160
+private const val DPI_MAX = 600
+
+@Composable
+private fun AppDpiDialog(
+    currentDpi: Int,
+    isCustom: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    var tempDpi by remember { mutableIntStateOf(currentDpi.coerceIn(DPI_MIN, DPI_MAX)) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.app_dpi)) },
+        text = {
+            Column {
+                Text(
+                    text = stringResource(R.string.app_dpi_dialog_summary),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Slider(
+                        value = tempDpi.toFloat(),
+                        onValueChange = { tempDpi = it.toInt() },
+                        valueRange = DPI_MIN.toFloat()..DPI_MAX.toFloat(),
+                        steps = (DPI_MAX - DPI_MIN) / 40 - 1,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = "$tempDpi",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 12.dp)
+                    )
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                ) {
+                    DpiPresetChip(
+                        label = stringResource(R.string.app_dpi_small),
+                        presetDpi = 240,
+                        currentDpi = tempDpi,
+                        onClick = { tempDpi = 240 }
+                    )
+                    DpiPresetChip(
+                        label = stringResource(R.string.app_dpi_medium),
+                        presetDpi = 320,
+                        currentDpi = tempDpi,
+                        onClick = { tempDpi = 320 }
+                    )
+                    DpiPresetChip(
+                        label = stringResource(R.string.app_dpi_large),
+                        presetDpi = 420,
+                        currentDpi = tempDpi,
+                        onClick = { tempDpi = 420 }
+                    )
+                    DpiPresetChip(
+                        label = stringResource(R.string.app_dpi_extra_large),
+                        presetDpi = 560,
+                        currentDpi = tempDpi,
+                        onClick = { tempDpi = 560 }
+                    )
+                }
+                if (isCustom) {
+                    TextButton(
+                        onClick = {
+                            onConfirm(0)
+                            onDismiss()
+                        },
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Text(stringResource(R.string.app_dpi_reset_system))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(tempDpi)
+                    onDismiss()
+                },
+                enabled = tempDpi != currentDpi
+            ) {
+                Text(stringResource(R.string.confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(pendingIndex) }) {
-                Text(stringResource(R.string.confirm))
-            }
         }
     )
+}
+
+@Composable
+private fun DpiPresetChip(
+    label: String,
+    presetDpi: Int,
+    currentDpi: Int,
+    onClick: () -> Unit
+) {
+    val selected = presetDpi == currentDpi
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = if (selected) MaterialTheme.colorScheme.secondaryContainer
+        else MaterialTheme.colorScheme.surfaceContainerHighest,
+        onClick = onClick
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+        )
+    }
 }
 
 @Composable
@@ -284,16 +611,12 @@ private fun PredictiveBackAnimation.label(): String = when (this) {
     PredictiveBackAnimation.AOSP -> stringResource(R.string.predictive_back_animation_aosp)
     PredictiveBackAnimation.MIUIX -> stringResource(R.string.predictive_back_animation_miuix)
     PredictiveBackAnimation.SCALE -> stringResource(R.string.predictive_back_animation_scale)
-    PredictiveBackAnimation.KSU_CLASSIC ->
-        stringResource(R.string.predictive_back_animation_ksu_classic)
+    PredictiveBackAnimation.KSU_CLASSIC -> stringResource(R.string.predictive_back_animation_ksu_classic)
 }
 
 @Composable
 private fun PredictiveBackExitDirection.label(): String = when (this) {
-    PredictiveBackExitDirection.FOLLOW_GESTURE ->
-        stringResource(R.string.predictive_back_exit_direction_follow_gesture)
-    PredictiveBackExitDirection.ALWAYS_RIGHT ->
-        stringResource(R.string.predictive_back_exit_direction_always_right)
-    PredictiveBackExitDirection.ALWAYS_LEFT ->
-        stringResource(R.string.predictive_back_exit_direction_always_left)
+    PredictiveBackExitDirection.FOLLOW_GESTURE -> stringResource(R.string.predictive_back_exit_direction_follow_gesture)
+    PredictiveBackExitDirection.ALWAYS_RIGHT -> stringResource(R.string.predictive_back_exit_direction_always_right)
+    PredictiveBackExitDirection.ALWAYS_LEFT -> stringResource(R.string.predictive_back_exit_direction_always_left)
 }

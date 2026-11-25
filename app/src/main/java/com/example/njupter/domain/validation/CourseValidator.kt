@@ -1,6 +1,5 @@
 package com.example.njupter.domain.validation
 
-import com.example.njupter.data.CourseInfo
 import com.example.njupter.data.CourseSession
 import kotlin.math.max
 import kotlin.math.min
@@ -9,10 +8,32 @@ sealed class ValidationError {
     data class StartAfterEnd(val start: Int, val end: Int) : ValidationError()
     object NoWeekSelected : ValidationError()
     data class TimeConflict(val day: Int, val startSection: Int, val endSection: Int) : ValidationError()
-    data class CourseDuplicate(val name: String, val teacher: String, val classroom: String) : ValidationError()
 }
 
 object CourseValidator {
+
+    fun conflictingSections(
+        day: Int,
+        weeks: Set<Int>,
+        editingSession: CourseSession?,
+        allSessions: List<CourseSession>,
+        maxSection: Int
+    ): Set<Int> {
+        if (weeks.isEmpty() || maxSection < 1) return emptySet()
+
+        val editingIndex = editingSessionIndex(editingSession, allSessions)
+        return buildSet {
+            allSessions.forEachIndexed { index, session ->
+                if (index == editingIndex || session.day != day) return@forEachIndexed
+
+                val start = max(1, session.startSection)
+                val end = min(maxSection, session.endSection)
+                if (start <= end && session.weeks.any { it in weeks }) {
+                    addAll(start..end)
+                }
+            }
+        }
+    }
 
     /**
      * Returns the weeks that cannot be used for the proposed day/section range.
@@ -84,24 +105,4 @@ object CourseValidator {
             ?: allSessions.indexOf(editingSession)
     }
 
-    fun validateCourseDuplication(
-        currentId: String,
-        name: String,
-        teacher: String,
-        classroom: String,
-        existingCourses: List<CourseInfo>
-    ): ValidationError? {
-        val duplicate = existingCourses.find {
-            it.name == name &&
-            it.teacher == teacher &&
-            it.classroom == classroom &&
-            it.id != currentId
-        }
-
-        if (duplicate != null) {
-            return ValidationError.CourseDuplicate(name, teacher, classroom)
-        }
-
-        return null
-    }
 }

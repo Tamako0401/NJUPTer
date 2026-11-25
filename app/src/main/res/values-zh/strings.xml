@@ -128,7 +128,6 @@
     <!-- Course Editor -->
     <string name="save_btn">保存</string>
     <string name="cd_timetable">课程表</string>
-    <string name="cd_settings">设置</string>
 
     <!-- Validation Errors -->
     <string name="error_start_after_end">错误：开始节次（%1$d）不能大于结束节次（%2$d）。</string>
@@ -142,7 +141,7 @@
     <string name="default_timetable_name">我的课表</string>
     <string name="course_reminder_channel_name">课程提醒</string>
     <string name="course_reminder_channel_desc">上课前10分钟通知</string>
-    <string name="course_reminder_title">课程还有10分钟开始</string>
+    <string name="course_reminder_title">课程还有%1$d分钟开始</string>
     <string name="course_reminder_content">%1$s · %2$s · %3$s · %4$s</string>
     <string name="notification_permission">通知权限</string>
     <string name="notification_permission_desc">用于显示课程提醒</string>
@@ -188,6 +187,21 @@
     <string name="theme_mode_dark">深色</string>
     <string name="dynamic_color">动态取色</string>
     <string name="dynamic_color_summary">使用壁纸颜色生成应用配色</string>
+    <string name="app_language">应用语言</string>
+    <string name="app_language_summary">选择应用内使用的语言</string>
+    <string name="app_dpi">应用 DPI</string>
+    <string name="app_dpi_summary">不改系统显示大小，单独缩放应用界面</string>
+    <string name="app_dpi_system">跟随系统</string>
+    <string name="app_dpi_dialog_summary">拖动滑杆或点选预设，数值越大界面越大</string>
+    <string name="app_dpi_small">S</string>
+    <string name="app_dpi_medium">M</string>
+    <string name="app_dpi_large">L</string>
+    <string name="app_dpi_extra_large">XL</string>
+    <string name="app_dpi_reset_system">恢复系统默认</string>
+    <string name="custom_background">自定义背景</string>
+    <string name="custom_background_summary">选择一张图片作为应用全局背景</string>
+    <string name="background_dim">背景压暗</string>
+    <string name="background_dim_summary">压暗自定义背景，保证前景内容可读</string>
     <string name="dynamic_color_unavailable">动态取色需要 Android 12 或更高版本</string>
     <string name="predictive_back_animation">预测性返回动画</string>
     <string name="predictive_back_animation_summary">返回手势过程中预览目标页面</string>
@@ -217,4 +231,92 @@
     <string name="update_ignore">忽略更新</string>
     <string name="update_download_started">已开始下载，完成后点击下载通知安装。</string>
     <string name="update_download_failed">无法开始下载，请启用系统下载管理器后重试。</string>
+    <string name="note">课程备注</string>
+    <string name="section_range">%1$s–%2$s</string>
+    <string name="reminder_lead_time">提醒提前时间</string>
+    <string name="reminder_lead_time_summary">上课前多少分钟提醒</string>
+    <string name="reminder_lead_min_value">%1$d 分钟</string>
+    <string name="reminder_lead_minutes_label">分钟</string>
+    <string name="reminder_lead_range_hint">范围 0–120；0 = 上课时提醒</string>
+    <string name="course_reminder_toggle">上课提醒</string>
+    <string name="course_reminder_toggle_summary">上课前通知该课程</string>
+    <string name="widget_more_courses">还有 %1$d 节</string>
+    <string name="widget_instances">小组件实例</string>
+    <string name="widget_mode_solid">纯色</string>
+    <string name="widget_mode_image">图片</string>
+    <string name="widget_solid_color">纯色颜色</string>
+    <string name="widget_solid_follow_theme">跟随主题</string>
+    <string name="widget_pin_to_home">添加到桌面</string>
+    <string name="widget_pin_failed">发起添加请求失败</string>
+    <string name="widget_pinned">小组件已添加到桌面</string>
+    <string name="widget_pin_guide_hint">已尝试发起系统添加请求。若未弹出系统确认窗口，请手动添加：</string>
+    <string name="widget_pin_guide_steps">1. 长按桌面空白处\n2. 选择「小组件」或「原子组件」\n3. 找到 NJUPTer，拖动到桌面即可</string>
+    <string name="widget_bg_edit_hint">拖动或双指缩放，调整背景位置和大小</string>
+    <string name="widget_pick_image_failed">所选图片加载失败</string>
+    <string name="widget_preview_no_data">暂无课表数据，添加课程后这里会显示真实预览</string>
+    <string name="minutes_unit">分钟</string>
+    <string name="section_conflict_blocked">所选节次存在冲突：%1$s。请调整节次或周次后保存。</string>
+
+    <!-- 服务 / 晨跑 -->
+    <string name="services">服务</string>
+    <string name="morning_run">晨跑</string>
+    <string name="morning_run_summary">查看打卡记录与学期次数</string>
+    <string name="morning_run_unbound">未绑定</string>
+    <string name="morning_run_count_value">%1$d 次</string>
+    <string name="morning_run_count_label">本学期次数</string>
+    <string name="morning_run_bind">绑定小程序 token</string>
+    <string name="morning_run_unbind">解绑</string>
+    <string name="morning_run_rebind">重新绑定</string>
+    <string name="morning_run_no_token_title">尚未绑定</string>
+    <string name="morning_run_no_token_desc">粘贴南邮小程序登录 token 后即可查看晨跑次数。</string>
+    <string name="morning_run_token_hint">粘贴 token（或包含 token 的文本）</string>
+    <string name="morning_run_token_invalid">未找到有效 token</string>
+    <string name="morning_run_how_to_get">如何获取 token？</string>
+    <string name="morning_run_guide_title">如何获取 token</string>
+    <string name="morning_run_guide_step1">token 只能在南邮微信小程序运行时抓取，需要能解密 HTTPS 的抓包环境（任意 HTTPS 抓包工具均可，推荐 Reqable）。</string>
+    <string name="morning_run_guide_step2">打开企业微信工作台里的南邮小程序并完成登录。</string>
+    <string name="morning_run_guide_step3">在抓包工具里过滤 wechat.njupt.edu.cn 的请求。</string>
+    <string name="morning_run_guide_step4">找到 login/bind 或 login/refreshUserInfo 的响应。</string>
+    <string name="morning_run_guide_step5">复制响应里 data.token 的值（粘贴整段响应 JSON 也可以）。</string>
+    <string name="morning_run_guide_step6">token 有效期约 2 小时，过期后需重新抓取。</string>
+    <string name="morning_run_paste">从剪贴板粘贴</string>
+    <string name="morning_run_expires">有效期至 %1$s</string>
+    <string name="morning_run_expired">token 已过期，请重新绑定。</string>
+    <string name="morning_run_no_checkin">今日未打卡</string>
+    <string name="morning_run_history">学期统计</string>
+    <string name="morning_run_semester_value">%1$d 次 · 差 %2$d</string>
+    <string name="morning_run_records">最近打卡</string>
+    <string name="refresh">刷新</string>
+    <string name="retry">重试</string>
+
+    <!-- 服务 / 校园通行 -->
+    <string name="campus_pass">校园通行</string>
+    <string name="campus_pass_summary">在校与在寝状态</string>
+    <string name="campus_pass_unbound">未绑定</string>
+    <string name="campus_pass_on_campus">在校</string>
+    <string name="campus_pass_off_campus">不在校</string>
+    <string name="campus_pass_in_dorm">在寝</string>
+    <string name="campus_pass_not_in_dorm">不在寝</string>
+    <string name="campus_pass_not_returned">未返校</string>
+    <string name="campus_pass_unknown">未知</string>
+    <string name="campus_pass_bind">绑定校园通行 token</string>
+    <string name="campus_pass_rebind">重新绑定</string>
+    <string name="campus_pass_unbind">解绑</string>
+    <string name="campus_pass_no_token_title">尚未绑定</string>
+    <string name="campus_pass_no_token_desc">粘贴校园通行 token 后即可查看在校与在寝状态。</string>
+    <string name="campus_pass_token_hint">粘贴 token（或包含 token 的文本）</string>
+    <string name="campus_pass_token_invalid">未找到有效 token</string>
+    <string name="campus_pass_paste">从剪贴板粘贴</string>
+    <string name="campus_pass_expires">有效期至 %1$s</string>
+    <string name="campus_pass_expired">token 已过期，请重新绑定。</string>
+    <string name="campus_pass_last_access">最后出行记录</string>
+    <string name="campus_pass_dorm_location">宿舍</string>
+    <string name="campus_pass_how_to_get">如何获取 token？</string>
+    <string name="campus_pass_guide_title">如何获取 token</string>
+    <string name="campus_pass_guide_step1">token 只能从企业微信打开的校园通行页面抓取，需要能解密 HTTPS 的抓包环境（任意 HTTPS 抓包工具均可，推荐 Reqable）。</string>
+    <string name="campus_pass_guide_step2">在企业微信工作台打开「校园通行」，页面会自动完成登录。</string>
+    <string name="campus_pass_guide_step3">在抓包工具里过滤 0trust-y.njupt.edu.cn 的请求。</string>
+    <string name="campus_pass_guide_step4">找到 /accessRecord/department/vxLogin 的响应。</string>
+    <string name="campus_pass_guide_step5">复制响应里 data.token 的值（粘贴整段响应 JSON 也可以）。</string>
+    <string name="campus_pass_guide_step6">token 有效期约 3 小时，过期后需重新抓取。</string>
 </resources>

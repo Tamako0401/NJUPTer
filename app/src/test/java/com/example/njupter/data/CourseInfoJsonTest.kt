@@ -16,13 +16,17 @@ class CourseInfoJsonTest {
             teacher = "闫巍",
             room = "教3-520",
             credit = "3",
-            courseNature = "必修"
+            courseNature = "必修",
+            note = "带实验报告\n第二周交",
+            reminderEnabled = false
         )
 
         val restored = gson.fromJson(gson.toJson(source), CourseInfoJson::class.java)
 
         assertEquals("3", restored.credit)
         assertEquals("必修", restored.courseNature)
+        assertEquals("带实验报告\n第二周交", restored.note)
+        assertEquals(false, restored.reminderEnabled)
     }
 
     @Test
@@ -34,5 +38,7 @@ class CourseInfoJsonTest {
 
         assertNull(restored.credit)
         assertNull(restored.courseNature)
+        assertNull(restored.note)
+        assertNull(restored.reminderEnabled)
     }
 }
