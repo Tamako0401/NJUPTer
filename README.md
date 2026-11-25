@@ -58,12 +58,27 @@ NJUPTer 是一个面向南京邮电大学学生的 Android 课程表应用，使
 - 提取课程名、教师、地点、星期、节次、周次等信息
 - 导入前提供预览，并以新课表形式落地
 
+### 校园服务
+
+- 底部导航栏提供 `课表`、`服务`、`设置` 三个一级页面
+- 晨跑查询：绑定小程序令牌后查看姓名、完成次数与历史记录，支持下拉刷新与解绑
+- 校园通行：获取在校/宿舍状态
+
+### 外观个性化
+
+- 主题模式：跟随系统 / 浅色 / 深色
+- 动态取色（Android 12+）
+- 应用语言：跟随系统 / 中文 / English
+- 应用 DPI：单独缩放应用界面，不影响系统显示大小
+- 自定义背景：选择图片作为全局背景，可调节背景压暗程度
+
 ## 界面结构
 
-应用当前主要分为两个一级页面：
+应用当前主要分为三个一级页面：
 
 - `课表`：主课程表视图，负责查看、切换周次、切换课表、增改课程
-- `设置`：当前课表配置页，负责修改名称、起始日期、周数、周末显示和节次时间
+- `服务`：校园查询功能入口（晨跑查询、校园通行）
+- `设置`：课表配置与应用设置（提醒、主题与动效、语言、桌面小组件等）
 
 当用户选择从教务系统导入时，会进入单独的登录与导入流程页面，并在导入完成前显示预览确认弹窗。
 
@@ -152,19 +167,20 @@ macOS / Linux:
 ./gradlew :app:compileDebugKotlin
 ```
 
-### CI 自动构建与 Artifacts
+### CI 自动构建与发布
 
-项目已包含 GitHub Actions 工作流：`.github/workflows/android-ci.yml`。
+项目已包含 GitHub Actions 工作流：`.github/workflows/android.yml`。
 
-- Push / Pull Request / 手动触发（workflow_dispatch）会自动构建 Debug APK，并上传到 Actions Artifacts
-- 打 `v*` 标签（例如 `v1.0.0`）会自动构建 Release APK + AAB，并上传 Artifacts
-- 打 `v*` 标签时还会自动创建 GitHub Release，并附带 APK/AAB 文件
+- Push / Pull Request / 手动触发（workflow_dispatch）会自动构建、测试并上传 Debug APK 到 Actions Artifacts
+- 推送到 `main` 分支时会自动构建稳定签名的 APK，并创建 GitHub Release（附 universal APK 与 `update.json` 更新清单），应用内更新检查读取该 Release
+- Release 说明取自 `docs/release-notes.md`，发版前请先更新该文件
 
 使用示例：
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git checkout main
+git merge dev
+git push Tamako0401 main   # CI 自动构建并发布 Release
 ```
 
 ## 网络与权限说明
@@ -263,12 +279,27 @@ It is intentionally lightweight, stores data locally, and is also suitable as a 
 - extract course name, teacher, classroom, weekday, sections, and weeks
 - preview the imported result before creating a new timetable
 
+### Campus Services
+
+- bottom navigation with `Timetable`, `Services`, and `Settings` top-level pages
+- Morning Run: bind a mini-program token to view your name, completion count, and history, with pull-to-refresh and unbind
+- Campus Pass: check on-campus / dormitory status
+
+### Appearance Customization
+
+- theme mode: follow system / light / dark
+- dynamic color (Android 12+)
+- app language: follow system / Chinese / English
+- app DPI: scale the app UI independently of system display size
+- custom background: pick an image as the app-wide background with an adjustable dim
+
 ## App Structure
 
-The app currently has two primary top-level pages:
+The app currently has three primary top-level pages:
 
 - `Timetable`: main weekly view for browsing, switching weeks, switching timetables, and editing courses
-- `Settings`: current timetable configuration page for name, start date, total weeks, weekend visibility, and session times
+- `Services`: entry points for campus queries (Morning Run, Campus Pass)
+- `Settings`: timetable configuration plus app settings (reminders, theme & motion, language, home-screen widget, etc.)
 
 The JWXT import flow is presented as a separate screen, followed by a preview dialog before the import is finalized.
 
